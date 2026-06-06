@@ -3,9 +3,5 @@ nixPkgs = [
     "cairo",
     "pango",
     "glib",
-    "pkg-config",
-    "xorg.libxcb",
-    "xorg.libX11",
-    "xorg.libXext",
-    "xorg.libXrender"
+    "pkg-config"
 ]
