@@ -1,0 +1,9 @@
+[phases.setup]
+nixPkgs = [
+    "pkg-config",
+    "cairo",
+    "xorg.libxcb",
+    "xorg.libX11",
+    "xorg.libXext",
+    "xorg.libXrender"
+]
