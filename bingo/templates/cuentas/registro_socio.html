@@ -1,0 +1,84 @@
+{% extends 'comunes/base.html' %}
+{% block title %}Registro de Socio - CoopBingo{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-4">
+    <div class="col-12 col-lg-8">
+        <div class="card-minimalista p-4 p-md-5">
+            <h4 class="fw-bold mb-4 text-center">Apertura de Cuenta (Socio)</h4>
+            
+            
+
+            <form method="post" action="{% url 'registro_socio' %}">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Primer Nombre</label>
+                        <input type="text" name="primer_nombre" class="form-control bg-transparent" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Segundo Nombre</label>
+                        <input type="text" name="segundo_nombre" class="form-control bg-transparent">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Primer Apellido</label>
+                        <input type="text" name="primer_apellido" class="form-control bg-transparent" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Segundo Apellido</label>
+                        <input type="text" name="segundo_apellido" class="form-control bg-transparent" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Cédula de Identidad</label>
+                        <input type="text" name="cedula" class="form-control bg-transparent" maxlength="10" pattern="\d{10}" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);" title="Debe contener exactamente 10 números" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Fecha de Nacimiento</label>
+                        <input type="date" name="fecha_nacimiento" id="input-fecha-nacimiento" class="form-control bg-transparent" required>
+                    </div>
+
+
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            // Bloquear fechas futuras en el calendario HTML
+                            let hoy = new Date();
+                            let dd = String(hoy.getDate()).padStart(2, '0');
+                            let mm = String(hoy.getMonth() + 1).padStart(2, '0');
+                            let yyyy = hoy.getFullYear();
+        
+                            let fechaMax = yyyy + '-' + mm + '-' + dd;
+                        document.getElementById("input-fecha-nacimiento").setAttribute("max", fechaMax);
+                        });
+                    </script>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Teléfono Celular</label>
+                        <input type="text" name="telefono_personal" class="form-control bg-transparent" maxlength="10" pattern="\d{10}" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);" title="Debe contener exactamente 10 números" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Sexo</label>
+                        <select name="sexo" class="form-select bg-transparent" required>
+                            <option value="H">Hombre</option>
+                            <option value="M">Mujer</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Dirección de Domicilio</label>
+                        <input type="text" name="direccion" class="form-control bg-transparent" required>
+                    </div>
+
+                    <div class="col-md-6 mt-4">
+                        <label class="form-label small fw-semibold text-primary">Correo Electrónico</label>
+                        <input type="email" name="email" class="form-control bg-transparent border-primary" required>
+                    </div>
+                    <div class="col-md-6 mt-4">
+                        <label class="form-label small fw-semibold text-primary">Contraseña de Acceso</label>
+                        <input type="password" name="password" class="form-control bg-transparent border-primary" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-indigo w-100 mt-4 py-2">Completar Registro Institucional <i class="fas fa-check-circle ms-2"></i></button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+<div class="bg-white p-2 rounded-3 shadow border border-2 border-dark" style="max-width: 320px; margin: auto;">
+    
+    <div class="text-center bg-dark text-white fw-bold py-1 mb-2 rounded-top small font-monospace d-flex justify-content-between px-3">
+        <span>CARTÓN</span>
+        <span class="text-warning">{{ asignacion.idcarton.codigocarton }}</span>
+    </div>
+    
+    <div class="d-grid gap-1 text-center mb-1" style="grid-template-columns: repeat(5, 1fr);">
+        <div class="fw-black bg-primary text-white rounded-1 py-1 fs-5">B</div>
+        <div class="fw-black bg-danger text-white rounded-1 py-1 fs-5">I</div>
+        <div class="fw-black bg-secondary text-white rounded-1 py-1 fs-5">N</div>
+        <div class="fw-black bg-success text-white rounded-1 py-1 fs-5">G</div>
+        <div class="fw-black bg-warning text-dark rounded-1 py-1 fs-5">O</div>
+    </div>
+    
+    <div class="d-grid gap-1 text-center" style="grid-template-columns: repeat(5, 1fr);">
+        {% for fila in asignacion.filas_matriz %}
+            {% for numero in fila %}
+                {% if numero == 'FREE' %}
+                    <div class="celda-bingo celda-free position-relative"><i class="fas fa-star text-dark opacity-50"></i></div>
+                {% else %}
+                    <div class="celda-bingo celda-numero-{{ numero }} position-relative d-flex justify-content-center align-items-center">
+                        <span class="position-relative z-1 fw-bold fs-5 text-dark">{{ numero }}</span>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
