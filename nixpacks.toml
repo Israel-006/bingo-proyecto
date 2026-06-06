@@ -1,9 +1,9 @@
 [phases.setup]
 nixPkgs = [
     "cairo",
-    "pkg-config",
     "pango",
     "glib",
+    "pkg-config",
     "xorg.libxcb",
     "xorg.libX11",
     "xorg.libXext",
