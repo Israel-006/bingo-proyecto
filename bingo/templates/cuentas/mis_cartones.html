@@ -17,7 +17,7 @@
         <!-- FILTRO INTELIGENTE CORREGIDO -->
         <div class="mb-4">
             <label class="form-label fw-bold text-secondary small"><i class="fas fa-filter me-1"></i> Filtrar por Evento</label>
-            <select id="filtro-boveda" class="form-select bg-white shadow-sm border-0 fw-bold w-100 w-md-50" onchange="filtrarBoveda(this.value)">
+            <select id="filtro-boveda" class="form-select animate__animated animate__fadeInDown shadow-sm border-0 fw-bold w-100 w-md-50" onchange="filtrarBoveda(this.value)">
                 <option value="ALL">🌟 Mostrar Todos mis Cartones</option>
                 {% for b in bingos_agrupados %}
                     <option value="bingo-{{ b.bingo.idbingo }}">{{ b.bingo.titulobingo }}</option>

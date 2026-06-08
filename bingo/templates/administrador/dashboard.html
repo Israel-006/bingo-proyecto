@@ -5,12 +5,12 @@
 {% block content %}
 <style>
     /* CSS MAGIA: Tablas desplazables con encabezados fijos */
-    .table-scroll-container {
+    .animate__animated animate__fadeInDown {
         max-height: 380px;
         overflow-y: auto;
         scrollbar-width: thin;
     }
-    .table-scroll-container thead th {
+    .animate__animated animate__fadeInDown thead th {
         position: sticky;
         top: 0;
         background-color: #f8f9fa;
@@ -89,7 +89,7 @@
                             <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
                             <input type="text" id="search-socio" class="form-control bg-transparent border-start-0" placeholder="Buscar por cédula o nombre..." onkeyup="filterTable('search-socio', 'table-socios')">
                         </div>
-                        <div class="table-responsive table-scroll-container">
+                        <div class="table-responsive animate__animated animate__fadeInDown">
                             <table class="table align-middle" id="table-socios">
                                 <thead>
                                     <tr class="text-secondary small text-uppercase">
@@ -130,7 +130,7 @@
                                         <i class="fas fa-plus"></i> Nuevo
                                     </button>
                                 </div>
-                                <div class="list-group list-group-flush table-scroll-container">
+                                <div class="list-group list-group-flush animate__animated animate__fadeInDown">
                                     {% for t in tipos_socio %}
                                     <div class="list-group-item bg-transparent px-0 py-2 d-flex justify-content-between align-items-center border-bottom">
                                         <div>
@@ -155,7 +155,7 @@
                                     <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
                                     <input type="text" id="search-cuentas" class="form-control bg-transparent border-start-0" placeholder="Buscar banco o titular..." onkeyup="filterTable('search-cuentas', 'table-cuentas')">
                                 </div>
-                                <div class="table-responsive table-scroll-container">
+                                <div class="table-responsive animate__animated animate__fadeInDown">
                                     <table class="table align-middle table-sm" id="table-cuentas" style="font-size: 0.85rem;">
                                         <thead>
                                             <tr class="text-muted">
@@ -187,7 +187,7 @@
                             <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
                             <input type="text" id="search-jugadores" class="form-control bg-transparent border-start-0" placeholder="Buscar por alias, cédula o correo..." onkeyup="filterTable('search-jugadores', 'table-jugadores')">
                         </div>
-                        <div class="table-responsive table-scroll-container">
+                        <div class="table-responsive animate__animated animate__fadeInDown">
                             <table class="table align-middle table-sm" id="table-jugadores">
                                 <thead>
                                     <tr class="text-secondary small text-uppercase">
@@ -231,7 +231,7 @@
                             <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
                             <input type="text" id="search-creditos" class="form-control bg-transparent border-start-0" placeholder="Buscar por socio..." onkeyup="filterTable('search-creditos', 'table-creditos')">
                         </div>
-                        <div class="table-responsive table-scroll-container">
+                        <div class="table-responsive animate__animated animate__fadeInDown">
                             <table class="table align-middle" id="table-creditos">
                                 <thead>
                                     <tr class="text-secondary small text-uppercase">
@@ -267,7 +267,7 @@
                                     <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
                                     <input type="text" id="search-pagos" class="form-control bg-transparent border-start-0" placeholder="Buscar por referencia o canal..." onkeyup="filterTable('search-pagos', 'table-pagos')">
                                 </div>
-                                <div class="table-responsive table-scroll-container">
+                                <div class="table-responsive animate__animated animate__fadeInDown">
                                     <table class="table align-middle table-sm" id="table-pagos" style="font-size:0.85rem;">
                                         <thead>
                                             <tr class="text-muted">
@@ -295,7 +295,7 @@
                         <div class="col-xl-5">
                             <div class="card-minimalista p-4 h-100 border-start border-info border-4">
                                 <h6 class="fw-bold text-secondary mb-3">Fondos de Ahorro (`Ahorro`)</h6>
-                                <div class="table-responsive table-scroll-container">
+                                <div class="table-responsive animate__animated animate__fadeInDown">
                                     {% for a in ahorros %}
                                     <div class="border-bottom py-2 small">
                                         <div class="d-flex justify-content-between">
@@ -317,7 +317,7 @@
                                 <i class="fas fa-file-pdf me-2"></i> Emitir Cierre de Caja (PDF)
                             </a>
                         </div>
-                        <div class="table-responsive table-scroll-container">
+                        <div class="table-responsive animate__animated animate__fadeInDown">
                             <table class="table align-middle table-sm">
                                 <thead>
                                     <tr class="text-secondary small text-uppercase">
@@ -466,7 +466,7 @@
                             <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
                             <input type="text" id="search-bingos" class="form-control bg-transparent border-start-0" placeholder="Buscar bingo por título..." onkeyup="filterTable('search-bingos', 'table-bingos')">
                         </div>
-                        <div class="table-responsive table-scroll-container">
+                        <div class="table-responsive animate__animated animate__fadeInDown">
                             <table class="table align-middle table-sm" id="table-bingos">
                                 <thead>
                                     <tr class="text-muted">
@@ -539,7 +539,7 @@
                                 </div>
                                 <!-- FIN DEL NUEVO FILTRO -->
 
-                                <div class="table-responsive table-scroll-container">
+                                <div class="table-responsive animate__animated animate__fadeInDown">
                                     <table class="table table-sm align-middle" id="table-rondas" style="font-size:0.85rem;">
                                         <thead>
                                             <tr class="text-muted">
@@ -614,7 +614,7 @@
                         <div class="col-md-5">
                             <div class="card-minimalista p-4 h-100 border-start border-warning border-4">
                                 <h6 class="fw-bold text-secondary mb-3">Catálogo de Premios Físicos (`Regalo`)</h6>
-                                <div class="list-group list-group-flush table-scroll-container">
+                                <div class="list-group list-group-flush animate__animated animate__fadeInDown">
                                     {% for r in regalos %}
                                     <div class="list-group-item bg-transparent px-0 py-2 small d-flex justify-content-between align-items-center">
                                         <div>
@@ -656,7 +656,7 @@
                                 <h5 class="fw-bold mb-3">Inventario y Control (`Carton`)</h5>
                                 <p class="text-secondary small">Selecciona un cartón del catálogo para inspeccionar su estructura.</p>
                                 
-                                <div class="table-responsive table-scroll-container">
+                                <div class="table-responsive animate__animated animate__fadeInDown">
                                     <table class="table align-middle table-hover table-sm">
                                         <thead>
                                             <tr class="text-secondary small text-uppercase">
@@ -717,7 +717,7 @@
 
                     <div class="card-minimalista p-4 mb-4 border-start border-success border-4">
                         <h5 class="fw-bold mb-3">Asignación por Rondas (`CartonPartidaBingo`)</h5>
-                        <div class="table-responsive table-scroll-container">
+                        <div class="table-responsive animate__animated animate__fadeInDown">
                             <table class="table align-middle table-sm">
                                 <thead>
                                     <tr class="text-muted">
@@ -755,7 +755,7 @@
                                 <i class="fas fa-plus"></i> Integrar Plataforma
                             </button>
                         </div>
-                        <div class="table-responsive table-scroll-container">
+                        <div class="table-responsive animate__animated animate__fadeInDown">
                             <table class="table align-middle">
                                 <thead>
                                     <tr class="text-secondary small text-uppercase">
@@ -798,7 +798,7 @@
                             <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
                             <input type="text" id="search-sesiones" class="form-control bg-transparent border-start-0" placeholder="Buscar por ID, IP o dispositivo..." onkeyup="filterTable('search-sesiones', 'table-sesiones')">
                         </div>
-                        <div class="table-responsive table-scroll-container">
+                        <div class="table-responsive animate__animated animate__fadeInDown">
                             <table class="table align-middle table-sm" id="table-sesiones" style="font-size:0.8rem;">
                                 <thead>
                                     <tr class="text-muted">
@@ -831,7 +831,7 @@
                                 <i class="fas fa-plus"></i> Nueva Divisa
                             </button>
                         </div>
-                        <div class="table-responsive table-scroll-container">
+                        <div class="table-responsive animate__animated animate__fadeInDown">
                             <table class="table align-middle table-sm">
                                 <thead>
                                     <tr class="text-secondary small text-uppercase">
@@ -953,7 +953,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-danger">Modalidad (Regla de Victoria)</label>
-                            <select name="modalidad_victoria" class="form-select bg-transparent border-danger" required>
+                            <select name="modalidad_victoria" class="form-select animate__animated animate__fadeInDown border-danger" required>
                                 <option value="Tabla Llena">Tabla Llena (Cartón Completo)</option>
                                 <option value="Las Cuatro Esquinas">Las Cuatro Esquinas</option>
                                 <option value="Linea Vertical">Línea Vertical (Cualquiera)</option>

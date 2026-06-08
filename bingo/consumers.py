@@ -190,25 +190,79 @@ class BingoConsumer(AsyncWebsocketConsumer):
         except Exception:
             pass
 
+    @database_sync_to_async
+    def obtener_lista_conectados(self):
+        from .models import Jugador
+        # Consultamos los jugadores con sesión activa en esta partida específica
+        jugadores = Jugador.objects.filter(
+            sesionjuego__idpartida_id=self.id_partida,
+            sesionjuego__estadosesion='Activa'
+        ).distinct().order_by('aliasjugador')
+        
+        return [j.aliasjugador for j in jugadores]
+
 # =========================================================
 # NUEVO: CONSUMIDOR EXCLUSIVO PARA LA TIENDA DE CARTONES
 # =========================================================
 class TiendaConsumer(AsyncWebsocketConsumer):
     
     async def connect(self):
-        # 1. Atrapamos el ID del Bingo (Evento Matriz) desde la URL
-        self.id_bingo = self.scope['url_route']['kwargs']['id_bingo']
-        self.group_tienda = f'bingo_tienda_{self.id_bingo}'
+        self.id_partida = self.scope['url_route']['kwargs']['id_partida']
+        self.id_bingo = await self.obtener_id_bingo(self.id_partida)
 
-        # 2. Inscribimos el navegador del comprador al grupo de la tienda
+        if not self.id_bingo:
+            await self.close()
+            return
+
+        self.group_partida = f'bingo_partida_{self.id_partida}'
+        self.group_tienda = f'bingo_tienda_{self.id_bingo}'
+        self.group_chat = f'bingo_chat_{self.id_bingo}'
+
+        await self.channel_layer.group_add(self.group_partida, self.channel_name)
         await self.channel_layer.group_add(self.group_tienda, self.channel_name)
-        
-        # 3. Le abrimos la puerta al WebSocket (Aquí desaparece tu error 404)
+        await self.channel_layer.group_add(self.group_chat, self.channel_name)
+
         await self.accept()
 
+        cedula = self.scope["user"].username if self.scope["user"].is_authenticated else "Invitado"
+        if cedula != "Invitado":
+            self.alias_seguro = await self.registrar_conexion(cedula, self.id_partida)
+            
+            # TRANSMISIÓN: Al conectar, enviamos la lista actualizada a todos en la sala
+            if self.alias_seguro:
+                lista_usuarios = await self.obtener_lista_conectados()
+                await self.channel_layer.group_send(
+                    self.group_partida,
+                    {
+                        'type': 'evento_partida',
+                        'datos': {
+                            'evento': 'actualizacion_lista_usuarios',
+                            'usuarios': lista_usuarios
+                        }
+                    }
+                )
+
     async def disconnect(self, close_code):
-        # Cuando el comprador cierra la tienda, lo sacamos del grupo
+        cedula = self.scope["user"].username if self.scope["user"].is_authenticated else "Invitado"
+        if cedula != "Invitado":
+            await self.registrar_desconexion(cedula, self.id_partida)
+            
+            # TRANSMISIÓN: Al desconectar, recalculamos y enviamos la nueva lista
+            lista_usuarios = await self.obtener_lista_conectados()
+            await self.channel_layer.group_send(
+                self.group_partida,
+                {
+                    'type': 'evento_partida',
+                    'datos': {
+                        'evento': 'actualizacion_lista_usuarios',
+                        'usuarios': lista_usuarios
+                    }
+                }
+            )
+
+        await self.channel_layer.group_discard(self.group_partida, self.channel_name)
         await self.channel_layer.group_discard(self.group_tienda, self.channel_name)
+        await self.channel_layer.group_discard(self.group_chat, self.channel_name)
 
     # El megáfono: Recibe el grito desde views.py y se lo pasa al JavaScript
     async def evento_tienda(self, event):
