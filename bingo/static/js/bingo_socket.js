@@ -258,37 +258,5 @@ if (BINGO_VAR) {
             chatInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') enviarMensajeChat(); });
         }
     });
-    document.addEventListener('evento_partida', function(e) {
-    const datos = e.detail;
     
-    if (datos.evento === 'actualizacion_lista_usuarios') {
-        const listaContenedor = document.querySelector('.lista-jugadores-dinamica');
-        if (!listaContenedor) return;
-        
-        // Limpiamos el contenedor lateral
-        listaContenedor.innerHTML = '';
-        
-        if (datos.usuarios.length === 0) {
-            listaContenedor.innerHTML = `
-                <li class="list-group-item bg-transparent border-0 text-center text-body-secondary py-5">
-                    <i class="fas fa-ghost fs-1 mb-3 text-muted"></i><br>
-                    No hay rivales en la sala aún.
-                </li>`;
-            return;
-        }
-        
-        // Regeneramos las tarjetas de usuario dinámicamente
-        datos.usuarios.forEach(alias => {
-            const inicial = alias.charAt(0).toUpperCase();
-            listaContenedor.innerHTML += `
-                <li class="list-group-item bg-transparent text-body d-flex align-items-center py-3" data-alias="${alias}">
-                    <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-3" 
-                         style="width: 35px; height: 35px; font-weight: bold; background-color: #4F46E5;">
-                        ${inicial}
-                    </div>
-                    <span class="fw-bold">${alias}</span>
-                </li>`;
-        });
-    }
-});
 }
