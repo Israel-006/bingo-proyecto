@@ -81,14 +81,23 @@ ASGI_APPLICATION = 'django_prueba.asgi.application'
 
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/0')
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [REDIS_URL],
+# Si estamos en Render, usará el REDIS_URL. Si estás en tu PC local, usará la memoria o el localhost.
+if os.environ.get('REDIS_URL'):
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [os.environ.get('REDIS_URL')],
+            },
         },
-    },
-}
+    }
+else:
+    # Respaldo local por si pruebas en tu computadora
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer"
+        }
+    }
 
 
 # Database
