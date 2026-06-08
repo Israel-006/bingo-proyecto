@@ -3,5 +3,8 @@ nixPkgs = [
     "cairo",
     "pango",
     "glib",
-    "pkg-config"
+    "pkg-config",
+    "freetype",
+    "zlib",
+    "libjpeg"
 ]
