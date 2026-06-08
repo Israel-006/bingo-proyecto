@@ -150,3 +150,5 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 CELERY_BROKER_URL = REDIS_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+
+CSRF_TRUSTED_ORIGINS = ['https://bingo-proyecto.onrender.com']
