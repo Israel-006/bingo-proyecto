@@ -159,53 +159,61 @@ if (BINGO_VAR) {
         // ==========================================
         // LA ZONA BLINDADA: FRANCOTIRADOR DATA-ALIAS Y MATEMÁTICAS REALES
         // ==========================================
+        // ==========================================
+        // LA ZONA BLINDADA: OPCIÓN B (FOTOGRAFÍA EN TIEMPO REAL)
+        // ==========================================
         else if (payload.canal === 'presencia') {
-            const listas = document.querySelectorAll('.lista-jugadores-dinamica');
-            const contadores = document.querySelectorAll('.contador-dinamico');
-            const alias = payload.alias.trim();
+            const listaJugadores = payload.lista_jugadores;
+            const cantidad = listaJugadores.length;
+            
+            // 1. Actualizamos todos los contadores de la pantalla (Jugadores y Admin)
+            document.querySelectorAll('.contador-dinamico').forEach(c => c.textContent = cantidad);
 
-            if (payload.accion === 'entrar') {
-                listas.forEach(lista => {
-                    // Francotirador: Buscamos exactamente el elemento por su data-alias invisible
-                    let itemExistente = lista.querySelector(`li[data-alias="${alias}"]`);
+            // 2. Construimos el HTML de los jugadores desde cero (Limpieza total)
+            let htmlJugadores = '';
+            let htmlAdmin = '';
 
-                    if (itemExistente) {
-                        // Si era un fantasma a punto de borrarse, lo rescatamos
-                        if (itemExistente.classList.contains('saliendo-fantasma')) {
-                            itemExistente.classList.remove('saliendo-fantasma', 'animate__fadeOutRight');
-                            itemExistente.classList.add('animate__fadeInLeft');
-                        }
-                    } else {
-                        const vacio = lista.querySelector('.fa-ghost, .fa-user-clock');
-                        if (vacio) vacio.closest('li').remove();
-
-                        const li = document.createElement('li');
-                        li.setAttribute('data-alias', alias); // Le pegamos el rastreador al nuevo nodo
-                        
-                        // Diferenciamos el diseño si es el panel lateral o la tarjeta principal
-                        const esPanel = lista.closest('#panelSocial') !== null;
-                        li.className = esPanel 
-                            ? 'list-group-item bg-transparent text-body d-flex align-items-center py-3 animate__animated animate__fadeInLeft'
-                            : 'list-group-item d-flex align-items-center py-3 animate__animated animate__fadeInLeft';
-
-                        li.innerHTML = `
+            if (cantidad === 0) {
+                htmlJugadores = `
+                    <li class="list-group-item bg-transparent border-0 text-center text-body-secondary py-5">
+                        <i class="fas fa-ghost fs-1 mb-3 text-muted"></i><br>
+                        No hay rivales en la sala aún.
+                    </li>`;
+                htmlAdmin = `<li class="list-group-item text-center text-muted py-4"><i class="fas fa-ghost mb-2 fs-3"></i><br>Nadie en la sala</li>`;
+            } else {
+                listaJugadores.forEach(alias => {
+                    const inicial = alias.charAt(0).toUpperCase();
+                    
+                    // Diseño para el panel lateral de los Jugadores
+                    htmlJugadores += `
+                        <li class="list-group-item bg-transparent text-body d-flex align-items-center py-3 animate__animated animate__fadeIn" data-alias="${alias}">
                             <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-3 flex-shrink-0" 
                                  style="width: 35px; height: 35px; font-weight: bold; background-color: #4F46E5;">
-                                ${alias.charAt(0).toUpperCase()}
+                                ${inicial}
                             </div>
-                            <span class="fw-bold ${esPanel ? '' : 'text-secondary'} text-truncate">${alias}</span>
-                        `;
-                        lista.appendChild(li);
-                    }
+                            <span class="fw-bold text-truncate">${alias}</span>
+                        </li>`;
+                        
+                    // Diseño para el Radar del Administrador
+                    htmlAdmin += `
+                        <li class="list-group-item d-flex align-items-center py-2 animate__animated animate__fadeIn border-light" data-alias="${alias}">
+                            <i class="fas fa-user-circle text-primary me-2 fs-4"></i>
+                            <span class="fw-bold text-secondary text-truncate">${alias}</span>
+                        </li>`;
                 });
+            }
 
-                // MATEMÁTICAS REALES: En vez de "+1", contamos los nodos HTML que existen. Cero errores (NaN).
-                if (listas.length > 0) {
-                    const totalReales = listas[0].querySelectorAll('li[data-alias]:not(.saliendo-fantasma)').length;
-                    contadores.forEach(c => c.textContent = totalReales);
-                }
+            // 3. Inyectamos el HTML a la sala de los jugadores
+            document.querySelectorAll('.lista-jugadores-dinamica').forEach(lista => {
+                lista.innerHTML = htmlJugadores;
+            });
 
-            } else if (payload.accion === 'salir') {
+            // 4. Inyectamos el HTML al Radar del Administrador (¡Solucionado!)
+            const radarAdmin = document.getElementById('lista-jugadores-conectados');
+            if (radarAdmin) {
+                radarAdmin.innerHTML = htmlAdmin;
+            }
+             else if (payload.accion === 'salir') {
                 listas.forEach(lista => {
                     let itemExistente = lista.querySelector(`li[data-alias="${alias}"]`);
 

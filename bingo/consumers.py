@@ -28,12 +28,13 @@ class BingoConsumer(AsyncWebsocketConsumer):
         if cedula != "Invitado":
             self.alias_seguro = await self.registrar_conexion(cedula, self.id_partida)
             if self.alias_seguro:
+                # LA MAGIA: Tomamos la foto y la enviamos a todos
+                lista_activos = await self.obtener_lista_completa_activos()
                 await self.channel_layer.group_send(
                     self.group_partida,
                     {
                         'type': 'evento_presencia',
-                        'accion': 'entrar',
-                        'alias': self.alias_seguro
+                        'lista_jugadores': lista_activos
                     }
                 )
         else:
@@ -46,12 +47,12 @@ class BingoConsumer(AsyncWebsocketConsumer):
                 cedula = self.scope["user"].username
                 await self.registrar_desconexion(cedula, self.id_partida)
                 
+                lista_activos = await self.obtener_lista_completa_activos()
                 await self.channel_layer.group_send(
                     self.group_partida,
                     {
                         'type': 'evento_presencia',
-                        'accion': 'salir',
-                        'alias': self.alias_seguro
+                        'lista_jugadores': lista_activos
                     }
                 )
 
@@ -123,8 +124,12 @@ class BingoConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({'canal': 'tienda', 'datos': event['datos']}))
 
     # CANAL EXCLUSIVO PARA PRESENCIA
+    # CANAL EXCLUSIVO PARA PRESENCIA (Actualizado para Opción B)
     async def evento_presencia(self, event):
-        await self.send(text_data=json.dumps({'canal': 'presencia', 'accion': event['accion'], 'alias': event['alias']}))
+        await self.send(text_data=json.dumps({
+            'canal': 'presencia', 
+            'lista_jugadores': event['lista_jugadores']
+        }))
 
     @database_sync_to_async
     def obtener_id_bingo(self, id_partida):
@@ -189,17 +194,17 @@ class BingoConsumer(AsyncWebsocketConsumer):
                 MensajeChat.objects.filter(idbingo=bingo).exclude(idmensaje__in=list(ids_a_guardar)).delete()
         except Exception:
             pass
-
+        
     @database_sync_to_async
-    def obtener_lista_conectados(self):
+    def obtener_lista_completa_activos(self):
         from .models import Jugador
-        # Consultamos los jugadores con sesión activa en esta partida específica
         jugadores = Jugador.objects.filter(
             sesionjuego__idpartida_id=self.id_partida,
             sesionjuego__estadosesion='Activa'
         ).distinct().order_by('aliasjugador')
-        
         return [j.aliasjugador for j in jugadores]
+
+
 
 # =========================================================
 # NUEVO: CONSUMIDOR EXCLUSIVO PARA LA TIENDA DE CARTONES
