@@ -35,6 +35,31 @@
     
     <script src="{% static 'js/main.js' %}"></script>
     
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Seleccionamos todos los botones de ojito que existan en la página
+        const toggleButtons = document.querySelectorAll('.toggle-password-btn');
+        
+        toggleButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Buscamos el input y el icono que están pegados a este botón específico
+                const input = this.closest('.input-group').querySelector('.toggle-password-field');
+                const icon = this.querySelector('i');
+                
+                // Lógica de alternancia (Toggle)
+                if (input.type === 'password') {
+                    input.type = 'text'; // Mostramos la contraseña
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash'); // Ponemos el ojito tachado
+                } else {
+                    input.type = 'password'; // Ocultamos la contraseña
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye'); // Ponemos el ojito normal
+                }
+            });
+        });
+    });
+</script>
 
     {% block extra_js %}{% endblock %}
     {% include 'componentes/alertas.html' %} 
