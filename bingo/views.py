@@ -835,7 +835,21 @@ def desempate_admin(request, id_partida):
     }
     marcadas_requeridas = patrones.get(partida.modalidad_victoria, patrones['Tabla Llena'])
     
-    cartones_en_juego = CartonPartidaBingo.objects.filter(idpartida=partida).select_related('idcarton', 'idjugador')
+    # =========================================================
+    # FIX: FILTRO DE JUGADORES CONECTADOS EN TIEMPO REAL
+    # =========================================================
+    # 1. Obtenemos los IDs de los jugadores que tienen la pestaña del juego abierta ahora mismo
+    jugadores_conectados_ids = Jugador.objects.filter(
+        sesionjuego__idpartida=partida,
+        sesionjuego__estadosesion='Activa'
+    ).values_list('idjugador', flat=True)
+    
+    # 2. El Radar solo escanea los cartones de las personas que están conectadas
+    cartones_en_juego = CartonPartidaBingo.objects.filter(
+        idpartida=partida,
+        idjugador__in=jugadores_conectados_ids
+    ).select_related('idcarton', 'idjugador')
+    # =========================================================
     ganadores_web = []
     
     for c in cartones_en_juego:
@@ -1063,7 +1077,21 @@ def consola_juego(request, id_partida):
     }
     marcadas_requeridas = patrones.get(partida.modalidad_victoria, patrones['Tabla Llena'])
     
-    cartones_en_juego = CartonPartidaBingo.objects.filter(idpartida=partida).select_related('idcarton', 'idjugador')
+    # =========================================================
+    # FIX: FILTRO DE JUGADORES CONECTADOS EN TIEMPO REAL
+    # =========================================================
+    # 1. Obtenemos los IDs de los jugadores que tienen la pestaña del juego abierta ahora mismo
+    jugadores_conectados_ids = Jugador.objects.filter(
+        sesionjuego__idpartida=partida,
+        sesionjuego__estadosesion='Activa'
+    ).values_list('idjugador', flat=True)
+    
+    # 2. El Radar solo escanea los cartones de las personas que están conectadas
+    cartones_en_juego = CartonPartidaBingo.objects.filter(
+        idpartida=partida,
+        idjugador__in=jugadores_conectados_ids
+    ).select_related('idcarton', 'idjugador')
+    # =========================================================
     ganadores_web = []
     
     for c in cartones_en_juego:
