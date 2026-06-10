@@ -36,7 +36,6 @@ if (BINGO_VAR) {
                 }
             }
             // 3. NUEVO: ALERTA GLOBAL DEL ADMINISTRADOR (TIPO TOAST EMERGENTE)
-            // 3. NUEVO: ALERTA GLOBAL DEL ADMINISTRADOR (TIPO TOAST EMERGENTE)
             else if (payload.datos.evento === 'alerta_admin') {
                 
                 // DETECTOR: Si existe el input del admin en la pantalla, significa que SOY el admin.
@@ -157,9 +156,6 @@ if (BINGO_VAR) {
             }
         }
         // ==========================================
-        // LA ZONA BLINDADA: FRANCOTIRADOR DATA-ALIAS Y MATEMÁTICAS REALES
-        // ==========================================
-        // ==========================================
         // LA ZONA BLINDADA: OPCIÓN B (FOTOGRAFÍA EN TIEMPO REAL)
         // ==========================================
         else if (payload.canal === 'presencia') {
@@ -212,40 +208,6 @@ if (BINGO_VAR) {
             const radarAdmin = document.getElementById('lista-jugadores-conectados');
             if (radarAdmin) {
                 radarAdmin.innerHTML = htmlAdmin;
-            }
-             else if (payload.accion === 'salir') {
-                listas.forEach(lista => {
-                    let itemExistente = lista.querySelector(`li[data-alias="${alias}"]`);
-
-                    if (itemExistente && !itemExistente.classList.contains('saliendo-fantasma')) {
-                        itemExistente.classList.add('saliendo-fantasma', 'animate__fadeOutRight');
-                        itemExistente.classList.remove('animate__fadeInLeft');
-                        
-                        setTimeout(() => {
-                            if (itemExistente.classList.contains('saliendo-fantasma')) {
-                                itemExistente.remove();
-                                
-                                // Volvemos a contar la realidad del HTML
-                                const totalReales = lista.querySelectorAll('li[data-alias]:not(.saliendo-fantasma)').length;
-                                contadores.forEach(c => c.textContent = totalReales);
-                                
-                                // Si no queda nadie, ponemos el mensaje de vacío correspondiente
-                                if (totalReales === 0 && !lista.querySelector('.fa-ghost, .fa-user-clock')) {
-                                    const esPanel = lista.closest('#panelSocial') !== null;
-                                    lista.innerHTML = esPanel
-                                        ? `<li class="list-group-item bg-transparent border-0 text-center text-body-secondary py-5">
-                                            <i class="fas fa-ghost fs-1 mb-3 text-muted"></i><br>
-                                            No hay rivales en la sala aún.
-                                           </li>`
-                                        : `<li class="list-group-item text-center text-muted py-4">
-                                            <i class="fas fa-user-clock mb-2 fs-3 animate__animated animate__fadeInDown"></i><br>
-                                            Eres el primero en llegar.
-                                           </li>`;
-                                }
-                            }
-                        }, 1000); // 1 segundo de gracia
-                    }
-                });
             }
         }
         
