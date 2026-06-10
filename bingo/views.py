@@ -253,6 +253,69 @@ def dashboard(request):
         except Exception as e:
             messages.error(request, f"Error en la operación: {str(e)}")
         return redirect('dashboard')
+    # ====================================================================
+    # INSERCIÓN SEGURA: MOTOR ESTADÍSTICO PARA EL DASHBOARD
+    # ====================================================================
+    hoy = timezone.now()
+    ayer = hoy - timedelta(days=1)
+    inicio_semana = hoy - timedelta(days=hoy.weekday())
+    inicio_mes = hoy.replace(day=1)
+    inicio_anio = hoy.replace(month=1, day=1)
+    
+    datos_graficos = {
+        'hoy': {'socios': 0, 'jugadores': 0, 'ganancias': 0},
+        'ayer': {'socios': 0, 'jugadores': 0, 'ganancias': 0},
+        'semana': {'socios': 0, 'jugadores': 0, 'ganancias': 0},
+        'mes': {'socios': 0, 'jugadores': 0, 'ganancias': 0},
+        'anio': {'socios': 0, 'jugadores': 0, 'ganancias': 0},
+    }
+
+    # 1. Procesar Ganancias Reales (Cartones comprados)
+    cartones_db = CartonPartidaBingo.objects.all()
+    for c in cartones_db:
+        if c.fechacompra:
+            fecha = c.fechacompra.date()
+            monto = float(c.preciopagado or 0)
+            if fecha == hoy.date(): datos_graficos['hoy']['ganancias'] += monto
+            if fecha == ayer.date(): datos_graficos['ayer']['ganancias'] += monto
+            if fecha >= inicio_semana.date(): datos_graficos['semana']['ganancias'] += monto
+            if fecha >= inicio_mes.date(): datos_graficos['mes']['ganancias'] += monto
+            if fecha >= inicio_anio.date(): datos_graficos['anio']['ganancias'] += monto
+
+    # 2. Procesar Socios Registrados
+    socios_db = Socio.objects.select_related('idusuario').all()
+    for s in socios_db:
+        try:
+            fecha = s.idusuario.date_joined.date() if (hasattr(s, 'idusuario') and s.idusuario) else None
+        except:
+            fecha = None
+            
+        if fecha:
+            if fecha == hoy.date(): datos_graficos['hoy']['socios'] += 1
+            if fecha == ayer.date(): datos_graficos['ayer']['socios'] += 1
+            if fecha >= inicio_semana.date(): datos_graficos['semana']['socios'] += 1
+            if fecha >= inicio_mes.date(): datos_graficos['mes']['socios'] += 1
+            if fecha >= inicio_anio.date(): datos_graficos['anio']['socios'] += 1
+        else:
+            for k in datos_graficos: datos_graficos[k]['socios'] += 1
+
+    # 3. Procesar Jugadores
+    jugadores_db = Jugador.objects.all()
+    for j in jugadores_db:
+        try:
+            fecha = j.idusuario.date_joined.date() if (hasattr(j, 'idusuario') and j.idusuario) else None
+        except:
+            fecha = None
+            
+        if fecha:
+            if fecha == hoy.date(): datos_graficos['hoy']['jugadores'] += 1
+            if fecha == ayer.date(): datos_graficos['ayer']['jugadores'] += 1
+            if fecha >= inicio_semana.date(): datos_graficos['semana']['jugadores'] += 1
+            if fecha >= inicio_mes.date(): datos_graficos['mes']['jugadores'] += 1
+            if fecha >= inicio_anio.date(): datos_graficos['anio']['jugadores'] += 1
+        else:
+            for k in datos_graficos: datos_graficos[k]['jugadores'] += 1
+    # ====================================================================
 
     contexto = {
         'total_socios': Socio.objects.count(), 'total_jugadores': Jugador.objects.count(), 'deuda_calle': Prestamo.objects.exclude(estadoprestamo='Liquidado').aggregate(total=Sum('saldopendiente'))['total'] or 0.00,
@@ -271,6 +334,9 @@ def dashboard(request):
     }
     # Agrega esto al final de tus variables de contexto
     contexto['bingos_con_pozo'] = list(PartidaBingo.objects.filter(premiomaterial='[POZO_MAYOR]').values_list('idbingo_id', flat=True))
+
+    # NUEVO: Le mandamos la información empaquetada en JSON al gráfico del HTML
+    contexto['datos_graficos_json'] = json.dumps(datos_graficos)
     
     return render(request, 'administrador/dashboard.html', contexto)
 
