@@ -77,11 +77,10 @@
         <div class="col-12 col-lg-9">
             <div class="tab-content" id="v-pills-tabContent">
 
-                <div class="tab-pane fade show active" id="mod-dashboard" role="tabpanel">
+                <div class="tab-pane fade" id="mod-dashboard" role="tabpanel">
                     <div class="card-minimalista p-4 mb-4 border-start border-warning border-4">
                         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                             <h5 class="fw-bold mb-0 text-body"><i class="fas fa-chart-simple text-primary me-2"></i> Análisis de Crecimiento y Ganancias</h5>
-                            
                             <select id="filtro-tiempo" class="form-select form-select-sm w-auto bg-body text-body border-secondary-subtle fw-bold shadow-sm">
                                 <option value="anio">Este Año</option>
                                 <option value="mes" selected>Este Mes</option>
@@ -90,11 +89,11 @@
                                 <option value="hoy">Hoy</option>
                             </select>
                         </div>
-                        <div class="position-relative w-100" style="height: 350px;">
-                            <canvas id="graficoRendimiento"></canvas>
-                        </div>
+                    <div class="position-relative w-100" style="height: 350px;">
+                        <canvas id="graficoRendimiento"></canvas>
                     </div>
                 </div>
+            </div>
                 
                 <div class="tab-pane fade show active" id="mod-comunidad" role="tabpanel">
                     
@@ -1735,94 +1734,54 @@
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Asegurarnos de que el canvas existe antes de intentar dibujar
         const canvas = document.getElementById('graficoRendimiento');
         if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
         const selectorTiempo = document.getElementById('filtro-tiempo');
         
-        // Obtenemos los datos inyectados desde views.py
         let datosBackend = {};
         try {
             datosBackend = JSON.parse('{{ datos_graficos_json|safe }}');
         } catch(e) {
-            console.error("No se recibieron datos de views.py aún.");
-            return; // Detenemos si no hay datos (evita errores blancos)
+            console.error("No hay datos JSON");
+            return;
         }
         
-        // Magia para el Modo Oscuro: El gráfico lee el color del texto del body
         const colorTexto = getComputedStyle(document.documentElement).getPropertyValue('--bs-body-color') || '#6c757d';
-        const colorGrilla = 'rgba(108, 117, 125, 0.1)';
-
+        
         let miGrafico = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Socios Registrados', 'Jugadores Activos', 'Ganancias (Ventas $)'],
+                labels: ['Socios', 'Jugadores', 'Ganancias ($)'],
                 datasets: [{
-                    label: 'Resultados',
-                    data: [0, 0, 0], // Arranca en cero, se llena con la función de abajo
-                    backgroundColor: [
-                        'rgba(13, 110, 253, 0.85)',   // Azul
-                        'rgba(25, 135, 84, 0.85)',    // Verde
-                        'rgba(255, 193, 7, 0.85)'     // Amarillo
-                    ],
-                    borderColor: [
-                        'rgb(13, 110, 253)',
-                        'rgb(25, 135, 84)',
-                        'rgb(255, 193, 7)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8,       // Puntas redondeadas
-                    barPercentage: 0.5,    // Espacio entre barras
-                    categoryPercentage: 0.8
+                    label: 'Métricas',
+                    data: [0, 0, 0],
+                    backgroundColor: ['rgba(13, 110, 253, 0.85)', 'rgba(25, 135, 84, 0.85)', 'rgba(255, 193, 7, 0.85)'],
+                    borderRadius: 8,
+                    barPercentage: 0.5
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false, // Fundamental para celulares
-                plugins: {
-                    legend: { display: false }, 
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let valor = context.raw;
-                                if (context.dataIndex === 2) return '$' + valor.toFixed(2);
-                                return valor + ' Usuarios';
-                            }
-                        }
-                    }
-                },
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: colorGrilla, drawBorder: false },
-                        ticks: { color: colorTexto, font: {weight: '500'} }
-                    },
-                    x: {
-                        grid: { display: false, drawBorder: false },
-                        ticks: { color: colorTexto, font: { weight: 'bold' } }
-                    }
+                    y: { ticks: { color: colorTexto } },
+                    x: { ticks: { color: colorTexto } }
                 }
             }
         });
 
-        // Función que redibuja todo al cambiar el filtro
         function actualizarGrafico(rango) {
             if(!datosBackend[rango]) return;
-            const data = datosBackend[rango];
-            miGrafico.data.datasets[0].data = [data.socios, data.jugadores, data.ganancias];
+            miGrafico.data.datasets[0].data = [datosBackend[rango].socios, datosBackend[rango].jugadores, datosBackend[rango].ganancias];
             miGrafico.update();
         }
 
-        selectorTiempo.addEventListener('change', function() {
-            actualizarGrafico(this.value);
-        });
-
-        // Disparo inicial con el valor que tenga el select
+        selectorTiempo.addEventListener('change', function() { actualizarGrafico(this.value); });
         actualizarGrafico(selectorTiempo.value);
     });
 </script>

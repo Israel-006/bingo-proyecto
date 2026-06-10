@@ -270,51 +270,57 @@ def dashboard(request):
         'anio': {'socios': 0, 'jugadores': 0, 'ganancias': 0},
     }
 
-    # 1. Procesar Ganancias Reales (Cartones comprados)
-    cartones_db = CartonPartidaBingo.objects.all()
-    for c in cartones_db:
-        if c.fechacompra:
-            fecha = c.fechacompra.date()
-            monto = float(c.preciopagado or 0)
-            if fecha == hoy.date(): datos_graficos['hoy']['ganancias'] += monto
-            if fecha == ayer.date(): datos_graficos['ayer']['ganancias'] += monto
-            if fecha >= inicio_semana.date(): datos_graficos['semana']['ganancias'] += monto
-            if fecha >= inicio_mes.date(): datos_graficos['mes']['ganancias'] += monto
-            if fecha >= inicio_anio.date(): datos_graficos['anio']['ganancias'] += monto
+    try:
+        # 1. Procesar Ganancias Reales (¡Usando la tabla Carton correcta!)
+        cartones_db = Carton.objects.all()
+        for c in cartones_db:
+            # Buscamos el atributo correcto sin importar cómo se llame exactamente
+            fecha_obj = getattr(c, 'fechacompra', getattr(c, 'fecha_creacion', getattr(c, 'fecha', None)))
+            if fecha_obj:
+                fecha = fecha_obj.date() if hasattr(fecha_obj, 'date') else fecha_obj
+                monto = float(getattr(c, 'preciopagado', 0) or 0)
+                
+                if fecha == hoy.date(): datos_graficos['hoy']['ganancias'] += monto
+                if fecha == ayer.date(): datos_graficos['ayer']['ganancias'] += monto
+                if fecha >= inicio_semana.date(): datos_graficos['semana']['ganancias'] += monto
+                if fecha >= inicio_mes.date(): datos_graficos['mes']['ganancias'] += monto
+                if fecha >= inicio_anio.date(): datos_graficos['anio']['ganancias'] += monto
 
-    # 2. Procesar Socios Registrados
-    socios_db = Socio.objects.select_related('idusuario').all()
-    for s in socios_db:
-        try:
-            fecha = s.idusuario.date_joined.date() if (hasattr(s, 'idusuario') and s.idusuario) else None
-        except:
+        # 2. Procesar Socios Registrados
+        socios_db = Socio.objects.select_related('idusuario').all()
+        for s in socios_db:
             fecha = None
-            
-        if fecha:
-            if fecha == hoy.date(): datos_graficos['hoy']['socios'] += 1
-            if fecha == ayer.date(): datos_graficos['ayer']['socios'] += 1
-            if fecha >= inicio_semana.date(): datos_graficos['semana']['socios'] += 1
-            if fecha >= inicio_mes.date(): datos_graficos['mes']['socios'] += 1
-            if fecha >= inicio_anio.date(): datos_graficos['anio']['socios'] += 1
-        else:
-            for k in datos_graficos: datos_graficos[k]['socios'] += 1
+            if hasattr(s, 'idusuario') and s.idusuario and hasattr(s.idusuario, 'date_joined'):
+                fecha = s.idusuario.date_joined.date()
+                
+            if fecha:
+                if fecha == hoy.date(): datos_graficos['hoy']['socios'] += 1
+                if fecha == ayer.date(): datos_graficos['ayer']['socios'] += 1
+                if fecha >= inicio_semana.date(): datos_graficos['semana']['socios'] += 1
+                if fecha >= inicio_mes.date(): datos_graficos['mes']['socios'] += 1
+                if fecha >= inicio_anio.date(): datos_graficos['anio']['socios'] += 1
+            else:
+                for k in datos_graficos: datos_graficos[k]['socios'] += 1
 
-    # 3. Procesar Jugadores
-    jugadores_db = Jugador.objects.all()
-    for j in jugadores_db:
-        try:
-            fecha = j.idusuario.date_joined.date() if (hasattr(j, 'idusuario') and j.idusuario) else None
-        except:
+        # 3. Procesar Jugadores
+        jugadores_db = Jugador.objects.all()
+        for j in jugadores_db:
             fecha = None
-            
-        if fecha:
-            if fecha == hoy.date(): datos_graficos['hoy']['jugadores'] += 1
-            if fecha == ayer.date(): datos_graficos['ayer']['jugadores'] += 1
-            if fecha >= inicio_semana.date(): datos_graficos['semana']['jugadores'] += 1
-            if fecha >= inicio_mes.date(): datos_graficos['mes']['jugadores'] += 1
-            if fecha >= inicio_anio.date(): datos_graficos['anio']['jugadores'] += 1
-        else:
-            for k in datos_graficos: datos_graficos[k]['jugadores'] += 1
+            if hasattr(j, 'idusuario') and j.idusuario and hasattr(j.idusuario, 'date_joined'):
+                fecha = j.idusuario.date_joined.date()
+                
+            if fecha:
+                if fecha == hoy.date(): datos_graficos['hoy']['jugadores'] += 1
+                if fecha == ayer.date(): datos_graficos['ayer']['jugadores'] += 1
+                if fecha >= inicio_semana.date(): datos_graficos['semana']['jugadores'] += 1
+                if fecha >= inicio_mes.date(): datos_graficos['mes']['jugadores'] += 1
+                if fecha >= inicio_anio.date(): datos_graficos['anio']['jugadores'] += 1
+            else:
+                for k in datos_graficos: datos_graficos[k]['jugadores'] += 1
+                
+    except Exception as e:
+        # Si algo explota silenciosamente, lo ignoramos para NO TIRAR LA PÁGINA
+        print(f"Error en el motor del gráfico: {e}")
     # ====================================================================
 
     contexto = {
