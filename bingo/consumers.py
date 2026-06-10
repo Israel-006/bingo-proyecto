@@ -165,7 +165,11 @@ class BingoConsumer(AsyncWebsocketConsumer):
                 estadosesion='Activa', navegadorweb='Socket de Juego', tokenconexion=str(uuid.uuid4())
             )
             return jugador.aliasjugador
-        except Exception:
+        except Exception as e:
+            # Le quitamos la mordaza al error para que lo imprima en Render
+            import traceback
+            print(f"🚨 ERROR CRÍTICO EN REGISTRO DE WEBSOCKET: {e}")
+            traceback.print_exc()
             return None
 
     @database_sync_to_async
@@ -177,7 +181,10 @@ class BingoConsumer(AsyncWebsocketConsumer):
             SesionJuego.objects.filter(idjugador=jugador, idpartida_id=id_partida, estadosesion='Activa').update(
                 estadosesion='Finalizada', fechafinsesion=timezone.now(), motivocierre='Salió de la Sala'
             )
-        except Exception:
+        except Exception as e:
+            import traceback
+            print(f"🚨 ERROR CRÍTICO EN DESCONEXIÓN DE WEBSOCKET: {e}")
+            traceback.print_exc()
             pass
 
     @database_sync_to_async
