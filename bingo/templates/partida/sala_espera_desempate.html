@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container py-5 text-center" style="max-width: 650px;">
     
-    <div id="pantalla-espera" class="card-minimalista p-5 shadow-lg border-top border-warning border-4 bg-white">
+    <div id="pantalla-espera" class="card-minimalista p-5 shadow-lg border-top border-warning border-4 bg-body">
         
         <div class="mb-4 position-relative d-inline-block">
             <div class="spinner-border text-warning" role="status" style="width: 5rem; height: 5rem; border-width: 0.4rem;">
@@ -15,21 +15,21 @@
             </div>
         </div>
 
-        <h3 class="fw-block text-dark fw-bold mb-2">¡BINGO RECLAMADO!</h3>
+        <h3 class="fw-block text-body fw-bold mb-2">¡BINGO RECLAMADO!</h3>
         <p class="text-secondary px-3">El juego ha sido pausado momentáneamente. El administrador se encuentra auditando los códigos de los cartones recibidos en la mesa de control.</p>
         
-        <div class="bg-light p-3 rounded border text-start my-4">
-            <div class="d-flex justify-content-between small text-black mb-1">
+        <div class="bg-body-tertiary p-3 rounded border text-start my-4">
+            <div class="d-flex justify-content-between small text-body mb-1">
                 <span>Ronda Activa:</span>
-                <span class="fw-bold text-dark">{{ partida.nombreronda }}</span>
+                <span class="fw-bold text-body">{{ partida.nombreronda }}</span>
             </div>
-            <div class="d-flex justify-content-between small text-black">
+            <div class="d-flex justify-content-between small text-body">
                 <span>Estado de Auditoría:</span>
                 <span id="txt-estado-flujo" class="badge bg-danger animate__animated animate__flash animate__infinite">Verificando Cartones</span>
             </div>
         </div>
 
-        <p class="text-black small mb-0"><i class="fas fa-sync fa-spin me-2"></i>Tu pantalla se actualizará automáticamente en cuanto se valide el resultado.</p>
+        <p class="text-body small mb-0"><i class="fas fa-sync fa-spin me-2"></i>Tu pantalla se actualizará automáticamente en cuanto se valide el resultado.</p>
     </div>
 
     <div id="pantalla-ganador" class="card-minimalista p-5 shadow-lg border-0 bg-dark text-white text-center" style="display: none; background: radial-gradient(circle, #2c3e50 0%, #0f172a 100%);">

@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4 bg-light min-vh-100">
+<div class="container-fluid py-4 bg-body-tertiary min-vh-100">
 
     {% include 'componentes/panel_social.html' %}
     <div id="zona-notificaciones-bingo" class="position-fixed top-0 start-50 translate-middle-x mt-4" style="z-index: 1060; width: 95%; max-width: 400px; pointer-events: none;"></div>
@@ -37,7 +37,7 @@
                     </div>
                     <div class="text-center">
                         <span class="d-block small animate__animated animate__fadeInDown mb-1 fw-bold text-muted">Última Bola</span>
-                        <div id="display-ultima-bola" class="display-ultima-bola bg-white text-dark rounded-circle d-flex justify-content-center align-items-center shadow-lg border border-4 border-warning mx-auto">
+                        <div id="display-ultima-bola" class="display-ultima-bola bg-body text-body rounded-circle d-flex justify-content-center align-items-center shadow-lg border border-4 border-warning mx-auto">
                             {{ partida.ultimabola|default:"--" }}
                         </div>
                     </div>
@@ -52,15 +52,15 @@
         <!-- CABECERA RESPONSIVA CON EL ROBOT DE AUTO-MARCADO -->
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-3 border-bottom pb-3 gap-3">
             <div>
-                <h5 class="fw-bold text-dark mb-1"><i class="fas fa-ticket-alt text-primary me-2"></i>Mis Cartones en Juego</h5>
+                <h5 class="fw-bold text-body mb-1"><i class="fas fa-ticket-alt text-primary me-2"></i>Mis Cartones en Juego</h5>
                 <span class="badge bg-primary rounded-pill fs-6">{{ cartones_asignados|length }} Cartones</span>
             </div>
             
             <!-- EL INTERRUPTOR MÁGICO -->
             <div class="form-check form-switch bg-indigo bg-opacity-10 border border-indigo border-opacity-25 rounded-pill px-4 py-2 shadow-sm" style="padding-left: 3rem !important;">
                 <input class="form-check-input cursor-pointer" type="checkbox" id="switch-automarcado" style="width: 2.2rem; height: 1.2rem; margin-left: -2.5rem;">
-                <label class="form-check-label fw-bold animate__animated animate__fadeInDown ms-2" for="switch-automarcado" style="cursor: pointer;">
-                    <i class="fas fa-robot me-1"></i> Piloto Automático
+                <label class="form-check-label text-body fw-bold animate__animated animate__fadeInDown ms-2" for="switch-automarcado" style="cursor: pointer;">
+                    <i class="fas fa-robot text-indigo me-1"></i> Piloto Automático
                 </label>
             </div>
         </div>
@@ -307,10 +307,12 @@
             celdas.forEach(celda => {
                 if (marcadasGuardadas.includes(numero.toString())) {
                     celda.classList.add('celda-marcada');
+                    // La estrella de fondo se queda oscura porque el número es blanco puro. Está perfecto.
                     celda.innerHTML = `<i class="fas fa-star position-absolute text-dark opacity-25" style="font-size: 1.5rem; top: 50%; left: 50%; transform: translate(-50%, -50%);"></i><span class="position-relative z-1 fw-bold text-white fs-5">${numero}</span>`;
                 } else {
                     celda.classList.add('celda-pista', 'animacion-latido-pista');
-                    celda.innerHTML = `<span class="position-relative z-1 fw-bold text-dark fs-5">${numero}</span>`;
+                    // FIX: Cambiamos text-dark por text-body para que el número no se vuelva invisible en Modo Oscuro al recargar la página
+                    celda.innerHTML = `<span class="position-relative z-1 fw-bold text-body fs-5">${numero}</span>`;
                 }
             });
         });
@@ -392,14 +394,14 @@
         } else if (datos.evento === 'estado_cambiado') {
             if (datos.nuevo_estado === 'Verificando') {
                 const divPausa = document.createElement('div');
-                divPausa.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95);z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;";
-                divPausa.innerHTML = '<div class="text-center px-4 w-100"><div class="spinner-border text-danger mb-3" style="width:4rem;height:4rem;"></div><h2 class="fw-bold text-dark display-5">¡Juego Pausado!</h2><p class="text-muted fs-5">Auditoría de cartones en curso...</p></div>';
+                divPausa.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background-color:var(--bs-body-bg);z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;";
+                divPausa.innerHTML = '<div class="text-center px-4 w-100"><div class="spinner-border text-danger mb-3" style="width:4rem;height:4rem;"></div><h2 class="fw-bold text-body display-5">¡Juego Pausado!</h2><p class="text-muted fs-5">Auditoría de cartones en curso...</p></div>';
                 document.body.appendChild(divPausa);
                 
             } else if (datos.nuevo_estado === 'Desempate') {
                 const divPausa = document.createElement('div');
-                divPausa.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95);z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;";
-                divPausa.innerHTML = '<div class="text-center px-4 w-100"><div class="spinner-border text-warning mb-3" style="width:4rem;height:4rem;"></div><h2 class="fw-bold text-dark display-5">Preparando Desempate...</h2><p class="text-muted fs-5">Por favor, aguarda en la sala de espera...</p></div>';
+                divPausa.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background-color:var(--bs-body-bg);z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;";
+                divPausa.innerHTML = '<div class="text-center px-4 w-100"><div class="spinner-border text-warning mb-3" style="width:4rem;height:4rem;"></div><h2 class="fw-bold text-body display-5">Preparando Desempate...</h2><p class="text-muted fs-5">Por favor, aguarda en la sala de espera...</p></div>';
                 document.body.appendChild(divPausa);
                 
                 setTimeout(() => {
@@ -418,11 +420,11 @@
                     : '<div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div>';
                 
                 const divPausa = document.createElement('div');
-                divPausa.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95);z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;";
+                divPausa.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background-color:var(--bs-body-bg);z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;";
                 divPausa.innerHTML = `
                     <div class="text-center px-4 w-100">
                         <i class="fas fa-crown text-warning mb-3 animate__animated animate__bounceIn" style="font-size: clamp(4rem, 10vw, 6rem);"></i>
-                        <h1 class="fw-black text-dark mb-2 display-5">¡Ronda Finalizada!</h1>
+                        <h1 class="fw-black text-body mb-2 display-5">¡Ronda Finalizada!</h1>
                         <h3 class="text-secondary mb-4 fs-4">Ganador: <span class="text-success fw-bold text-break">${ganadorNombre}</span></h3>
                         ${iconoCentral}
                         <p class="text-muted mt-4 fw-bold fs-5">${mensajeDespedida}</p>

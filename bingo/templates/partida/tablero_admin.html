@@ -23,7 +23,7 @@
     }
     
     /* Estado: No ha salido */
-    .ball-pending { background-color: #e9ecef; color: #adb5bd; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.1); }
+    .ball-pending { background-color: var(--bs-secondary-bg); color: var(--bs-secondary-color); border: 1px solid var(--bs-border-color); box-shadow: inset 1px 1px 3px rgba(0,0,0,0.1); }
     
     /* Estado: Ya salió (DISEÑO ROSADO UNIFICADO) */
     .ball-called { 
@@ -92,13 +92,20 @@
         <div class="col-lg-3">
             <div class="card-minimalista p-3 p-md-4 shadow-sm h-100 border-top border-indigo border-4">
                 <h5 class="fw-bold mb-3 text-center"><i class="fas fa-cogs text-indigo me-2"></i>Control</h5>
-                <div class="bg-light p-2 rounded mb-3 text-center border">
+                <div class="bg-body-tertiary p-2 rounded mb-3 text-center border">
                     <span class="d-block text-secondary small fw-bold text-uppercase">Ronda Actual</span>
-                    <h5 class="fw-bold text-dark mb-0 text-truncate">{{ partida.nombreronda }}</h5>
+                    <h5 class="fw-bold text-body mb-0 text-truncate">{{ partida.nombreronda }}</h5>
                 </div>
                 
-                <button class="btn btn-indigo w-100 fw-bold py-3 mb-3 shadow" onclick="sacarSiguienteBola()">
-                    <i class="fas fa-random me-2"></i> SACAR BOLA
+                <div class="form-check form-switch bg-warning bg-opacity-10 border border-warning rounded p-3 mb-3 d-flex justify-content-between align-items-center shadow-sm">
+                    <label class="form-check-label fw-bold text-body m-0" for="switchAutoDraw" style="cursor: pointer;">
+                        <i class="fas fa-robot text-warning me-2"></i> Piloto Automático (5s)
+                    </label>
+                    <input class="form-check-input fs-4 m-0" type="checkbox" role="switch" id="switchAutoDraw" onchange="toggleAutoDraw(this)" style="cursor: pointer;">
+                </div>
+
+                <button id="btn-sacar-bola" class="btn btn-indigo w-100 fw-bold py-3 mb-3 shadow" onclick="sacarSiguienteBola()">
+                    <i class="fas fa-random me-2"></i> SACAR BOLA MANUAL
                 </button>
 
                 <div class="text-center mb-3">
@@ -232,6 +239,42 @@
 
 {% if partida.estadopartida == 'En Juego' %}
 <script>
+    // =========================================================
+    // MOTOR DE PILOTO AUTOMÁTICO
+    // =========================================================
+    let autoDrawInterval = null;
+
+    function toggleAutoDraw(switchElement) {
+        const btnManual = document.getElementById('btn-sacar-bola');
+        
+        if (switchElement.checked) {
+            // MODO ON: Bloqueamos botón manual, avisamos al admin y encendemos el motor (5000 ms = 5s)
+            btnManual.disabled = true;
+            btnManual.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> EXTRACCIÓN AUTOMÁTICA...';
+            
+            // Sacamos la primera bola al instante para no hacer esperar 5s la primera vez
+            sacarSiguienteBola(); 
+            // Arrancamos el bucle
+            autoDrawInterval = setInterval(sacarSiguienteBola, 5000);
+        } else {
+            // MODO OFF: Destruimos el temporizador y devolvemos el control manual
+            clearInterval(autoDrawInterval);
+            autoDrawInterval = null;
+            btnManual.disabled = false;
+            btnManual.innerHTML = '<i class="fas fa-random me-2"></i> SACAR BOLA MANUAL';
+        }
+    }
+
+    // El Freno de Emergencia
+    function apagarPilotoAutomatico() {
+        const switchAuto = document.getElementById('switchAutoDraw');
+        if (switchAuto && switchAuto.checked) {
+            switchAuto.checked = false; // Bajamos el switch visualmente
+            toggleAutoDraw(switchAuto); // Ejecutamos la función de apagado
+        }
+    }
+    // =========================================================
+
     function sacarSiguienteBola() {
         fetch("{% url 'sacar_bola_api' id_partida=partida.idpartidabingo %}", {
             method: 'POST',
@@ -248,6 +291,14 @@
     document.addEventListener('evento_partida', function(e) {
         const datos = e.detail;
         
+        // -------------------------------------------------------------
+        // FRENO INSTANTÁNEO SI ALGUIEN GRITA BINGO O SE PAUSA LA SALA
+        // -------------------------------------------------------------
+        if (datos.evento === 'bingo_reclamado' || 
+           (datos.evento === 'estado_cambiado' && (datos.nuevo_estado === 'Pausada' || datos.nuevo_estado === 'Finalizada'))) {
+            apagarPilotoAutomatico();
+        }
+
         if (datos.evento === 'nueva_bola') {
             const numero = datos.numero;
 

@@ -69,7 +69,7 @@
             <div class="card bg-warning bg-opacity-10 border border-warning rounded-4 mb-4 shadow-sm">
                 <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                     <div>
-                        <h5 class="fw-bold text-dark mb-1"><i class="fas fa-crown text-warning me-2"></i> Desbloquea todo el potencial de CoopBingo</h5>
+                        <h5 class="fw-bold text-body mb-1"><i class="fas fa-crown text-warning me-2"></i> Desbloquea todo el potencial de CoopBingo</h5>
                         <p class="text-secondary small mb-0">Conviértete en Socio para acceder a créditos y ahorros. ¡Tus datos básicos se sincronizarán automáticamente!</p>
                     </div>
                     <button class="btn btn-warning fw-bold text-dark px-4 flex-shrink-0" data-bs-toggle="modal" data-bs-target="#modalAscensoSocio">
@@ -253,7 +253,7 @@
                                                         <td>{{ a.tipoahorro }}</td>
                                                         <td class="text-success fw-bold">+${{ a.montoahorro }}</td>
                                                         <td class="text-muted">{{ a.fechaahorro|date:"d/m/y" }}</td>
-                                                        <td><span class="badge text-bg-light border">{{ a.estadoahorro }}</span></td>
+                                                        <td><span class="badge bg-body-secondary text-body border">{{ a.estadoahorro }}</span></td>
                                                     </tr>
                                                     {% empty %}
                                                     <tr><td colspan="4" class="text-center text-muted py-3">Sin registros de ahorros recientes.</td></tr>
@@ -289,7 +289,7 @@
                                                         <td class="font-monospace text-muted">#{{ p.idprestamo }}</td>
                                                         <td class="fw-semibold">${{ p.montoprestamosolicitado }}</td>
                                                         <td class="text-danger fw-bold">${{ p.saldopendiente }}</td>
-                                                        <td><span class="badge text-bg-light border">{{ p.estadoprestamo }}</span></td>
+                                                        <td><span class="badge bg-body-secondary text-body border">{{ p.estadoprestamo }}</span></td>
                                                     </tr>
                                                     {% empty %}
                                                     <tr><td colspan="4" class="text-center text-muted py-3">No tienes préstamos activos en tu cuenta.</td></tr>
@@ -373,7 +373,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-0 mt-3">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn bg-body-tertiary text-body border" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-warning fw-bold text-dark">Confirmar Registro Legal</button>
                 </div>
             </form>

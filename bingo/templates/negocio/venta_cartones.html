@@ -114,7 +114,7 @@
                                 </div>
 
                                 <div class="tab-pane fade" id="tab-cat-{{ item.bingo.idbingo }}">
-                                    <div class="vitrina-scroll p-2 bg-light border rounded">
+                                    <div class="vitrina-scroll p-2 bg-body-tertiary border rounded">
                                         <div class="row g-2 g-md-3">
                                             {% for c in item.catalogo %}
                                             <div class="col-6 col-sm-4 col-md-3">
@@ -275,7 +275,7 @@
         
         store.generatedCards.forEach((card, index) => {
             list.innerHTML += `
-                <li class="d-flex justify-content-between align-items-center gap-2 mb-2 bg-white text-dark p-2 rounded border shadow-sm">
+                <li class="d-flex justify-content-between align-items-center gap-2 mb-2 bg-body-tertiary text-body p-2 rounded border shadow-sm">
                     <div class="flex-shrink-0" style="width: 75px;">${renderMiniGrid(card.matriz, true)}</div>
                     <span class="fw-bold small text-break flex-grow-1 text-center text-primary">${card.codigo}</span>
                     <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="removeFromCart(${bId}, 'gen', ${index})"><i class="fas fa-times"></i></button>
@@ -301,8 +301,8 @@
             if(catItem) {
                 catItem.classList.remove('bg-primary-subtle', 'border-primary');
                 let badge = catItem.querySelector('.check-badge');
-                badge.classList.replace('bg-primary', 'text-bg-light');
-                badge.classList.replace('text-white', 'text-dark');
+                badge.classList.replace('bg-primary', 'bg-body-secondary');
+                badge.classList.replace('text-white', 'text-body');
                 badge.innerText = 'Disponible';
             }
         } else {
@@ -318,8 +318,8 @@
             if(catItem) {
                 catItem.classList.remove('bg-primary-subtle', 'border-primary');
                 let badge = catItem.querySelector('.check-badge');
-                badge.classList.replace('bg-primary', 'text-bg-light');
-                badge.classList.replace('text-white', 'text-dark');
+                badge.classList.replace('bg-primary', 'bg-body-secondary');
+                badge.classList.replace('text-white', 'text-body');
                 badge.innerText = 'Disponible';
             }
         });
@@ -404,8 +404,8 @@
                     // LÍMITE ELIMINADO
                     store.selectedCatalogIds.add(cId);
                     this.classList.add('bg-primary-subtle', 'border-primary');
-                    badge.classList.replace('text-bg-light', 'bg-primary');
-                    badge.classList.replace('text-dark', 'text-white');
+                    badge.classList.replace('bg-body-secondary', 'bg-primary');
+                    badge.classList.replace('text-body', 'text-white');
                     badge.innerText = 'Seleccionado';
                     updateCartUI(bId);
                 }
