@@ -44,8 +44,6 @@ if (BINGO_VAR) {
             const payload = JSON.parse(e.data);
             if (payload.canal === 'pong') return; 
             
-            console.log("📩 Evento recibido:", payload);
-
             if (payload.canal === 'partida') {
                 document.dispatchEvent(new CustomEvent('evento_partida', { detail: payload.datos }));
                 
@@ -179,35 +177,42 @@ if (BINGO_VAR) {
         };
     }
 
-    // Arrancamos la conexión
     conectarWebSocket();
 
     // =======================================================
     // FIX SUPREMO: ACELERADOR DE DESCONEXIÓN (CERO DELAY)
     // =======================================================
-    function desconexionFulminante() {
+    window.addEventListener('beforeunload', function() {
         cierreIntencional = true;
         if (window.bingoSocket && window.bingoSocket.readyState === WebSocket.OPEN) {
+            window.bingoSocket.send(JSON.stringify({ 'tipo': 'salida_inmediata' }));
             window.bingoSocket.close(1000, "Cierre fulminante");
-        }
-    }
-
-    // 1. Cierre estándar del navegador (cerrar pestaña, refrescar)
-    window.addEventListener('beforeunload', desconexionFulminante);
-    window.addEventListener('pagehide', desconexionFulminante);
-
-    // 2. Cierre fulminante al hacer clic en enlaces (ej. Logo de Inicio, Menú)
-    document.addEventListener('click', function(e) {
-        const link = e.target.closest('a');
-        // Si el jugador hace clic en un enlace para ir a otra página, cortamos la llamada al instante.
-        if (link && link.href && !link.href.includes('javascript:') && !link.href.includes('#') && link.target !== '_blank') {
-            desconexionFulminante();
         }
     });
 
-    // 3. Cierre fulminante al enviar formularios (ej. Cerrar sesión)
+    // Trampa para atrapar el clic a otros enlaces (Logotipo, Menús, Botones)
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a');
+        if (link && link.href && !link.href.includes('javascript:') && !link.href.includes('#') && link.target !== '_blank') {
+            e.preventDefault(); // Pausamos la navegación un instante
+            cierreIntencional = true;
+            if (window.bingoSocket && window.bingoSocket.readyState === WebSocket.OPEN) {
+                // Le GRITAMOS al servidor que actualice la BD y el radar al instante
+                window.bingoSocket.send(JSON.stringify({ 'tipo': 'salida_inmediata' }));
+                window.bingoSocket.close();
+            }
+            // Retomamos la navegación luego de 50ms imperceptibles
+            setTimeout(() => {
+                window.location.href = link.href;
+            }, 50); 
+        }
+    });
+
     document.addEventListener('submit', function() {
-        desconexionFulminante();
+        cierreIntencional = true;
+        if (window.bingoSocket && window.bingoSocket.readyState === WebSocket.OPEN) {
+            window.bingoSocket.send(JSON.stringify({ 'tipo': 'salida_inmediata' }));
+        }
     });
     // =======================================================
 

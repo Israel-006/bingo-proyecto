@@ -66,6 +66,20 @@ class BingoConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({'canal': 'pong'}))
             return
 
+        # =========================================================
+        # NUEVO: BARRIDO INSTANTÁNEO (ADIÓS AL DELAY DEL NAVEGADOR)
+        # =========================================================
+        if tipo_evento == 'salida_inmediata':
+            if hasattr(self, 'mi_cedula') and self.mi_cedula != "Invitado" and not getattr(self, 'es_admin', False):
+                await self.registrar_desconexion(self.mi_cedula, self.id_partida, getattr(self, 'token_unico', None))
+                lista_activos = await self.obtener_lista_completa_activos()
+                await self.channel_layer.group_send(
+                    self.group_partida,
+                    {'type': 'evento_presencia', 'lista_jugadores': lista_activos}
+                )
+            return
+        # =========================================================
+
         if tipo_evento == 'chat':
             alias_usar = getattr(self, 'alias_seguro', "Invitado")
             await self.guardar_historial_chat(self.id_bingo, alias_usar, data['mensaje'])
@@ -139,10 +153,6 @@ class BingoConsumer(AsyncWebsocketConsumer):
             partida = PartidaBingo.objects.get(idpartidabingo=id_partida)
             plataforma, _ = PlataformaJuego.objects.get_or_create(nombreplataforma='Web Oficial', defaults={'urlplataforma': '/', 'estadoplataforma': True})
             
-            # =========================================================
-            # EL EXORCISMO: Destruimos cualquier sesión zombi atorada 
-            # de este jugador antes de crear la nueva.
-            # =========================================================
             SesionJuego.objects.filter(
                 idjugador=jugador, 
                 idpartida=partida, 
@@ -152,7 +162,6 @@ class BingoConsumer(AsyncWebsocketConsumer):
                 fechafinsesion=timezone.now(), 
                 motivocierre='Limpieza de Zombis'
             )
-            # =========================================================
 
             SesionJuego.objects.create(
                 idplataforma=plataforma, idjugador=jugador, idpartida=partida,
@@ -255,8 +264,20 @@ class TiendaConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         data = json.loads(text_data)
-        if data.get('tipo') == 'ping':
+        tipo_evento = data.get('tipo')
+        
+        if tipo_evento == 'ping':
             await self.send(text_data=json.dumps({'canal': 'pong'}))
+            return
+            
+        if tipo_evento == 'salida_inmediata':
+            if hasattr(self, 'mi_cedula') and self.mi_cedula != "Invitado" and not getattr(self, 'es_admin', False):
+                await self.registrar_desconexion(self.mi_cedula, self.id_partida, getattr(self, 'token_unico', None))
+                lista_activos = await self.obtener_lista_completa_activos()
+                await self.channel_layer.group_send(
+                    self.group_partida,
+                    {'type': 'evento_presencia', 'lista_jugadores': lista_activos}
+                )
             return
 
     async def evento_tienda(self, event):
