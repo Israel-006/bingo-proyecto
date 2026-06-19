@@ -17,15 +17,22 @@ if (BINGO_VAR) {
         console.log("🟢 Conectado al sistema de eventos en tiempo real.");
     };
 
+    // =======================================================
+    // FIX ANTI-FANTASMAS: Obligamos al navegador a despedirse
+    // =======================================================
+    window.addEventListener('beforeunload', function() {
+        if (window.bingoSocket && window.bingoSocket.readyState === WebSocket.OPEN) {
+            window.bingoSocket.close(1000, "Cierre intencional por navegación");
+        }
+    });
+
     bingoSocket.onmessage = function(e) {
         const payload = JSON.parse(e.data);
         console.log("📩 Evento recibido:", payload);
 
         if (payload.canal === 'partida') {
-            // 1. EL MEGÁFONO: Avisamos a cualquier pantalla HTML que esté abierta
             document.dispatchEvent(new CustomEvent('evento_partida', { detail: payload.datos }));
             
-            // 2. Colorear la matriz del Administrador (Si el admin está viendo su tablero)
             if (payload.datos.evento === 'nueva_bola') {
                 const bolaMaestra = document.getElementById(`bola-maestra-${payload.datos.numero}`);
                 if (bolaMaestra) {
@@ -35,13 +42,8 @@ if (BINGO_VAR) {
                     if(colorClass) bolaMaestra.classList.add(colorClass);
                 }
             }
-            // 3. NUEVO: ALERTA GLOBAL DEL ADMINISTRADOR (TIPO TOAST EMERGENTE)
             else if (payload.datos.evento === 'alerta_admin') {
-                
-                // DETECTOR: Si existe el input del admin en la pantalla, significa que SOY el admin.
                 const soyAdmin = document.getElementById('admin-mensaje-input') !== null;
-                
-                // Solo dibujamos la alerta si somos un jugador normal
                 if (!soyAdmin) {
                     const toastContainer = document.getElementById('admin-toast-container') || (() => {
                         const tc = document.createElement('div');
@@ -68,19 +70,15 @@ if (BINGO_VAR) {
                     const toastElement = document.getElementById(toastId);
                     const toast = new bootstrap.Toast(toastElement);
                     toast.show();
-                    
                     toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
                 }
             }
-            // 4. NUEVO: ALERTA DE RECLAMO DE BINGO (FASE 2)
             else if (payload.datos.evento === 'alerta_reclamo') {
                 const aliasGanador = payload.datos.alias;
                 const codigoCarton = payload.datos.codigo;
-                
                 const esAdmin = document.querySelector('.master-board') !== null;
                 
                 if (esAdmin) {
-                    // A) Ponemos la medallita y borde rojo intermitente en el radar lateral
                     const lista = document.getElementById('lista-jugadores-conectados');
                     if (lista) {
                         let items = Array.from(lista.getElementsByTagName('li'));
@@ -88,15 +86,12 @@ if (BINGO_VAR) {
                         if (liGanador) {
                             liGanador.classList.remove('border-light');
                             liGanador.classList.add('border-danger', 'border-2', 'bg-danger-subtle', 'animate__animated', 'animate__flash');
-                            
                             const viejaMedalla = liGanador.querySelector('.medalla-bingo');
                             if(viejaMedalla) viejaMedalla.remove();
-                            
                             liGanador.innerHTML += `<span class="medalla-bingo badge bg-danger ms-auto animate__animated animate__tada animate__infinite shadow"><i class="fas fa-trophy"></i> BINGO</span>`;
                         }
                     }
                     
-                    // B) Tiramos un Toast gigante en el centro de la pantalla del administrador
                     const toastContainer = document.getElementById('admin-toast-container') || (() => {
                         const tc = document.createElement('div');
                         tc.id = 'admin-toast-container';
@@ -130,15 +125,9 @@ if (BINGO_VAR) {
         else if (payload.canal === 'chat') {
             const cajaChat = document.getElementById('chat-mensajes');
             if (cajaChat) {
-                // Comprobamos si el mensaje lo enviaste TÚ
                 const esMiMensaje = (payload.usuario === (BINGO_VAR && BINGO_VAR.mi_alias));
-                
                 const nuevoMensaje = document.createElement('div');
-                
-                // Alineación: Derecha si es tuyo, Izquierda si es de un rival
                 nuevoMensaje.className = `mb-3 d-flex flex-column ${esMiMensaje ? 'align-items-end' : 'align-items-start'} animate__animated animate__fadeInUp animate__faster`;
-                
-                // Colores tipo WhatsApp
                 const colorFondo = esMiMensaje ? 'bg-primary text-white shadow-sm' : 'bg-light text-dark border shadow-sm';
                 const colorNombre = esMiMensaje ? 'text-primary' : 'text-secondary';
                 const nombreAlias = esMiMensaje ? 'Tú' : payload.usuario;
@@ -149,23 +138,16 @@ if (BINGO_VAR) {
                         ${payload.mensaje}
                     </div>
                 `;
-                
                 cajaChat.appendChild(nuevoMensaje);
-                // Auto-scroll hacia abajo
                 cajaChat.scrollTop = cajaChat.scrollHeight;
             }
         }
-        // ==========================================
-        // LA ZONA BLINDADA: OPCIÓN B (FOTOGRAFÍA EN TIEMPO REAL)
-        // ==========================================
         else if (payload.canal === 'presencia') {
             const listaJugadores = payload.lista_jugadores;
             const cantidad = listaJugadores.length;
             
-            // 1. Actualizamos todos los contadores de la pantalla (Jugadores y Admin)
             document.querySelectorAll('.contador-dinamico').forEach(c => c.textContent = cantidad);
 
-            // 2. Construimos el HTML de los jugadores desde cero (Limpieza total)
             let htmlJugadores = '';
             let htmlAdmin = '';
 
@@ -180,7 +162,6 @@ if (BINGO_VAR) {
                 listaJugadores.forEach(alias => {
                     const inicial = alias.charAt(0).toUpperCase();
                     
-                    // Diseño para el panel lateral de los Jugadores
                     htmlJugadores += `
                         <li class="list-group-item bg-transparent text-body d-flex align-items-center py-3 animate__animated animate__fadeIn" data-alias="${alias}">
                             <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-3 flex-shrink-0" 
@@ -190,7 +171,6 @@ if (BINGO_VAR) {
                             <span class="fw-bold text-truncate">${alias}</span>
                         </li>`;
                         
-                    // Diseño para el Radar del Administrador
                     htmlAdmin += `
                         <li class="list-group-item d-flex align-items-center py-2 animate__animated animate__fadeIn border-light" data-alias="${alias}">
                             <i class="fas fa-user-circle text-primary me-2 fs-4"></i>
@@ -199,21 +179,17 @@ if (BINGO_VAR) {
                 });
             }
 
-            // 3. Inyectamos el HTML a la sala de los jugadores
             document.querySelectorAll('.lista-jugadores-dinamica').forEach(lista => {
                 lista.innerHTML = htmlJugadores;
             });
 
-            // 4. Inyectamos el HTML al Radar del Administrador (¡Solucionado!)
             const radarAdmin = document.getElementById('lista-jugadores-conectados');
             if (radarAdmin) {
                 radarAdmin.innerHTML = htmlAdmin;
             }
         }
-        
     };
 
-    // Chat Logic
     document.addEventListener('DOMContentLoaded', () => {
         const chatInput = document.getElementById('chat-input');
         const chatBtn = document.getElementById('chat-btn-enviar');
@@ -228,5 +204,4 @@ if (BINGO_VAR) {
             chatInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') enviarMensajeChat(); });
         }
     });
-    
 }
