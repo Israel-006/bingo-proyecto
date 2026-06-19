@@ -1,5 +1,4 @@
-import random
-import uuid
+import random, ast, uuid, json
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.core.files.storage import default_storage 
@@ -252,8 +251,10 @@ def auditar_patron_bingo(matriz, bolas_llamadas, modalidad):
 
 def validar_carton_hibrido(codigo_carton, id_partida):
     """
-    Árbitro Digital Principal
+    Árbitro Digital 'Smart Hybrid'
+    Diferencia entre jugadores activos en la web (exige clics) y jugadores externos (exige matemática pura).
     """
+    import json
     try:
         asignacion = CartonPartidaBingo.objects.select_related('idcarton', 'idpartida', 'idjugador').get(
             idcarton__codigocarton=codigo_carton,
@@ -262,18 +263,48 @@ def validar_carton_hibrido(codigo_carton, id_partida):
         
         partida = asignacion.idpartida
         matriz = asignacion.idcarton.matriznumeros
-        
-        # Limpieza de las bolas cantadas a una lista pura
-        bolas_cantadas_str = partida.bolascantadas.replace('B','').replace('I','').replace('N','').replace('G','').replace('O','')
-        bolas_cantadas_lista = [b.strip() for b in bolas_cantadas_str.split(',') if b.strip()]
-        
-        # OBTENEMOS LA MODALIDAD Y ENVIAMOS A AUDITAR
         modalidad_ronda = getattr(partida, 'modalidad_victoria', 'Tabla Llena')
-        es_valido = auditar_patron_bingo(matriz, bolas_cantadas_lista, modalidad_ronda)
+
+        bolas_str = partida.bolascantadas.replace('B','').replace('I','').replace('N','').replace('G','').replace('O','')
+        bolas_oficiales = [str(b.strip()) for b in bolas_str.split(',') if b.strip().isdigit()]
         
+        # 1. FILTRO ABSOLUTO: Verificamos si el cartón sirve matemáticamente con las bolas de la mesa
+        es_ganador_matematico = auditar_patron_bingo(matriz, bolas_oficiales, modalidad_ronda)
+        
+        if not es_ganador_matematico:
+            return {'existe': True, 'valido': False, 'mensaje': 'El cartón no cumple el patrón ganador con las bolas actuales.'}
+
+        # 2. FILTRO INTELIGENTE: Diferenciar Web vs Zoom
+        if asignacion.idjugador:
+            from .models import SesionJuego
+            # Verificamos si el dueño del cartón tiene la pestaña abierta AHORA MISMO
+            esta_conectado_web = SesionJuego.objects.filter(
+                idjugador=asignacion.idjugador,
+                idpartida=partida,
+                estadosesion='Activa'
+            ).exists()
+
+            if esta_conectado_web:
+                # Si está en la web, LO OBLIGAMOS a tener sus casillas marcadas
+                marcados_db = []
+                if getattr(asignacion, 'numerosmarcados', None):
+                    try: marcados_db = json.loads(asignacion.numerosmarcados)
+                    except: 
+                        import ast
+                        try: marcados_db = ast.literal_eval(asignacion.numerosmarcados)
+                        except: pass
+                
+                marcados_str = [str(num) for num in marcados_db]
+                es_ganador_clicks = auditar_patron_bingo(matriz, marcados_str, modalidad_ronda)
+                
+                if not es_ganador_clicks:
+                    # El jugador está online pero fue perezoso y no marcó
+                    return {'existe': True, 'valido': False, 'mensaje': 'El jugador está en línea pero no ha marcado las casillas digitales requeridas.'}
+
+        # Si pasó todos los filtros (Es de Zoom o es de Web y SÍ marcó)
         return {
             'existe': True,
-            'valido': es_valido,
+            'valido': True,
             'jugador': asignacion.idjugador.aliasjugador if asignacion.idjugador else 'Jugador Anónimo',
             'origen': 'Web' if asignacion.idjugador else 'Externo',
             'id_jugador': asignacion.idjugador.idjugador if asignacion.idjugador else None
@@ -285,3 +316,68 @@ def validar_carton_hibrido(codigo_carton, id_partida):
             'valido': False,
             'mensaje': 'Código no registrado para esta ronda.'
         }
+    
+# Fíjate que añadimos 'partida_id' aquí en los parámetros
+def marcar_casilla_manual(jugador_id, carton_codigo, numero, partida_id):
+    """
+    Guardia de Seguridad: Verifica que el clic del jugador sea legal en la ronda correcta.
+    """
+    try:
+        # 1. Buscar el cartón en juego (AHORA SÍ FILTRAMOS POR LA RONDA EXACTA)
+        asignacion = CartonPartidaBingo.objects.select_related('idcarton', 'idpartida').get(
+            idcarton__codigocarton=carton_codigo, 
+            idjugador_id=jugador_id,
+            idpartida_id=partida_id  # <--- ESTA ES LA LÍNEA SALVAVIDAS
+        )
+        partida = asignacion.idpartida
+        
+        # 2. Validar que la bola SÍ salió en la mesa del admin
+        if not partida.bolascantadas:
+            return False
+            
+        bolas_cantadas_str = partida.bolascantadas.replace('B','').replace('I','').replace('N','').replace('G','').replace('O','')
+        bolas_cantadas_lista = [b.strip() for b in bolas_cantadas_str.split(',') if b.strip()]
+        
+        if str(numero) not in bolas_cantadas_lista:
+            return False # Quiso marcar un número que no ha salido
+            
+        # 3. Validar que el número SÍ existe en ese cartón
+        if isinstance(asignacion.idcarton.matriznumeros, str):
+            try:
+                matriz = json.loads(asignacion.idcarton.matriznumeros)
+            except:
+                matriz = ast.literal_eval(asignacion.idcarton.matriznumeros)
+        else:
+            matriz = asignacion.idcarton.matriznumeros
+            
+        numero_existe = False
+        for letra in ['B', 'I', 'N', 'G', 'O']:
+            if numero in matriz[letra] or str(numero) in matriz[letra]:
+                numero_existe = True
+                break
+                
+        if not numero_existe:
+            return False # Quiso marcar un número que no está en su cartón
+            
+        # 4. Guardar la marca en el nuevo campo de la BD
+        marcados = []
+        if getattr(asignacion, 'numerosmarcados', None):
+            try:
+                marcados = json.loads(asignacion.numerosmarcados)
+            except:
+                marcados = ast.literal_eval(asignacion.numerosmarcados)
+                
+        if numero not in marcados and str(numero) not in marcados:
+            marcados.append(numero)
+            asignacion.numerosmarcados = json.dumps(marcados)
+            asignacion.cantidadaciertos += 1
+            asignacion.save()
+            return True
+        else:
+            # ¡EL SALVAVIDAS! Si el jugador dio doble clic rápido 
+            # o tiene dos pantallas abiertas, le decimos que todo está bien.
+            return True
+            
+    except Exception as e:
+        print(f"Error en marcado manual: {e}")
+        return False

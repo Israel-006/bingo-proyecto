@@ -57,12 +57,23 @@
             </div>
             
             <!-- EL INTERRUPTOR MÁGICO -->
-            <div class="form-check form-switch bg-indigo bg-opacity-10 border border-indigo border-opacity-25 rounded-pill px-4 py-2 shadow-sm" style="padding-left: 3rem !important;">
-                <input class="form-check-input cursor-pointer" type="checkbox" id="switch-automarcado" style="width: 2.2rem; height: 1.2rem; margin-left: -2.5rem;">
-                <label class="form-check-label text-body fw-bold animate__animated animate__fadeInDown ms-2" for="switch-automarcado" style="cursor: pointer;">
-                    <i class="fas fa-robot text-indigo me-1"></i> Piloto Automático
-                </label>
+            <div class="d-flex gap-2 flex-wrap justify-content-end">
+                <div class="form-check form-switch bg-success bg-opacity-10 border border-success border-opacity-25 rounded-pill px-4 py-2 shadow-sm" style="padding-left: 3rem !important;">
+                    <input class="form-check-input cursor-pointer" type="checkbox" id="switch-voz" style="width: 2.2rem; height: 1.2rem; margin-left: -2.5rem;">
+                    <label class="form-check-label text-body fw-bold animate__animated animate__fadeInDown ms-2" for="switch-voz" style="cursor: pointer;">
+                        <i class="fas fa-volume-up text-success me-1"></i> Locutor
+                    </label>
+                </div>
+
+                <div class="form-check form-switch bg-indigo bg-opacity-10 border border-indigo border-opacity-25 rounded-pill px-4 py-2 shadow-sm" style="padding-left: 3rem !important;">
+                    <input class="form-check-input cursor-pointer" type="checkbox" id="switch-automarcado" style="width: 2.2rem; height: 1.2rem; margin-left: -2.5rem;">
+                    <label class="form-check-label text-body fw-bold animate__animated animate__fadeInDown ms-2" for="switch-automarcado" style="cursor: pointer;">
+                        <i class="fas fa-robot text-indigo me-1"></i> Piloto Automático
+                    </label>
+                </div>
             </div>
+
+
         </div>
 
         <div class="row g-4 justify-content-center cartones-carrusel">
@@ -101,37 +112,97 @@
 </style>
 
 <script>
-    // El diccionario de patrones
+    // El diccionario de patrones ACTUALIZADO (Soporta múltiples formas de ganar)
     window.patrones = {
-        'Tabla Llena': [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24],
-        'Las Cuatro Esquinas': [0, 4, 20, 24],
-        'En Diagonal': [0, 6, 12, 18, 24],
-        'Forma de X': [0, 4, 6, 8, 12, 16, 18, 20, 24],
-        'Forma de Cruz': [2, 7, 10, 11, 12, 13, 14, 17, 22],
-        'Marco de Foto': [0,1,2,3,4, 5,9, 10,14, 15,19, 20,21,22,23,24],
-        'Linea Vertical': [2, 7, 12, 17, 22],
-        'Forma de L': [0, 5, 10, 15, 20, 21, 22, 23, 24],
-        'Forma de C': [0,1,2,3,4, 5, 10, 15, 20,21,22,23,24],
-        'Forma de T': [0,1,2,3,4, 7, 12, 17, 22],
-        'Forma de U': [0,4, 5,9, 10,14, 15,19, 20,21,22,23,24],
-        'Forma de H': [0,4, 5,9, 10,11,12,13,14, 15,19, 20,24],
-        'Forma de Z': [0,1,2,3,4, 8, 12, 16, 20,21,22,23,24],
-        'Forma de Flecha': [2, 6, 8, 12, 17, 22]
+        'Tabla Llena': [[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]],
+        'Las Cuatro Esquinas': [[0, 4, 20, 24]],
+        'En Diagonal': [[0, 6, 12, 18, 24], [4, 8, 12, 16, 20]], // Ahora soporta ambas diagonales
+        'Forma de X': [[0, 4, 6, 8, 12, 16, 18, 20, 24]],
+        'Forma de Cruz': [[2, 7, 10, 11, 12, 13, 14, 17, 22]],
+        'Marco de Foto': [[0,1,2,3,4, 5,9, 10,14, 15,19, 20,21,22,23,24]],
+        'Linea Vertical': [
+            [0, 5, 10, 15, 20], // Columna B
+            [1, 6, 11, 16, 21], // Columna I
+            [2, 7, 12, 17, 22], // Columna N
+            [3, 8, 13, 18, 23], // Columna G
+            [4, 9, 14, 19, 24]  // Columna O
+        ],
+        'Forma de L': [[0, 5, 10, 15, 20, 21, 22, 23, 24]],
+        'Forma de C': [[0,1,2,3,4, 5, 10, 15, 20,21,22,23,24]],
+        'Forma de T': [[0,1,2,3,4, 7, 12, 17, 22]],
+        'Forma de U': [[0,4, 5,9, 10,14, 15,19, 20,21,22,23,24]],
+        'Forma de H': [[0,4, 5,9, 10,11,12,13,14, 15,19, 20,24]],
+        'Forma de Z': [[0,1,2,3,4, 8, 12, 16, 20,21,22,23,24]],
+        'Forma de Flecha': [[2, 6, 8, 12, 17, 22]]
     };
 
+    // ================================
+    // MOTOR DE VOZ DEL LOCUTOR 
+    // ================================
+    function cantarBolaConVoz(numero) {
+        const swVoz = document.getElementById('switch-voz');
+        if (!swVoz || !swVoz.checked) return;
+
+        // 1. Fonética fuerte para que las letras suenen bien al estar solas
+        let fonetica = '';
+        if (numero >= 1 && numero <= 15) fonetica = 'Bé';
+        else if (numero >= 16 && numero <= 30) fonetica = 'I';
+        else if (numero >= 31 && numero <= 45) fonetica = 'Éne';
+        else if (numero >= 46 && numero <= 60) fonetica = 'Ge';
+        else if (numero >= 61 && numero <= 75) fonetica = 'O';
+
+        // Buscamos la mejor voz disponible
+        let vocesDisponibles = window.speechSynthesis.getVoices();
+        let vozIdeal = vocesDisponibles.find(v => v.lang.includes('es') && (v.name.includes('Google') || v.name.includes('Paulina')));
+
+        // 2. Preparamos el audio de la LETRA (Lento y dramático)
+        let msjLetra = new SpeechSynthesisUtterance(fonetica);
+        msjLetra.lang = 'es-MX';
+        msjLetra.rate = 0.55; // Muy lento
+        if (vozIdeal) msjLetra.voice = vozIdeal;
+
+        // 3. Preparamos el audio del NÚMERO (Velocidad normal)
+        let msjNumero = new SpeechSynthesisUtterance(numero.toString());
+        msjNumero.lang = 'es-MX';
+        msjNumero.rate = 0.85; // Normal/Rápido
+        if (vozIdeal) msjNumero.voice = vozIdeal;
+
+        // Limpiamos cualquier audio viejo que se haya quedado atascado por el piloto automático
+        window.speechSynthesis.cancel();
+
+        // 4. ¡Acción! Primero canta la letra...
+        window.speechSynthesis.speak(msjLetra);
+
+        // 5. ...y cuando termine la letra, aplicamos el suspenso exacto en milisegundos
+        msjLetra.onend = function() {
+            setTimeout(() => {  
+                window.speechSynthesis.speak(msjNumero);
+            }, 200); // <-- ms de suspenso (puedes subirlo a 600 o bajarlo a 200)
+        };
+    }
+    
+    // Despertar las voces (Truco para que carguen rápido)
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = function() {
+            window.speechSynthesis.getVoices();
+        };
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-        // Buscamos si hay algún contenedor de micro-cartón en la pantalla
         const microContenedores = document.querySelectorAll('.render-micro-carton');
         if(microContenedores.length === 0) return;
 
-        // Renderizamos el cartoncito
         microContenedores.forEach(cont => {
             const modalidad = cont.getAttribute('data-modalidad') || 'Tabla Llena';
-            const marcadas = patrones[modalidad] || patrones['Tabla Llena'];
+            const combinaciones = window.patrones[modalidad] || window.patrones['Tabla Llena'];
+            
+            // Para el dibujo pequeño recordatorio, usamos la primera combinación de la lista
+            const marcadasDibujo = combinaciones[0]; 
+            
             let gridHTML = '<div class="micro-carton-grid">';
             for (let i = 0; i < 25; i++) {
-                let claseExtra = marcadas.includes(i) ? 'micro-marcada' : '';
-                if(i === 12 && !marcadas.includes(i)) claseExtra += ' micro-free';
+                let claseExtra = marcadasDibujo.includes(i) ? 'micro-marcada' : '';
+                if(i === 12 && !marcadasDibujo.includes(i)) claseExtra += ' micro-free';
                 gridHTML += `<div class="micro-celda ${claseExtra}"></div>`;
             }
             gridHTML += '</div>';
@@ -152,41 +223,42 @@
 
 <script>
     // =======================================================
-    // NUEVO: MOTOR DEL ROBOT AUTO-MARCADOR
+    // NUEVO: MOTOR DEL ROBOT AUTO-MARCADOR (CONECTADO AL BACKEND)
     // =======================================================
     function ejecutarAutoMarcado() {
         // Busca en toda la pantalla los números que salieron pero no han sido presionados
         const celdasPista = document.querySelectorAll('.celda-pista');
         if (celdasPista.length === 0) return;
 
-        const idPartida = window.BINGO_CONFIG.id_partida;
-        let marcadasGuardadas = JSON.parse(localStorage.getItem('bingo_marcadas_' + idPartida) || '[]');
-        let cambioDetectado = false;
-
         celdasPista.forEach(celda => {
-            // El robot hace el click por ti
-            celda.classList.remove('celda-pista', 'animacion-latido-pista');
-            celda.classList.add('celda-marcada', 'animacion-estampado');
-            
-            let numeroStr = "";
-            celda.classList.forEach(cls => {
-                if (cls.startsWith('celda-numero-')) numeroStr = cls.replace('celda-numero-', '');
-            });
+            // Extraer el número
+            let numeroStr = celda.innerText.trim();
+            if (!numeroStr) {
+                celda.classList.forEach(cls => {
+                    if (cls.startsWith('celda-numero-')) numeroStr = cls.replace('celda-numero-', '');
+                });
+            }
+            if (!numeroStr || isNaN(numeroStr)) return;
 
-            // Estampa la estrella de oro
-            celda.innerHTML = `<i class="fas fa-star position-absolute text-dark opacity-25" style="font-size: 1.5rem; top: 50%; left: 50%; transform: translate(-50%, -50%);"></i><span class="position-relative z-1 fw-bold text-white fs-5">${numeroStr}</span>`;
-            
-            if (numeroStr !== "" && !marcadasGuardadas.includes(numeroStr)) {
-                marcadasGuardadas.push(numeroStr);
-                cambioDetectado = true;
+            // FIX: Extraer el código del cartón leyendo el texto naranja de la cabecera
+            const cartonDiv = celda.closest('.carton-dinamico');
+            const spanCodigo = cartonDiv.querySelector('.text-warning');
+            if (!spanCodigo) return; // Si no encuentra el texto, aborta
+            const codigoCarton = spanCodigo.innerText.trim();
+
+            // Bloquear visualmente para no saturar al servidor
+            celda.style.opacity = '0.5';
+            celda.style.pointerEvents = 'none';
+
+            // El robot pide permiso al servidor vía WebSocket
+            if (window.bingoSocket && window.bingoSocket.readyState === WebSocket.OPEN) {
+                window.bingoSocket.send(JSON.stringify({
+                    'tipo': 'marcar_casilla',
+                    'carton_codigo': codigoCarton,
+                    'numero': parseInt(numeroStr)
+                }));
             }
         });
-
-        // Si el robot hizo cambios, graba la memoria y ordena los cartones
-        if (cambioDetectado) {
-            localStorage.setItem('bingo_marcadas_' + idPartida, JSON.stringify(marcadasGuardadas));
-            verificarCartones();
-        }
     }
 
     function gritarBingo(btn) {
@@ -204,7 +276,7 @@
 
     function verificarCartones() {
         const modalidad = "{{ partida.modalidad_victoria }}";
-        const marcadasRequeridas = window.patrones[modalidad] || window.patrones['Tabla Llena'];
+        const combinacionesGanadoras = window.patrones[modalidad] || window.patrones['Tabla Llena'];
         let menorDistancia = 999;
         let codigoCartonGanador = "";
 
@@ -215,29 +287,34 @@
             if(grids.length < 2) return;
             const celdas = grids[1].children;
 
-            let faltantes = 0;
-            marcadasRequeridas.forEach(index => {
-                const celda = celdas[index];
-                if (!celda.classList.contains('celda-free') && 
-                    !celda.classList.contains('celda-marcada') && 
-                    !celda.classList.contains('celda-pista')) {
-                    faltantes++;
+            let faltantesMinimos = 999;
+            
+            // Evaluamos el cartón contra TODAS las formas válidas de ganar esa modalidad
+            // CÓDIGO NUEVO Y ESTRICTO
+            combinacionesGanadoras.forEach(marcadasRequeridas => {
+                let faltantes = 0;
+                marcadasRequeridas.forEach(index => {
+                    const celda = celdas[index];
+                    // Ahora solo consideramos como válido el centro FREE o una celda MARCADA MANUALMENTE
+                    if (!celda.classList.contains('celda-free') && 
+                            !celda.classList.contains('celda-marcada')) { 
+                            faltantes++;
+                    }
+                });
+    
+                if (faltantes < faltantesMinimos) {
+                    faltantesMinimos = faltantes;
                 }
             });
 
-            // =======================================================
-            // NUEVO: SISTEMA DE CARTONES CALIENTES (Ordenamiento Visual)
-            // =======================================================
-            // Magia Flexbox: Le asignamos la cantidad faltante a la propiedad 'order'.
-            // El cartón que le faltan 0, se pondrá de primero (Order: 0)
-            // El cartón que le faltan 10, se irá al final (Order: 10)
-            cartonCol.style.order = faltantes;
+            // Ordenamiento Visual (Cartones Calientes)
+            cartonCol.style.order = faltantesMinimos;
 
             // Busca el que esté más cerca de ganar para la alerta global
-            if (faltantes < menorDistancia) {
-                menorDistancia = faltantes;
+            if (faltantesMinimos < menorDistancia) {
+                menorDistancia = faltantesMinimos;
                 const spanCodigo = cartonCol.querySelector('.text-warning');
-                if(spanCodigo) codigoCartonGanador = spanCodigo.innerText;
+                if(spanCodigo) codigoCartonGanador = spanCodigo.innerText.trim();
             }
         });
 
@@ -284,10 +361,20 @@
             swAuto.checked = isAutoActive;
             swAuto.addEventListener('change', function() {
                 localStorage.setItem('bingo_auto_' + idPartida, this.checked);
-                // Si el jugador lo prende a mitad del juego, el robot escanea todo al instante
                 if(this.checked) ejecutarAutoMarcado();
             });
         }
+
+        // --- Memoria del Switch del Locutor ---
+        const swVoz = document.getElementById('switch-voz');
+        const isVozActive = localStorage.getItem('bingo_voz_' + idPartida) === 'true';
+        if (swVoz) {
+            swVoz.checked = isVozActive;
+            swVoz.addEventListener('change', function() {
+                localStorage.setItem('bingo_voz_' + idPartida, this.checked);
+            });
+        }
+        // --------------------------------------------------
 
         // Carga inicial del historial en el tubo
         const ultimasBolas = bolasCantadas.slice(-9).reverse();
@@ -307,40 +394,49 @@
             celdas.forEach(celda => {
                 if (marcadasGuardadas.includes(numero.toString())) {
                     celda.classList.add('celda-marcada');
-                    // La estrella de fondo se queda oscura porque el número es blanco puro. Está perfecto.
                     celda.innerHTML = `<i class="fas fa-star position-absolute text-dark opacity-25" style="font-size: 1.5rem; top: 50%; left: 50%; transform: translate(-50%, -50%);"></i><span class="position-relative z-1 fw-bold text-white fs-5">${numero}</span>`;
                 } else {
                     celda.classList.add('celda-pista', 'animacion-latido-pista');
-                    // FIX: Cambiamos text-dark por text-body para que el número no se vuelva invisible en Modo Oscuro al recargar la página
                     celda.innerHTML = `<span class="position-relative z-1 fw-bold text-body fs-5">${numero}</span>`;
                 }
             });
         });
 
-        // 3. Si el Robot estaba encendido desde antes, lo ponemos a trabajar al cargar la página
         if(isAutoActive) {
             setTimeout(ejecutarAutoMarcado, 300);
         }
 
-        // Evento manual (Por si el robot está apagado y el jugador quiere jugar manual)
+        // =======================================================
+        // NUEVO: EVENTO MANUAL (Petición al Servidor)
+        // =======================================================
         document.addEventListener('click', function(e) {
             const celda = e.target.closest('.celda-pista');
             if (celda) {
-                celda.classList.remove('celda-pista', 'animacion-latido-pista');
-                celda.classList.add('celda-marcada', 'animacion-estampado');
-                
-                let numeroStr = "";
-                celda.classList.forEach(cls => {
-                    if (cls.startsWith('celda-numero-')) numeroStr = cls.replace('celda-numero-', '');
-                });
-
-                celda.innerHTML = `<i class="fas fa-star position-absolute text-dark opacity-25" style="font-size: 1.5rem; top: 50%; left: 50%; transform: translate(-50%, -50%);"></i><span class="position-relative z-1 fw-bold text-white fs-5">${numeroStr}</span>`;
-                
-                if (numeroStr !== "" && !marcadasGuardadas.includes(numeroStr)) {
-                    marcadasGuardadas.push(numeroStr);
-                    localStorage.setItem('bingo_marcadas_' + idPartida, JSON.stringify(marcadasGuardadas));
+                let numeroStr = celda.innerText.trim();
+                if (!numeroStr) {
+                    celda.classList.forEach(cls => {
+                        if (cls.startsWith('celda-numero-')) numeroStr = cls.replace('celda-numero-', '');
+                    });
                 }
-                verificarCartones();
+                if (!numeroStr || isNaN(numeroStr)) return;
+
+                // FIX: Extraer el código del cartón leyendo el texto naranja
+                const cartonDiv = celda.closest('.carton-dinamico');
+                const spanCodigo = cartonDiv.querySelector('.text-warning');
+                if (!spanCodigo) return;
+                const codigoCarton = spanCodigo.innerText.trim();
+
+                // Bloqueo temporal
+                celda.style.opacity = '0.5';
+                celda.style.pointerEvents = 'none';
+
+                if (window.bingoSocket && window.bingoSocket.readyState === WebSocket.OPEN) {
+                    window.bingoSocket.send(JSON.stringify({
+                        'tipo': 'marcar_casilla',
+                        'carton_codigo': codigoCarton,
+                        'numero': parseInt(numeroStr)
+                    }));
+                }
             }
         });
         
@@ -348,13 +444,14 @@
     });
 
     // =======================================================
-    // WEBSOCKET: RESPUESTA A NUEVOS EVENTOS
+    // WEBSOCKET: RESPUESTA A NUEVOS EVENTOS (VERSIÓN BLINDADA)
     // =======================================================
     document.addEventListener('evento_partida', function(e) {
         const datos = e.detail;
         
         if (datos.evento === 'nueva_bola') {
             const numero = datos.numero;
+            cantarBolaConVoz(numero);
 
             const display = document.getElementById('display-ultima-bola');
             if (display) {
@@ -382,12 +479,48 @@
                 }
             });
 
-            // Lógica de decisión al caer una bola: ¿Robot o Humano?
             const swAuto = document.getElementById('switch-automarcado');
             if (swAuto && swAuto.checked) {
-                // Le damos 400ms al robot para que la bola termine de caer visualmente antes de marcar
                 setTimeout(ejecutarAutoMarcado, 400);
             } else {
+                verificarCartones();
+            }
+
+        // =======================================================
+        // PERMISO DEL SERVIDOR PARA ESTAMPAR LA ESTRELLA
+        // =======================================================
+        } else if (datos.evento === 'casilla_marcada_ok') {
+            const numero = datos.numero;
+            const codigoCarton = datos.carton;
+
+            const cartones = document.querySelectorAll('.carton-dinamico');
+            let cartonDiv = null;
+            cartones.forEach(c => {
+                const span = c.querySelector('.text-warning');
+                if (span && span.innerText.trim() === codigoCarton) {
+                    cartonDiv = c;
+                }
+            });
+            
+            if (!cartonDiv) return;
+            
+            const celda = cartonDiv.querySelector(`.celda-numero-${numero}`);
+            
+            if (celda) {
+                celda.style.opacity = '1';
+                celda.style.pointerEvents = 'auto';
+                
+                celda.classList.remove('celda-pista', 'animacion-latido-pista');
+                celda.classList.add('celda-marcada', 'animacion-estampado');
+                celda.innerHTML = `<i class="fas fa-star position-absolute text-dark opacity-25" style="font-size: 1.5rem; top: 50%; left: 50%; transform: translate(-50%, -50%);"></i><span class="position-relative z-1 fw-bold text-white fs-5">${numero}</span>`;
+                
+                const idPartida = window.BINGO_CONFIG.id_partida;
+                let marcadasGuardadas = JSON.parse(localStorage.getItem('bingo_marcadas_' + idPartida) || '[]');
+                if (!marcadasGuardadas.includes(numero.toString())) {
+                    marcadasGuardadas.push(numero.toString());
+                    localStorage.setItem('bingo_marcadas_' + idPartida, JSON.stringify(marcadasGuardadas));
+                }
+                
                 verificarCartones();
             }
 
@@ -405,7 +538,7 @@
                 document.body.appendChild(divPausa);
                 
                 setTimeout(() => {
-                    window.location.replace("{% url 'sala_espera' id_partida=partida.idpartidabingo %}");
+                    window.location.replace("{% url 'sala_espera_desempate' id_partida=partida.idpartidabingo %}");
                 }, 500);
 
             } else if (datos.nuevo_estado === 'Finalizada') {

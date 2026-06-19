@@ -271,7 +271,7 @@
                                         <td class="small text-muted">{{ p.tasainteres }}%</td>
                                         <td class="fw-bold text-body">${{ p.montototalpagar }}</td>
                                         <td class="text-danger fw-bold">${{ p.saldopendiente }}</td>
-                                        <td><span class="badge text-bg-light border">{{ p.estadoprestamo }}</span></td>
+                                        <td><span class="badge bg-body-secondary text-body border">{{ p.estadoprestamo }}</span></td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -354,7 +354,7 @@
                                         <td class="fw-semibold">{{ ap.idsocio.primernombresocio }} {{ ap.idsocio.primerapellidosocio }}</td>
                                         <td class="font-monospace text-center">Nº {{ ap.numerosemana }}</td>
                                         <td>{{ ap.fechaplanificadadada|date:"d/m/Y" }}</td>
-                                        <td><span class="badge text-bg-light border">{{ ap.metodoingreso }}</span></td>
+                                        <td><span class="badge bg-body-secondary text-body border">{{ ap.metodoingreso }}</span></td>
                                         <td><span class="badge {% if ap.estadoaporte == 'Al Dia' %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %}">{{ ap.estadoaporte }}</span></td>
                                     </tr>
                                     {% endfor %}
@@ -454,7 +454,7 @@
                                 <div class="p-4 text-white d-flex flex-column justify-content-between h-100">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <span id="out-estado" class="badge bg-warning text-dark font-monospace fw-bold">PROGRAMADO</span>
-                                        <span id="out-tipo" class="badge text-bg-light text-indigo">VIRTUAL</span>
+                                        <span id="out-tipo" class="badge bg-body-secondary text-body text-indigo">VIRTUAL</span>
                                     </div>
                                     <div class="my-4">
                                         <h4 id="out-titulo" class="fw-bold text-white mb-2" style="word-break: break-word;">Título Inicial del Evento</h4>
@@ -505,7 +505,7 @@
                                         <td>{{ b.tipobingo }}</td>
                                         <td>${{ b.preciocarton }}</td>
                                         <td class="text-success fw-bold">${{ b.premiomayor }}</td>
-                                        <td><span class="badge text-bg-light border">{{ b.estadobingo }}</span></td>
+                                        <td><span class="badge bg-body-secondary text-body border">{{ b.estadobingo }}</span></td>
                                         <td class="text-end">
                                             <a href="{% url 'reporte_liquidacion_bingo' b.idbingo %}" class="btn btn-sm btn-outline-success border-0 p-1 px-2" data-bs-toggle="tooltip" title="Exportar Liquidación Contable">
                                                 <i class="fas fa-file-excel"></i>
@@ -540,7 +540,7 @@
                                 
                                 <!-- NUEVO FILTRO INTERACTIVO (Sustituye al select) -->
                                 <div class="mb-3 dropdown">
-                                    <button class="btn btn-sm btn-light fw-bold border w-100 text-start d-flex justify-content-between align-items-center" type="button" id="dropdownRondasBingo" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <button class="btn btn-sm bg-body-tertiary text-body fw-bold border w-100 text-start d-flex justify-content-between align-items-center" type="button" id="dropdownRondasBingo" data-bs-toggle="dropdown" aria-expanded="false">
                                         <span id="texto-filtro-bingo">🌟 Mostrar Todas las Rondas</span>
                                         <i class="fas fa-chevron-down text-muted"></i>
                                     </button>
@@ -597,7 +597,7 @@
                                                         <span class="text-muted small">Sin premio</span>
                                                     {% endif %}
                                                 </td>
-                                                <td><span class="badge text-bg-light border">{{ pt.estadopartida }}</span></td>
+                                                <td><span class="badge bg-body-secondary text-body border">{{ pt.estadopartida }}</span></td>
                                                 <td class="font-monospace text-center fw-bold bg-body-secondary rounded-circle text-body" style="width:30px; height:30px;">{{ pt.ultimabola }}</td>
                                                 <td class="text-end text-nowrap">
                                                     
@@ -641,7 +641,7 @@
                                             <div class="fw-bold text-body">{{ r.nombreregalo }}</div>
                                             <span class="text-muted" style="font-size:0.75rem;">Valor: ${{ r.valorregalo }}</span>
                                         </div>
-                                        <span class="badge text-bg-light border">{{ r.estadoregalo }}</span>
+                                        <span class="badge bg-body-secondary text-body border">{{ r.estadoregalo }}</span>
                                     </div>
                                     {% endfor %}
                                 </div>
@@ -995,7 +995,7 @@
                     <div class="mb-3 border-top pt-3">
                         <div class="form-check form-switch mb-3 bg-warning bg-opacity-10 p-3 rounded border border-warning border-opacity-50">
                             <input class="form-check-input ms-1 me-3 shadow-sm border-warning" type="checkbox" name="es_pozo_mayor" id="switch_pozo_mayor" onchange="togglePozoMayor()" style="width: 2.5rem; height: 1.25rem;">
-                            <label class="form-check-label fw-bold text-dark fs-6 ms-2" for="switch_pozo_mayor">
+                            <label class="form-check-label fw-bold text-body fs-6 ms-2" for="switch_pozo_mayor">
                                 <i class="fas fa-crown text-warning me-1"></i> Jugar el POZO MAYOR en esta ronda
                             </label>
                             <div class="small text-muted mt-2 ps-1" id="msg_pozo_mayor">
@@ -1023,7 +1023,7 @@
                     
                 </div>
                 <div class="modal-footer border-top-0 pt-0 mt-3">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn bg-body-tertiary text-body border" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-indigo">Aperturar Ronda a la Tienda</button>
                 </div>
             </form>
@@ -1056,7 +1056,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn bg-body-tertiary text-body border" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-indigo">Guardar Registro</button>
                 </div>
             </form>
@@ -1113,7 +1113,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-0 mt-3">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn bg-body-tertiary text-body border" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-indigo">Conectar API</button>
                 </div>
             </form>
@@ -1192,7 +1192,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-0 mt-3">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn bg-body-tertiary text-body border" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-indigo">Guardar Cambios</button>
                 </div>
             </form>
@@ -1268,7 +1268,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-0 mt-3">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn bg-body-tertiary text-body border" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-indigo">Guardar Cambios</button>
                 </div>
             </form>
@@ -1329,7 +1329,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-0 mt-3">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn bg-body-tertiary text-body border" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-indigo">Guardar Cambios</button>
                 </div>
             </form>
@@ -1379,7 +1379,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-0 mt-3">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn bg-body-tertiary text-body border" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-indigo">Guardar Divisa</button>
                 </div>
             </form>
@@ -1429,7 +1429,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-0 mt-3">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn bg-body-tertiary text-body border" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-indigo">Guardar Cambios</button>
                 </div>
             </form>

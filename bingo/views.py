@@ -1,4 +1,4 @@
-import json
+import json, os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash, logout
 from .models import (
@@ -570,33 +570,41 @@ def tablero_tiempo_real(request, id_partida):
         elif 'Firefox' in user_agent: navegador = 'Mozilla Firefox'
         elif 'Edge' in user_agent: navegador = 'Microsoft Edge'
 
-        # C. Control de Concurrencia (Anti-Clonación) en una transacción aislada
-        with transaction.atomic():
-            # Si el jugador ya tenía otra pestaña u otro dispositivo activo en esta ronda, lo finalizamos
+        # ============================================================
+        # C. CONTROL DE CONCURRENCIA INTELIGENTE (PRODUCCIÓN VS LOCAL)
+        # ============================================================
+        if os.environ.get('REDIS_URL'):
+            # MODO RENDER (POSTGRESQL): Usamos la bóveda acorazada
+            with transaction.atomic():
+                SesionJuego.objects.filter(
+                    idjugador=jugador, 
+                    idpartida=partida, 
+                    estadosesion='Activa'
+                ).update(estadosesion='Finalizada', fechafinsesion=timezone.now(), motivocierre='Nueva conexión establecida')
+
+                SesionJuego.objects.create(
+                    idplataforma=plataforma, idjugador=jugador, idpartida=partida,
+                    fechainiciosesion=timezone.now(), ipconexion=obtener_ip_cliente(request),
+                    dispositivoconexion=dispositivo, estadosesion='Activa',
+                    navegadorweb=navegador, tokenconexion=str(uuid.uuid4())
+                )
+        else:
+            # MODO LOCAL (SQLITE): Guardado relajado para permitir multi-pestañas sin congelar
             SesionJuego.objects.filter(
                 idjugador=jugador, 
                 idpartida=partida, 
                 estadosesion='Activa'
-            ).update(
-                estadosesion='Finalizada', 
-                fechafinsesion=timezone.now(), 
-                motivocierre='Nueva conexión establecida'
-            )
+            ).update(estadosesion='Finalizada', fechafinsesion=timezone.now(), motivocierre='Nueva conexión establecida')
 
-            # Creamos la nueva sesión activa oficial para este dispositivo
             SesionJuego.objects.create(
-                idplataforma=plataforma,
-                idjugador=jugador,
-                idpartida=partida,
-                fechainiciosesion=timezone.now(),
-                ipconexion=obtener_ip_cliente(request),
-                dispositivoconexion=dispositivo,
-                estadosesion='Activa',
-                navegadorweb=navegador,
-                tokenconexion=str(uuid.uuid4())
+                idplataforma=plataforma, idjugador=jugador, idpartida=partida,
+                fechainiciosesion=timezone.now(), ipconexion=obtener_ip_cliente(request),
+                dispositivoconexion=dispositivo, estadosesion='Activa',
+                navegadorweb=navegador, tokenconexion=str(uuid.uuid4())
             )
+            
     except Exception as e:
-        # Fallback de seguridad: Si falla el log de sesión, no bloqueamos el juego, solo lo dejamos pasar
+        # Fallback de seguridad: Si falla el log de sesión, no bloqueamos el juego
         print(f"Error silencioso al registrar la sesión de auditoría: {str(e)}")
     # =========================================================
 
@@ -851,14 +859,11 @@ def desempate_admin(request, id_partida):
                 ).order_by('idpartidabingo').first()
 
                 if siguiente_partida:
-                    # FIX: Eliminamos el cambio de estado a 'En Juego'. 
-                    # Ahora la partida se queda 'Programada' y el admin viaja al tablero a iniciarla manualmente.
                     destino_admin = redirect('tablero_admin', id_partida=siguiente_partida.idpartidabingo)
                 else:
                     bingo_actual = partida.idbingo
                     bingo_actual.estadobingo = 'Finalizado'
                     bingo_actual.save()
-                    # Si ya no hay rondas, lo mandamos al dashboard
                     destino_admin = redirect('dashboard')
                 # ==========================================
                 
@@ -870,25 +875,20 @@ def desempate_admin(request, id_partida):
                         'evento': 'estado_cambiado', 
                         'nuevo_estado': 'Finalizada',
                         'ganador': resultado['jugador'],
-                        'id_siguiente_partida': id_siguiente # <-- LA LLAVE MÁGICA
+                        'id_siguiente_partida': id_siguiente
                     }}
                 )
                 
                 messages.success(request, f"¡Partida finalizada! Ganador único asignado: {resultado['jugador']}")
-                
-                # ¡Vuelo directo al nuevo destino!
                 return destino_admin
             else:
                 messages.error(request, "El código ingresado no es válido o no completó el cartón.")
                 return redirect('desempate_admin', id_partida=partida.idpartidabingo)
 
     # =========================================================
-    # ESCÁNER DE GANADORES WEB EN TIEMPO REAL (AQUÍ AFUERA DEL POST)
+    # ESCÁNER DE GANADORES WEB EN TIEMPO REAL (RADAR ESTRICTO)
     # =========================================================
     import json
-    bolas_str = partida.bolascantadas.replace('B','').replace('I','').replace('N','').replace('G','').replace('O','')
-    bolas_llamadas = [int(b.strip()) for b in bolas_str.split(',') if b.strip().isdigit()]
-    
     patrones = {
         'Tabla Llena': [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24],
         'Las Cuatro Esquinas': [0, 4, 20, 24],
@@ -907,24 +907,33 @@ def desempate_admin(request, id_partida):
     }
     marcadas_requeridas = patrones.get(partida.modalidad_victoria, patrones['Tabla Llena'])
     
-    # =========================================================
-    # FIX: FILTRO DE JUGADORES CONECTADOS EN TIEMPO REAL
-    # =========================================================
-    # 1. Obtenemos los IDs de los jugadores que tienen la pestaña del juego abierta ahora mismo
     jugadores_conectados_ids = Jugador.objects.filter(
         sesionjuego__idpartida=partida,
         sesionjuego__estadosesion='Activa'
     ).values_list('idjugador', flat=True)
     
-    # 2. El Radar solo escanea los cartones de las personas que están conectadas
     cartones_en_juego = CartonPartidaBingo.objects.filter(
         idpartida=partida,
         idjugador__in=jugadores_conectados_ids
     ).select_related('idcarton', 'idjugador')
-    # =========================================================
-    ganadores_web = []
     
+    ganadores_web = []
     for c in cartones_en_juego:
+        # Extraemos los clics de la DB
+        marcados_db = []
+        if getattr(c, 'numerosmarcados', None):
+            try: marcados_db = json.loads(c.numerosmarcados)
+            except: 
+                import ast
+                try: marcados_db = ast.literal_eval(c.numerosmarcados)
+                except: pass
+        
+        # FILTRO LETAL: Si no marcó nada, se ignora por completo
+        if not marcados_db:
+            continue
+            
+        marcados_str = [str(num) for num in marcados_db]
+
         matriz = c.idcarton.matriznumeros
         if isinstance(matriz, str):
             try: matriz = json.loads(matriz.replace("'", '"'))
@@ -936,14 +945,14 @@ def desempate_admin(request, id_partida):
             
         es_ganador = True
         for idx in marcadas_requeridas:
-            if idx == 12: continue # La celda del medio (FREE)
-            if int(celdas[idx]) not in bolas_llamadas:
+            if idx == 12: continue 
+            # Verificamos SOLO contra las casillas que marcó
+            if str(celdas[idx]) not in marcados_str:
                 es_ganador = False
                 break
                 
         if es_ganador:
             ganadores_web.append(c)
-    # =========================================================
 
     contexto = {
         'partida': partida,
@@ -996,11 +1005,10 @@ def consola_juego(request, id_partida):
                             'type': 'evento_partida',
                             'datos': {
                                 'evento': 'invitacion_vip',
-                                'id_jugador': str(resultado['id_jugador']) # <--- EL CAMBIO CLAVE AQUÍ
+                                'id_jugador': str(resultado['id_jugador']) 
                             }
                         }
                     )
-                    # ==========================================
                     
                     messages.success(request, f"¡Cartón verificado! {resultado['jugador']} agregado al desempate.")
                 else:
@@ -1010,31 +1018,24 @@ def consola_juego(request, id_partida):
             
             return redirect('consola_juego', id_partida=id_partida)
         
-        # =========================================================
-        # NUEVO: MOTOR DE MEMORIA Y WEBSOCKET (JUEZ SUPREMO)
-        # =========================================================
         elif action == 'registrar_tiro_desempate':
             id_jugador_tiro = request.POST.get('id_jugador_tiro')
             numero_tiro = int(request.POST.get('numero_tiro'))
             
-            # 1. Guardamos el tiro en la Bóveda JSON
             sorteo = partida.sorteodesempate or {}
             sorteo[str(id_jugador_tiro)] = numero_tiro
             partida.sorteodesempate = sorteo
             partida.save()
             
-            # 2. Verificamos si TODOS los candidatos ya tiraron
             ids_actuales = [str(i.strip()) for i in str(partida.idbingadores).split(',') if i.strip()]
             completado = all(candidato in sorteo for candidato in ids_actuales)
             
             if completado:
-                # 3. Django decide quién ganó (matemáticamente)
                 ganador_id = max(sorteo, key=sorteo.get)
                 ganador_numero = sorteo[ganador_id]
                 ganador_obj = Jugador.objects.filter(idjugador=int(ganador_id)).first()
                 ganador_nombre = ganador_obj.aliasjugador if ganador_obj else "Jugador Oficial"
                 
-                # 4. Disparamos el misil por WebSocket a la consola
                 channel_layer = get_channel_layer()
                 async_to_sync(channel_layer.group_send)(
                     f'bingo_partida_{id_partida}',
@@ -1050,7 +1051,6 @@ def consola_juego(request, id_partida):
                 )
             
             return JsonResponse({'status': 'ok', 'completado': completado})
-        # =========================================================
             
         elif action == 'resolver_desempate':
             ganador_id = request.POST.get('ganador_final')
@@ -1063,9 +1063,6 @@ def consola_juego(request, id_partida):
                 partida.horafin = timezone.now() 
                 partida.save()
                 
-                # ==========================================
-                # MAGIA FINANCIERA: PAGO AUTOMÁTICO DE PREMIOS
-                # ==========================================
                 es_pozo_mayor = (partida.premiomaterial == '[POZO_MAYOR]')
                 monto_a_pagar = partida.idbingo.premiomayor if es_pozo_mayor else partida.valorpremio
                 
@@ -1078,31 +1075,23 @@ def consola_juego(request, id_partida):
                         jugador_ganador.saldovirtualjugador += monto_a_pagar
                     jugador_ganador.save()
                     
-                # Logística del Premio Físico
                 if not es_pozo_mayor and partida.premiomaterial and partida.premiomaterial != 'Ninguno':
                     partida.estadopremiomaterial = 'Pendiente'
 
                 partida.save()
                 
-                # ==========================================
-                # ÁRBITRO DIGITAL: RELEVO Y ENRUTAMIENTO (FASE 3)
-                # ==========================================
                 siguiente_partida = PartidaBingo.objects.filter(
                     idbingo=partida.idbingo,
                     idpartidabingo__gt=partida.idpartidabingo
                 ).order_by('idpartidabingo').first()
 
                 if siguiente_partida:
-                    # FIX: Eliminamos el auto-arranque de la partida.
-                    # Viaje directo al tablero para inicio manual.
                     destino_admin = redirect('tablero_admin', id_partida=siguiente_partida.idpartidabingo)
                 else:
                     bingo_actual = partida.idbingo
                     bingo_actual.estadobingo = 'Finalizado'
                     bingo_actual.save()
-                    # Preparamos viaje al dashboard
                     destino_admin = redirect('dashboard')
-                # ==========================================
                 
                 id_siguiente = siguiente_partida.idpartidabingo if siguiente_partida else None
                 
@@ -1114,7 +1103,7 @@ def consola_juego(request, id_partida):
                         'evento': 'estado_cambiado', 
                         'nuevo_estado': 'Finalizada',
                         'ganador': ganador_obj.aliasjugador,
-                        'id_siguiente_partida': id_siguiente # <-- LA LLAVE MÁGICA
+                        'id_siguiente_partida': id_siguiente
                     }}
                 )
                 
@@ -1125,12 +1114,9 @@ def consola_juego(request, id_partida):
                 return redirect('consola_juego', id_partida=id_partida)
 
     # =========================================================
-    # ESCÁNER DE GANADORES WEB EN TIEMPO REAL (RADAR WEB)
+    # ESCÁNER DE GANADORES WEB EN TIEMPO REAL (RADAR ESTRICTO)
     # =========================================================
     import json
-    bolas_str = partida.bolascantadas.replace('B','').replace('I','').replace('N','').replace('G','').replace('O','')
-    bolas_llamadas = [int(b.strip()) for b in bolas_str.split(',') if b.strip().isdigit()]
-    
     patrones = {
         'Tabla Llena': [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24],
         'Las Cuatro Esquinas': [0, 4, 20, 24],
@@ -1149,24 +1135,33 @@ def consola_juego(request, id_partida):
     }
     marcadas_requeridas = patrones.get(partida.modalidad_victoria, patrones['Tabla Llena'])
     
-    # =========================================================
-    # FIX: FILTRO DE JUGADORES CONECTADOS EN TIEMPO REAL
-    # =========================================================
-    # 1. Obtenemos los IDs de los jugadores que tienen la pestaña del juego abierta ahora mismo
     jugadores_conectados_ids = Jugador.objects.filter(
         sesionjuego__idpartida=partida,
         sesionjuego__estadosesion='Activa'
     ).values_list('idjugador', flat=True)
     
-    # 2. El Radar solo escanea los cartones de las personas que están conectadas
     cartones_en_juego = CartonPartidaBingo.objects.filter(
         idpartida=partida,
         idjugador__in=jugadores_conectados_ids
     ).select_related('idcarton', 'idjugador')
-    # =========================================================
-    ganadores_web = []
     
+    ganadores_web = []
     for c in cartones_en_juego:
+        # Extraemos los clics de la DB
+        marcados_db = []
+        if getattr(c, 'numerosmarcados', None):
+            try: marcados_db = json.loads(c.numerosmarcados)
+            except: 
+                import ast
+                try: marcados_db = ast.literal_eval(c.numerosmarcados)
+                except: pass
+        
+        # FILTRO LETAL: Si no marcó nada, se ignora por completo
+        if not marcados_db:
+            continue
+            
+        marcados_str = [str(num) for num in marcados_db]
+
         matriz = c.idcarton.matriznumeros
         if isinstance(matriz, str):
             try: matriz = json.loads(matriz.replace("'", '"'))
@@ -1178,19 +1173,19 @@ def consola_juego(request, id_partida):
             
         es_ganador = True
         for idx in marcadas_requeridas:
-            if idx == 12: continue # La celda del medio (FREE)
-            if int(celdas[idx]) not in bolas_llamadas:
+            if idx == 12: continue 
+            # Verificamos SOLO contra las casillas que marcó
+            if str(celdas[idx]) not in marcados_str:
                 es_ganador = False
                 break
                 
         if es_ganador:
             ganadores_web.append(c)
-    # =========================================================
 
     contexto = {
         'partida': partida,
         'candidatos': candidatos,
-        'ganadores_web': ganadores_web # <-- Aquí enviamos a los que bingaron a la plantilla
+        'ganadores_web': ganadores_web 
     }
     return render(request, 'partida/consola_juego.html', contexto)
 

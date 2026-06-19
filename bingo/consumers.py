@@ -119,6 +119,44 @@ class BingoConsumer(AsyncWebsocketConsumer):
                 }
             )
 
+        # ==========================================
+        # NUEVO: VALIDACIÓN DE CLIC MANUAL
+        # ==========================================
+        elif tipo_evento == 'marcar_casilla':
+            carton_codigo = data.get('carton_codigo')
+            numero = data.get('numero')
+            
+            # 1. Necesitamos la cédula para verificar la propiedad del cartón
+            cedula = self.scope["user"].username if self.scope["user"].is_authenticated else "Invitado"
+            if cedula == "Invitado":
+                return # Si no está logueado, ignoramos el clic por seguridad
+                
+            # Función asíncrona interna (Añadimos c_partida a los parámetros)
+            @database_sync_to_async
+            def procesar_marcado(c_cedula, c_codigo, c_numero, c_partida):
+                try:
+                    from .models import Jugador
+                    from .services import marcar_casilla_manual
+                    jugador = Jugador.objects.get(cedulaidentidadjugador=c_cedula)
+                    # Llamamos al Guardia de Seguridad pasándole la partida actual
+                    return marcar_casilla_manual(jugador.idjugador, c_codigo, c_numero, c_partida)
+                except Exception as e:
+                    print(f"Error procesando marcado asíncrono: {e}")
+                    return False
+
+            # Ejecutamos pasando el self.id_partida
+            exito = await procesar_marcado(cedula, carton_codigo, numero, self.id_partida)
+            
+            if exito:
+                await self.send(text_data=json.dumps({
+                    'canal': 'partida',
+                    'datos': {
+                        'evento': 'casilla_marcada_ok',
+                        'carton': carton_codigo,
+                        'numero': numero
+                    }
+                }))
+
     async def evento_chat(self, event):
         await self.send(text_data=json.dumps({'canal': 'chat', 'usuario': event['usuario'], 'mensaje': event['mensaje']}))
 

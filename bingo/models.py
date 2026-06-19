@@ -981,6 +981,11 @@ class CartonPartidaBingo(models.Model):
     )
     esganador = models.BooleanField(default=False)
     cantidadaciertos = models.IntegerField(default=0)
+    numerosmarcados = models.CharField(
+        max_length=500, 
+        default='[]',
+        verbose_name="Números Marcados Manualmente"
+    )
     fechaganador = models.DateTimeField(
         null=True, 
         blank=True,
