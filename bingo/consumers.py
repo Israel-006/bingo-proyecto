@@ -29,10 +29,6 @@ class BingoConsumer(AsyncWebsocketConsumer):
         self.es_admin = usuario.is_staff if usuario.is_authenticated else False
         self.mi_cedula = usuario.username if usuario.is_authenticated else "Invitado"
         self.alias_seguro = "Invitado"
-        
-        # =========================================================
-        # LA SOLUCIÓN LETAL: UN TOKEN ÚNICO PARA CADA PESTAÑA
-        # =========================================================
         self.token_unico = str(uuid.uuid4())
 
         if self.es_admin:
@@ -50,8 +46,6 @@ class BingoConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         if hasattr(self, 'group_partida'):
             if hasattr(self, 'mi_cedula') and self.mi_cedula != "Invitado" and not getattr(self, 'es_admin', False):
-                
-                # Desconectamos usando el Token, cero margen de error en la Base de Datos
                 await self.registrar_desconexion(self.mi_cedula, self.id_partida, getattr(self, 'token_unico', None))
                 
                 lista_activos = await self.obtener_lista_completa_activos()
@@ -145,6 +139,21 @@ class BingoConsumer(AsyncWebsocketConsumer):
             partida = PartidaBingo.objects.get(idpartidabingo=id_partida)
             plataforma, _ = PlataformaJuego.objects.get_or_create(nombreplataforma='Web Oficial', defaults={'urlplataforma': '/', 'estadoplataforma': True})
             
+            # =========================================================
+            # EL EXORCISMO: Destruimos cualquier sesión zombi atorada 
+            # de este jugador antes de crear la nueva.
+            # =========================================================
+            SesionJuego.objects.filter(
+                idjugador=jugador, 
+                idpartida=partida, 
+                estadosesion='Activa'
+            ).update(
+                estadosesion='Finalizada', 
+                fechafinsesion=timezone.now(), 
+                motivocierre='Limpieza de Zombis'
+            )
+            # =========================================================
+
             SesionJuego.objects.create(
                 idplataforma=plataforma, idjugador=jugador, idpartida=partida,
                 fechainiciosesion=timezone.now(), ipconexion='127.0.0.1', dispositivoconexion='Conexión En Vivo',
@@ -163,15 +172,13 @@ class BingoConsumer(AsyncWebsocketConsumer):
             jugador = Jugador.objects.get(cedulaidentidadjugador=cedula)
             partida = PartidaBingo.objects.get(idpartidabingo=id_partida)
             if token_unico:
-                # Usamos el token_unico garantizando que no falle por culpa de un ID desconocido
                 SesionJuego.objects.filter(
                     idjugador=jugador, idpartida=partida, tokenconexion=token_unico
                 ).update(
                     estadosesion='Finalizada', fechafinsesion=timezone.now(), motivocierre='Cerró la pestaña'
                 )
-        except Exception as e:
-            # Si algo falla aquí, al menos saldrá en la consola de Render
-            print(f"Error CRÍTICO al desconectar jugador en BD: {e}")
+        except Exception:
+            pass
 
     @database_sync_to_async
     def guardar_historial_chat(self, id_bingo, alias, texto):
@@ -278,6 +285,12 @@ class TiendaConsumer(AsyncWebsocketConsumer):
             partida = PartidaBingo.objects.get(idpartidabingo=id_partida)
             plataforma, _ = PlataformaJuego.objects.get_or_create(nombreplataforma='Web Oficial', defaults={'urlplataforma': '/', 'estadoplataforma': True})
             
+            SesionJuego.objects.filter(
+                idjugador=jugador, idpartida=partida, estadosesion='Activa'
+            ).update(
+                estadosesion='Finalizada', fechafinsesion=timezone.now(), motivocierre='Limpieza Zombi Tienda'
+            )
+
             SesionJuego.objects.create(
                 idplataforma=plataforma, idjugador=jugador, idpartida=partida,
                 fechainiciosesion=timezone.now(), ipconexion='127.0.0.1', dispositivoconexion='Conexión Tienda',
