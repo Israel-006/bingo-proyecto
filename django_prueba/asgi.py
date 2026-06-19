@@ -10,7 +10,6 @@ from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django_prueba.routing import websocket_urlpatterns
 
-
 # 3. Declaramos la aplicación principal que usará Daphne
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
