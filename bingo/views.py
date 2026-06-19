@@ -422,47 +422,6 @@ def sala_espera(request, id_partida):
             return redirect('sala_espera_desempate', id_partida=partida.idpartidabingo)
     # =========================================================
     
-    # >>> INYECTA TODO ESTE BLOQUE NUEVO AQUÍ <<<
-    # =========================================================
-    # FIX FASE 1: REGISTRO DE SESIÓN PARA LA NUEVA RONDA
-    # =========================================================
-    try:
-        plataforma, _ = PlataformaJuego.objects.get_or_create(
-            nombreplataforma='Web Oficial',
-            defaults={'urlplataforma': request.build_absolute_uri('/'), 'estadoplataforma': True}
-        )
-        
-        user_agent = request.META.get('HTTP_USER_AGENT', 'Desconocido')
-        dispositivo = 'Dispositivo Móvil' if any(x in user_agent for x in ['Mobile', 'Android', 'iPhone']) else 'Tablet' if 'iPad' in user_agent else 'PC / Escritorio'
-        navegador = 'Google Chrome' if 'Chrome' in user_agent else 'Apple Safari' if 'Safari' in user_agent else 'Mozilla Firefox' if 'Firefox' in user_agent else 'Otro Navegador'
-
-        with transaction.atomic():
-            # 1. Cerramos CUALQUIER sesión activa anterior del jugador (lo sacamos de la ronda vieja)
-            SesionJuego.objects.filter(
-                idjugador=jugador, 
-                estadosesion='Activa'
-            ).update(
-                estadosesion='Finalizada', 
-                fechafinsesion=timezone.now(), 
-                motivocierre='Traslado automático a nueva ronda'
-            )
-
-            # 2. Creamos la nueva sesión oficial para ESTA ronda de espera
-            SesionJuego.objects.create(
-                idplataforma=plataforma,
-                idjugador=jugador,
-                idpartida=partida,
-                fechainiciosesion=timezone.now(),
-                ipconexion=obtener_ip_cliente(request),
-                dispositivoconexion=dispositivo,
-                estadosesion='Activa',
-                navegadorweb=navegador,
-                tokenconexion=str(uuid.uuid4())
-            )
-    except Exception as e:
-        print(f"Error al registrar la sesión en sala de espera: {str(e)}")
-    # =========================================================
-    
     # =========================================================
     # FIX ANTI-FANTASMAS: SOLO JUGADORES CON CONEXIÓN ACTIVA
     # =========================================================
@@ -540,73 +499,6 @@ def tablero_tiempo_real(request, id_partida):
     elif partida.estadopartida == 'Finalizada':
         messages.info(request, "Esta ronda ha finalizado.")
         return redirect('inicio')
-
-    # =========================================================
-    # DETECTOR AUTOMÁTICO Y SILENCIOSO DE SESIÓN DE JUEGO (LOG)
-    # =========================================================
-    try:
-        # A. Obtener o crear la Plataforma Base para la Web del sistema
-        plataforma, _ = PlataformaJuego.objects.get_or_create(
-            nombreplataforma='Web Oficial',
-            defaults={
-                'urlplataforma': request.build_absolute_uri('/'),
-                'descripcionplataforma': 'Acceso nativo desde la aplicación web.',
-                'estadoplataforma': True
-            }
-        )
-        
-        # B. Extraer metadatos del Navegador y Dispositivo
-        user_agent = request.META.get('HTTP_USER_AGENT', 'Desconocido')
-        
-        dispositivo = 'PC / Escritorio'
-        if 'Mobile' in user_agent or 'Android' in user_agent or 'iPhone' in user_agent:
-            dispositivo = 'Dispositivo Móvil'
-        elif 'iPad' in user_agent or 'Tablet' in user_agent:
-            dispositivo = 'Tablet'
-
-        navegador = 'Otro Navegador'
-        if 'Chrome' in user_agent: navegador = 'Google Chrome'
-        elif 'Safari' in user_agent and 'Chrome' not in user_agent: navegador = 'Apple Safari'
-        elif 'Firefox' in user_agent: navegador = 'Mozilla Firefox'
-        elif 'Edge' in user_agent: navegador = 'Microsoft Edge'
-
-        # ============================================================
-        # C. CONTROL DE CONCURRENCIA INTELIGENTE (PRODUCCIÓN VS LOCAL)
-        # ============================================================
-        if os.environ.get('REDIS_URL'):
-            # MODO RENDER (POSTGRESQL): Usamos la bóveda acorazada
-            with transaction.atomic():
-                SesionJuego.objects.filter(
-                    idjugador=jugador, 
-                    idpartida=partida, 
-                    estadosesion='Activa'
-                ).update(estadosesion='Finalizada', fechafinsesion=timezone.now(), motivocierre='Nueva conexión establecida')
-
-                SesionJuego.objects.create(
-                    idplataforma=plataforma, idjugador=jugador, idpartida=partida,
-                    fechainiciosesion=timezone.now(), ipconexion=obtener_ip_cliente(request),
-                    dispositivoconexion=dispositivo, estadosesion='Activa',
-                    navegadorweb=navegador, tokenconexion=str(uuid.uuid4())
-                )
-        else:
-            # MODO LOCAL (SQLITE): Guardado relajado para permitir multi-pestañas sin congelar
-            SesionJuego.objects.filter(
-                idjugador=jugador, 
-                idpartida=partida, 
-                estadosesion='Activa'
-            ).update(estadosesion='Finalizada', fechafinsesion=timezone.now(), motivocierre='Nueva conexión establecida')
-
-            SesionJuego.objects.create(
-                idplataforma=plataforma, idjugador=jugador, idpartida=partida,
-                fechainiciosesion=timezone.now(), ipconexion=obtener_ip_cliente(request),
-                dispositivoconexion=dispositivo, estadosesion='Activa',
-                navegadorweb=navegador, tokenconexion=str(uuid.uuid4())
-            )
-            
-    except Exception as e:
-        # Fallback de seguridad: Si falla el log de sesión, no bloqueamos el juego
-        print(f"Error silencioso al registrar la sesión de auditoría: {str(e)}")
-    # =========================================================
 
     # 2. Traer los cartones que ESTE jugador compró para ESTA partida
     cartones_asignados = CartonPartidaBingo.objects.filter(
