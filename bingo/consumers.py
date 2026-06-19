@@ -25,19 +25,20 @@ class BingoConsumer(AsyncWebsocketConsumer):
 
         usuario = self.scope["user"]
         
-        # ==========================================
-        # FIX 1: EL ADMINISTRADOR ES UN FANTASMA
-        # ==========================================
+        # El Admin entra como espectador silencioso
         if usuario.is_authenticated and usuario.is_staff:
             self.alias_seguro = None
-            return # El Admin entra, se suscribe para escuchar, pero NO hace ruido ni se registra
+            self.sesion_id = None
+            return 
 
-        # MAGIA: Presencia Automática solo para Jugadores
+        # Registro inteligente de sesión
         cedula = usuario.username if usuario.is_authenticated else "Invitado"
         if cedula != "Invitado":
-            self.alias_seguro = await self.registrar_conexion(cedula, self.id_partida)
-            if self.alias_seguro:
-                # Tomamos la foto y la enviamos a todos
+            resultado = await self.registrar_conexion(cedula, self.id_partida)
+            if resultado and resultado[0]:
+                self.alias_seguro = resultado[0]
+                self.sesion_id = resultado[1] # Guardamos el ID único de ESTA pestaña
+                
                 lista_activos = await self.obtener_lista_completa_activos()
                 await self.channel_layer.group_send(
                     self.group_partida,
@@ -48,16 +49,19 @@ class BingoConsumer(AsyncWebsocketConsumer):
                 )
         else:
             self.alias_seguro = "Invitado"
+            self.sesion_id = None
 
     async def disconnect(self, close_code):
         if hasattr(self, 'group_partida'):
             usuario = self.scope["user"]
             
-            # FIX 2: El Administrador fantasma tampoco avisa cuando se va
             if usuario.is_authenticated and not usuario.is_staff:
                 if hasattr(self, 'alias_seguro') and self.alias_seguro and self.alias_seguro != "Invitado":
                     cedula = usuario.username
-                    await self.registrar_desconexion(cedula, self.id_partida)
+                    sesion_id = getattr(self, 'sesion_id', None)
+                    
+                    # Le decimos que SOLO finalice esta sesión específica
+                    await self.registrar_desconexion(cedula, self.id_partida, sesion_id)
                     
                     lista_activos = await self.obtener_lista_completa_activos()
                     await self.channel_layer.group_send(
@@ -119,32 +123,23 @@ class BingoConsumer(AsyncWebsocketConsumer):
                 }
             )
 
-        # ==========================================
-        # NUEVO: VALIDACIÓN DE CLIC MANUAL
-        # ==========================================
         elif tipo_evento == 'marcar_casilla':
             carton_codigo = data.get('carton_codigo')
             numero = data.get('numero')
             
-            # 1. Necesitamos la cédula para verificar la propiedad del cartón
             cedula = self.scope["user"].username if self.scope["user"].is_authenticated else "Invitado"
-            if cedula == "Invitado":
-                return # Si no está logueado, ignoramos el clic por seguridad
+            if cedula == "Invitado": return 
                 
-            # Función asíncrona interna (Añadimos c_partida a los parámetros)
             @database_sync_to_async
             def procesar_marcado(c_cedula, c_codigo, c_numero, c_partida):
                 try:
                     from .models import Jugador
                     from .services import marcar_casilla_manual
                     jugador = Jugador.objects.get(cedulaidentidadjugador=c_cedula)
-                    # Llamamos al Guardia de Seguridad pasándole la partida actual
                     return marcar_casilla_manual(jugador.idjugador, c_codigo, c_numero, c_partida)
                 except Exception as e:
-                    print(f"Error procesando marcado asíncrono: {e}")
                     return False
 
-            # Ejecutamos pasando el self.id_partida
             exito = await procesar_marcado(cedula, carton_codigo, numero, self.id_partida)
             
             if exito:
@@ -167,10 +162,7 @@ class BingoConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({'canal': 'tienda', 'datos': event['datos']}))
 
     async def evento_presencia(self, event):
-        await self.send(text_data=json.dumps({
-            'canal': 'presencia', 
-            'lista_jugadores': event['lista_jugadores']
-        }))
+        await self.send(text_data=json.dumps({'canal': 'presencia', 'lista_jugadores': event['lista_jugadores']}))
 
     @database_sync_to_async
     def obtener_id_bingo(self, id_partida):
@@ -196,28 +188,31 @@ class BingoConsumer(AsyncWebsocketConsumer):
             )
             SesionJuego.objects.filter(idjugador=jugador, idpartida=partida, estadosesion='Activa').update(estadosesion='Finalizada', fechafinsesion=timezone.now())
             
-            # FIX 3: Cambiamos 'WebSocket' por '127.0.0.1' para que PostgreSQL (Render) no crashee
-            SesionJuego.objects.create(
+            sesion = SesionJuego.objects.create(
                 idplataforma=plataforma, idjugador=jugador, idpartida=partida,
                 fechainiciosesion=timezone.now(), ipconexion='127.0.0.1', dispositivoconexion='Conexión En Vivo',
                 estadosesion='Activa', navegadorweb='Socket de Juego', tokenconexion=str(uuid.uuid4())
             )
-            return jugador.aliasjugador
-        except Exception as e:
-            import traceback
-            print(f"🚨 ERROR CRÍTICO EN REGISTRO DE WEBSOCKET: {e}")
-            traceback.print_exc()
-            return None
+            # AHORA RETORNAMOS EL ID DE LA SESIÓN
+            return jugador.aliasjugador, sesion.idsesionjuego 
+        except Exception:
+            return None, None
 
     @database_sync_to_async
-    def registrar_desconexion(self, cedula, id_partida):
+    def registrar_desconexion(self, cedula, id_partida, sesion_id=None):
         from .models import Jugador, SesionJuego
         from django.utils import timezone
         try:
             jugador = Jugador.objects.get(cedulaidentidadjugador=cedula)
-            SesionJuego.objects.filter(idjugador=jugador, idpartida_id=id_partida, estadosesion='Activa').update(
-                estadosesion='Finalizada', fechafinsesion=timezone.now(), motivocierre='Salió de la Sala'
-            )
+            if sesion_id:
+                # SI TENEMOS EL ID, SOLO MATAMOS ESA PESTAÑA
+                SesionJuego.objects.filter(idsesionjuego=sesion_id, estadosesion='Activa').update(
+                    estadosesion='Finalizada', fechafinsesion=timezone.now(), motivocierre='Salió de la Sala'
+                )
+            else:
+                SesionJuego.objects.filter(idjugador=jugador, idpartida_id=id_partida, estadosesion='Activa').update(
+                    estadosesion='Finalizada', fechafinsesion=timezone.now(), motivocierre='Salió de la Sala'
+                )
         except Exception:
             pass
 
@@ -244,7 +239,7 @@ class BingoConsumer(AsyncWebsocketConsumer):
 
 
 # =========================================================
-# NUEVO: CONSUMIDOR EXCLUSIVO PARA LA TIENDA DE CARTONES
+# CONSUMIDOR TIENDA (AHORA ARREGLADO Y BLINDADO)
 # =========================================================
 class TiendaConsumer(AsyncWebsocketConsumer):
     
@@ -268,46 +263,102 @@ class TiendaConsumer(AsyncWebsocketConsumer):
 
         cedula = self.scope["user"].username if self.scope["user"].is_authenticated else "Invitado"
         if cedula != "Invitado":
-            self.alias_seguro = await self.registrar_conexion(cedula, self.id_partida)
-            
-            # TRANSMISIÓN: Al conectar, enviamos la lista actualizada a todos en la sala
-            if self.alias_seguro:
-                lista_usuarios = await self.obtener_lista_conectados()
+            resultado = await self.registrar_conexion(cedula, self.id_partida)
+            if resultado and resultado[0]:
+                self.alias_seguro = resultado[0]
+                self.sesion_id = resultado[1]
+                
+                lista_activos = await self.obtener_lista_completa_activos()
                 await self.channel_layer.group_send(
                     self.group_partida,
                     {
-                        'type': 'evento_partida',
-                        'datos': {
-                            'evento': 'actualizacion_lista_usuarios',
-                            'usuarios': lista_usuarios
-                        }
+                        'type': 'evento_presencia',
+                        'lista_jugadores': lista_activos
                     }
                 )
 
     async def disconnect(self, close_code):
-        cedula = self.scope["user"].username if self.scope["user"].is_authenticated else "Invitado"
-        if cedula != "Invitado":
-            await self.registrar_desconexion(cedula, self.id_partida)
-            
-            # TRANSMISIÓN: Al desconectar, recalculamos y enviamos la nueva lista
-            lista_usuarios = await self.obtener_lista_conectados()
-            await self.channel_layer.group_send(
-                self.group_partida,
-                {
-                    'type': 'evento_partida',
-                    'datos': {
-                        'evento': 'actualizacion_lista_usuarios',
-                        'usuarios': lista_usuarios
+        if hasattr(self, 'group_partida'):
+            cedula = self.scope["user"].username if self.scope["user"].is_authenticated else "Invitado"
+            if cedula != "Invitado":
+                sesion_id = getattr(self, 'sesion_id', None)
+                await self.registrar_desconexion(cedula, self.id_partida, sesion_id)
+                
+                lista_activos = await self.obtener_lista_completa_activos()
+                await self.channel_layer.group_send(
+                    self.group_partida,
+                    {
+                        'type': 'evento_presencia',
+                        'lista_jugadores': lista_activos
                     }
-                }
-            )
+                )
 
-        await self.channel_layer.group_discard(self.group_partida, self.channel_name)
-        await self.channel_layer.group_discard(self.group_tienda, self.channel_name)
-        await self.channel_layer.group_discard(self.group_chat, self.channel_name)
+            await self.channel_layer.group_discard(self.group_partida, self.channel_name)
+            await self.channel_layer.group_discard(self.group_tienda, self.channel_name)
+            await self.channel_layer.group_discard(self.group_chat, self.channel_name)
 
-    # El megáfono: Recibe el grito desde views.py y se lo pasa al JavaScript
+    # Agregamos estos receptores para que no crashee cuando BingoConsumer hable
     async def evento_tienda(self, event):
-        # Extraemos 'datos' y lo enviamos al JS (para que haga la animación de desaparecer)
-        await self.send(text_data=json.dumps(event['datos']))
+        await self.send(text_data=json.dumps({'canal': 'tienda', 'datos': event['datos']}))
 
+    async def evento_presencia(self, event):
+        await self.send(text_data=json.dumps({'canal': 'presencia', 'lista_jugadores': event['lista_jugadores']}))
+
+    async def evento_partida(self, event):
+        await self.send(text_data=json.dumps({'canal': 'partida', 'datos': event['datos']}))
+
+    async def evento_chat(self, event):
+        await self.send(text_data=json.dumps({'canal': 'chat', 'usuario': event['usuario'], 'mensaje': event['mensaje']}))
+
+    # Helper methods
+    @database_sync_to_async
+    def obtener_id_bingo(self, id_partida):
+        try: return PartidaBingo.objects.get(idpartidabingo=id_partida).idbingo_id
+        except PartidaBingo.DoesNotExist: return None
+
+    @database_sync_to_async
+    def registrar_conexion(self, cedula, id_partida):
+        from .models import Jugador, SesionJuego, PlataformaJuego, PartidaBingo
+        from django.utils import timezone
+        import uuid
+        try:
+            jugador = Jugador.objects.get(cedulaidentidadjugador=cedula)
+            partida = PartidaBingo.objects.get(idpartidabingo=id_partida)
+            plataforma, _ = PlataformaJuego.objects.get_or_create(
+                nombreplataforma='Web Oficial', defaults={'urlplataforma': '/', 'estadoplataforma': True}
+            )
+            SesionJuego.objects.filter(idjugador=jugador, idpartida=partida, estadosesion='Activa').update(estadosesion='Finalizada', fechafinsesion=timezone.now())
+            sesion = SesionJuego.objects.create(
+                idplataforma=plataforma, idjugador=jugador, idpartida=partida,
+                fechainiciosesion=timezone.now(), ipconexion='127.0.0.1', dispositivoconexion='Conexión Tienda',
+                estadosesion='Activa', navegadorweb='Socket Tienda', tokenconexion=str(uuid.uuid4())
+            )
+            return jugador.aliasjugador, sesion.idsesionjuego
+        except Exception:
+            return None, None
+
+    @database_sync_to_async
+    def registrar_desconexion(self, cedula, id_partida, sesion_id=None):
+        from .models import Jugador, SesionJuego
+        from django.utils import timezone
+        try:
+            jugador = Jugador.objects.get(cedulaidentidadjugador=cedula)
+            if sesion_id:
+                SesionJuego.objects.filter(idsesionjuego=sesion_id, estadosesion='Activa').update(
+                    estadosesion='Finalizada', fechafinsesion=timezone.now(), motivocierre='Salió de la Sala'
+                )
+            else:
+                SesionJuego.objects.filter(idjugador=jugador, idpartida_id=id_partida, estadosesion='Activa').update(
+                    estadosesion='Finalizada', fechafinsesion=timezone.now(), motivocierre='Salió de la Sala'
+                )
+        except Exception:
+            pass
+            
+    @database_sync_to_async
+    def obtener_lista_completa_activos(self):
+        from .models import Jugador
+        jugadores = Jugador.objects.filter(
+            sesionjuego__idpartida_id=self.id_partida,
+            sesionjuego__estadosesion='Activa'
+        ).distinct().order_by('aliasjugador')
+        return [j.aliasjugador for j in jugadores]
