@@ -3,6 +3,9 @@ set -o errexit
 
 pip install -r requirements.txt
 python manage.py collectstatic --no-input
+
+cat forzar_columna.py | python manage.py shell
+
 python manage.py migrate
 
 echo "from django.contrib.auth import get_user_model; \
