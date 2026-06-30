@@ -210,9 +210,6 @@ def dashboard(request):
             elif action == 'generar_cartones':
                 cantidad = int(request.POST.get('cantidad_cartones', 0))
                 if cantidad > 0:
-                    lote = generar_lote_cartones(cantidad)
-                    cartones_db = [Carton(codigocarton=c['codigo'], matriznumeros=c['matriz'], esmaestro=True) for c in lote]
-                    Carton.objects.bulk_create(cartones_db)
                     fabricar_cartones_maestros_task.delay(cantidad)
                     messages.success(request, f"¡Orden enviada a la fábrica! Se están estampando {cantidad} cartones RNG en segundo plano.")
             elif action == 'eliminar_carton':
