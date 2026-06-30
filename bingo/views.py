@@ -1,4 +1,4 @@
-import json, os
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash, logout
 from .models import (

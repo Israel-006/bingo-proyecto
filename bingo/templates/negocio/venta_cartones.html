@@ -225,7 +225,7 @@
     function generateCol(min, max) {
         let nums = new Set();
         while(nums.size < 5) { nums.add(getRandomInt(min, max)); }
-        return Array.from(nums).sort((a,b) => a - b);
+        return Array.from(nums);
     }
 
     function rollMatrix(bingoId) {
