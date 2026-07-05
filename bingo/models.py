@@ -42,6 +42,29 @@ def validarfechanacimiento(value):
     if value.year < hace100anios:
         raise ValidationError(f'La fecha de nacimiento es demasiado antigua (Límite: {hace100anios}).')
 
+def validar_cedula_ecuatoriana(cedula):
+    if not cedula or not cedula.isdigit() or len(cedula) != 10:
+        raise ValidationError('La cédula debe tener exactamente 10 dígitos numéricos para ser válida en Ecuador.')
+    
+    provincia = int(cedula[:2])
+    if provincia < 1 or (provincia > 24 and provincia != 30):
+        raise ValidationError('Código de provincia inválido.')
+    
+    tercer_digito = int(cedula[2])
+    if tercer_digito >= 6:
+        raise ValidationError('Tercer dígito inválido para personas naturales.')
+    
+    # Validación con Algoritmo Módulo 10
+    coeficientes = [2, 1, 2, 1, 2, 1, 2, 1, 2]
+    total = sum(
+        (int(cedula[i]) * coeficientes[i]) - 9 if (int(cedula[i]) * coeficientes[i]) >= 10 else (int(cedula[i]) * coeficientes[i])
+        for i in range(9)
+    )
+    
+    digito_verificador = (10 - (total % 10)) % 10
+    if digito_verificador != int(cedula[9]):
+        raise ValidationError('La cédula ecuatoriana ingresada no es válida.')
+
 class Socio(models.Model):
     SEXO_CHOICES = [
         ('H', 'Hombre'),
@@ -62,13 +85,18 @@ class Socio(models.Model):
     segundonombresocio = models.CharField(max_length=40, null=True, blank=True, verbose_name="Segundo Nombre")
     primerapellidosocio = models.CharField(max_length=40, verbose_name="Primer Apellido")
     segundoapellidosocio = models.CharField(max_length=40, verbose_name="Segundo Apellido")
+    nacionalidad = models.CharField(max_length=50, default='Ecuatoriana', verbose_name="Nacionalidad")
+    correosocio = models.EmailField(max_length=200, unique=True, null=True, blank=True, verbose_name="Correo Electrónico")
     cisocio = models.CharField(
         max_length=10, 
         unique=True, 
+        validators=[validar_cedula_ecuatoriana], # AQUÍ ESTÁ LA MAGIA
         verbose_name="Cédula de Identidad"
     )
+    foto_cedula_frontal = models.ImageField(upload_to='media/socio/cedula/frontal/', null=True, blank=True, verbose_name="Foto Cédula Frontal")
+    foto_cedula_trasera = models.ImageField(upload_to='media/socio/cedula/trasera/', null=True, blank=True, verbose_name="Foto Cédula Trasera")
     fotosocio = models.ImageField(
-        upload_to='socio/foto/', 
+        upload_to='media/socio/foto/', 
         null=True, 
         blank=True, 
         verbose_name="Avatar/Foto"
@@ -321,7 +349,7 @@ class Pago(models.Model):
         verbose_name="Fecha Confirmación Admin"
     )
     comprobantepago = models.FileField(
-        upload_to='pago/comprobantes_pagos/', 
+        upload_to='media/pago/comprobantes_pagos/', 
         max_length=255, 
         null=False, 
         blank=False, 
@@ -377,12 +405,8 @@ class Bingo(models.Model):
         ('Cancelado', 'Cancelado'),
     ]
     idbingo = models.AutoField(primary_key=True)
-    idunidadmonetaria = models.ForeignKey(
-        'UnidadMonetaria', 
-        on_delete=models.PROTECT, 
-        db_column='idunidadmonetaria',
-        verbose_name="Unidad Monetaria"
-    )
+    idunidad_venta = models.ForeignKey(UnidadMonetaria, on_delete=models.PROTECT, related_name='bingos_venta')
+    idunidad_premio = models.ForeignKey(UnidadMonetaria, on_delete=models.PROTECT, related_name='bingos_premio')
     titulobingo = models.CharField(
         max_length=150, 
         verbose_name="Título del Bingo"
@@ -429,14 +453,14 @@ class Bingo(models.Model):
         verbose_name="Estado del Bingo"
     )
     rutaimagenpremiomayor = models.ImageField(
-        upload_to='bingo/imagen_premio_mayor/', 
+        upload_to='media/bingo/imagen_premio_mayor/', 
         max_length=300, 
         null=True, 
         blank=True,
         verbose_name="Imagen del Premio"
     )
     urlvideopromocional = models.FileField(
-        upload_to='bingo/video_promocional/', 
+        upload_to='media/bingo/video_promocional/', 
         max_length=300, 
         null=True, 
         blank=True,
@@ -529,37 +553,31 @@ class Jugador(models.Model):
         db_column='idsocio',
         verbose_name="Socio Vinculado"
     )
-    idsocio = models.ForeignKey(
-        'Socio', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
-        db_column='idsocio',
-        verbose_name="Socio Vinculado"
-    )
     nombresjugador = models.CharField(
         max_length=150, 
         null=True, 
         blank=True, 
         verbose_name="Nombres Completos"
     )
-    
     apellidosjugador = models.CharField(
         max_length=150, 
         null=True, 
         blank=True, 
         verbose_name="Apellidos Completos"
     )
-    
+    nacionalidad = models.CharField(max_length=50, default='Ecuatoriana', verbose_name="Nacionalidad")
     cedulaidentidadjugador = models.CharField(
-        max_length=20, 
+        max_length=10, 
         unique=True, 
         null=True, 
         blank=True, 
+        validators=[validar_cedula_ecuatoriana], # VALIDADOR ACTIVO
         verbose_name="Cédula de Identidad"
     )
+    foto_cedula_frontal = models.ImageField(upload_to='media/jugador/cedula/frontal/', null=True, blank=True, verbose_name="Foto Cédula Frontal")
+    foto_cedula_trasera = models.ImageField(upload_to='media/jugador/cedula/trasera/', null=True, blank=True, verbose_name="Foto Cédula Trasera")
     avatarjugador = models.ImageField(
-        upload_to='jugador/avatar/', 
+        upload_to='media/jugador/avatar/', 
         null=True, 
         blank=True, 
         verbose_name="Avatar/Foto"
@@ -669,7 +687,7 @@ class Regalo(models.Model):
         verbose_name="Última Actualización"
     )
     urlimagen = models.ImageField(
-        upload_to='regalo/imagenes/', 
+        upload_to='media/regalo/imagenes/', 
         verbose_name="Imagen del Regalo"
     )
 
@@ -919,14 +937,6 @@ class Carton(models.Model):
         default=False,
         verbose_name="¿Es Cartón Maestro?"
     )
-    indicevictoria = models.IntegerField(
-        default=0,
-        validators=[
-        MinValueValidator(0),
-        MaxValueValidator(100)
-        ],
-        verbose_name="Índice de Victoria Estimado"
-    )
 
     def __str__(self):
         tipo = "Maestro" if self.esmaestro else "Temporal"
@@ -1017,7 +1027,7 @@ class PlataformaJuego(models.Model):
         verbose_name="Nombre de la Plataforma"
     )
     logoplataforma = models.ImageField(
-        upload_to='plataforma/logos/', 
+        upload_to='media/plataforma/logos/', 
         null=True, 
         blank=True, 
         verbose_name="Logo de la Plataforma"
@@ -1113,11 +1123,6 @@ class SesionJuego(models.Model):
         choices=ESTADO_SESION_CHOICES, 
         verbose_name="Estado"
     )
-    latenciaping = models.IntegerField(
-        null=True, 
-        blank=True, 
-        verbose_name="Latencia (ms)"
-    )
     navegadorweb = models.CharField(
         max_length=150, 
         null=True, 
@@ -1165,7 +1170,7 @@ class ConfiguracionWeb(models.Model):
         verbose_name="Texto Descriptivo (Sobre Nosotros)"
     )
     imagenpromocional = models.ImageField(
-        upload_to='web/inicio/', 
+        upload_to='media/web/inicio/', 
         null=True, 
         blank=True, 
         verbose_name="Imagen Promocional del Inicio"

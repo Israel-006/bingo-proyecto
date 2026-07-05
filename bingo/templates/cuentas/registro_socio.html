@@ -28,7 +28,6 @@
                         <label class="form-label small fw-semibold">Segundo Apellido</label>
                         <input type="text" name="segundo_apellido" class="form-control bg-transparent" required>
                     </div>
-
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold">Cédula de Identidad</label>
                         <input type="text" name="cedula" class="form-control bg-transparent" maxlength="10" pattern="\d{10}" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);" title="Debe contener exactamente 10 números" required>
@@ -37,8 +36,6 @@
                         <label class="form-label small fw-semibold">Fecha de Nacimiento</label>
                         <input type="date" name="fecha_nacimiento" id="input-fecha-nacimiento" class="form-control bg-transparent" required>
                     </div>
-
-
                     <script>
                         document.addEventListener("DOMContentLoaded", function() {
                             // Bloquear fechas futuras en el calendario HTML
@@ -56,6 +53,17 @@
                         <input type="text" name="telefono_personal" class="form-control bg-transparent" maxlength="10" pattern="\d{10}" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);" title="Debe contener exactamente 10 números" required>
                     </div>
                     <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Nacionalidad</label>
+                        <select name="nacionalidad" class="form-select bg-transparent">
+                            <option value="Ecuatoriana" selected>Ecuatoriana</option>
+                            <option value="Extranjera">Extranjera</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Teléfono Trabajo (Opcional)</label>
+                        <input type="text" name="telefonofijo" class="form-control bg-transparent">
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label small fw-semibold">Sexo</label>
                         <select name="sexo" class="form-select bg-transparent" required>
                             <option value="H">Hombre</option>
@@ -66,7 +74,10 @@
                         <label class="form-label small fw-semibold">Dirección de Domicilio</label>
                         <input type="text" name="direccion" class="form-control bg-transparent" required>
                     </div>
-
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Dirección de Trabajo (Opcional)</label>
+                        <input type="text" name="direcciontrabajo" class="form-control bg-transparent">
+                    </div>
                     <div class="col-md-6 mt-4">
                         <label class="form-label small fw-semibold text-primary">Correo Electrónico</label>
                         <input type="email" name="email" class="form-control bg-transparent border-primary" required>

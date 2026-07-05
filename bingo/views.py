@@ -4,7 +4,8 @@ from django.contrib.auth import login, update_session_auth_hash, logout
 from .models import (
     TipoSocio, Socio, CuentaBancaria, MetodoPago, Prestamo, Pago, 
     Bingo, Ahorro, Jugador, PartidaBingo, Carton, CartonPartidaBingo, 
-    PlataformaJuego, SesionJuego, Regalo, AporteSemanal, ConfiguracionWeb, UnidadMonetaria, MensajeChat
+    PlataformaJuego, SesionJuego, Regalo, AporteSemanal, ConfiguracionWeb, UnidadMonetaria, MensajeChat,
+    validar_cedula_ecuatoriana
 )
 from .services import generar_matriz_bingo, generar_lote_cartones, actualizar_socio_y_credenciales, actualizar_jugador_y_credenciales, actualizar_avatar_perfil, validar_carton_hibrido
 from django.contrib import messages
@@ -24,14 +25,18 @@ from django.template.loader import get_template
 from xhtml2pdf import pisa
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
+from decimal import Decimal
+from django.core.exceptions import ValidationError
 
 def inicio(request):
     preguntar_jugador = request.session.pop('preguntar_jugador', False)
     es_jugador = False
+    es_socio = False
     mostrar_promo_socio = False
 
     if request.user.is_authenticated and not request.user.is_staff:
         jugador = Jugador.objects.filter(cedulaidentidadjugador=request.user.username).first()
+        socio = Socio.objects.filter(cisocio=request.user.username).first()
         if jugador:
             es_jugador = True
             # LÓGICA DE ÚNICA VEZ: Si es jugador, NO es socio, y no ha visto la promo en esta sesión
@@ -39,12 +44,15 @@ def inicio(request):
                 mostrar_promo_socio = True
                 request.session['promo_socio_visto'] = True
 
+        if socio:
+            es_socio = True
+
     config_web = ConfiguracionWeb.objects.first()
     
     # 1. Recuperamos los bingos activos
     bingos_activos = Bingo.objects.filter(
         estadobingo__in=['Programado', 'En Curso']
-    ).select_related('idunidadmonetaria').order_by('fechaprogramadabingo')  
+    ).select_related('idunidad_venta', 'idunidad_premio').order_by('fechaprogramadabingo')  
     
     # ================================================================
     # CÓDIGO LIMPIO: Django ya sabe que estamos en America/Guayaquil
@@ -70,10 +78,34 @@ def inicio(request):
                 b.sala_abierta = False
         else:
             b.sala_abierta = False
+        
+        # =========================================================
+        # CÁLCULO DEL POZO DINÁMICO (SOPORTE MULTIDIVISA - 45%)
+        # =========================================================
+        vendidos = CartonPartidaBingo.objects.filter(idpartida__idbingo=b).values('idcarton').distinct().count()
+        
+        # 1. Extraemos las tasas de conversión
+        tasa_venta = float(b.idunidad_venta.tasaconversionmoneda)
+        tasa_premio = float(b.idunidad_premio.tasaconversionmoneda)
+        
+        # 2. Convertimos TODO a Dólares
+        ingreso_en_dolares = float(vendidos * b.preciocarton) * tasa_venta
+        
+        # 3. El 45% va directo al Pozo Mayor
+        fondo_pozo_dolares = ingreso_en_dolares * 0.45
+        premio_base_dolares = float(b.premiomayor) * tasa_premio
+        
+        # 4. Comparamos en Dólares y lo transformamos de vuelta
+        if fondo_pozo_dolares > premio_base_dolares:
+            b.pozo_dinamico_actual = fondo_pozo_dolares / tasa_premio
+        else:
+            b.pozo_dinamico_actual = float(b.premiomayor)
+        # =========================================================
 
     contexto = {
         'preguntar_jugador': preguntar_jugador,
         'es_jugador': es_jugador,
+        'es_socio': es_socio,
         'config_web': config_web,
         'bingos_activos': bingos_activos,
         'mostrar_promo_socio': mostrar_promo_socio,
@@ -95,6 +127,37 @@ def dashboard(request):
             elif action == 'eliminar_tiposocio':
                 TipoSocio.objects.get(idtiposocio=request.POST.get('id_tipo')).delete()
                 messages.success(request, "Tipo de Socio eliminado.")
+                
+            elif action == 'recarga_masiva_credito':
+                ids_str = request.POST.get('jugadores_ids', '')
+                tipo_saldo = request.POST.get('tipo_saldo')
+                monto_str = request.POST.get('monto', '0.00')
+                
+                if not ids_str:
+                    messages.error(request, "Error: No seleccionaste ningún jugador para la recarga.")
+                    return redirect('dashboard')
+                
+                # Convertimos la cadena de IDs separados por comas en una lista limpia de enteros
+                ids_lista = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
+                monto = Decimal(monto_str)
+                
+                if monto <= 0:
+                    messages.error(request, "El monto a inyectar debe ser mayor a cero.")
+                    return redirect('dashboard')
+
+                from django.db.models import F
+                if tipo_saldo == 'real':
+                    Jugador.objects.filter(idjugador__in=ids_lista).update(
+                        saldocreditojugador=F('saldocreditojugador') + monto
+                    )
+                    messages.success(request, f"⚡ Inyección Masiva: Se añadieron ${monto} (Saldo Real) a {len(ids_lista)} jugadores.")
+                elif tipo_saldo == 'virtual':
+                    Jugador.objects.filter(idjugador__in=ids_lista).update(
+                        saldovirtualjugador=F('saldovirtualjugador') + monto
+                    )
+                    messages.success(request, f"⚡ Inyección Masiva: Se añadieron {monto} Puntos (Saldo Virtual) a {len(ids_lista)} jugadores.")
+                else:
+                    messages.error(request, "Parámetro de saldo no reconocido.")
             elif action == 'crear_plataforma':
                 estado_plat = True if request.POST.get('estadoplataforma') == 'on' else False
                 PlataformaJuego.objects.create(nombreplataforma=request.POST.get('nombreplataforma'), urlplataforma=request.POST.get('urlplataforma'), descripcionplataforma=request.POST.get('descripcionplataforma'), contactoplataforma=request.POST.get('contactoplataforma'), estadoplataforma=estado_plat, fechaadquisicionlicencia=request.POST.get('fechaadquisicionlicencia') or None, fechavencimientolicencia=request.POST.get('fechavencimientolicencia') or None, logoplataforma=request.FILES.get('logoplataforma'))
@@ -103,13 +166,15 @@ def dashboard(request):
                 PlataformaJuego.objects.get(idplataformajuego=request.POST.get('id_plataforma')).delete()
                 messages.success(request, "Plataforma eliminada del sistema.")
             elif action == 'crear_bingo':
-                unidad = get_object_or_404(UnidadMonetaria, idunidadmonetaria=request.POST.get('idunidadmonetaria'))
-                Bingo.objects.create(idunidadmonetaria=unidad, titulobingo=request.POST.get('titulobingo'), fechaprogramadabingo=request.POST.get('fechaprogramadabingo'), tipobingo=request.POST.get('tipobingo'), lugarbingo=request.POST.get('lugarbingo'), urlsesionbingo=request.POST.get('urlsesionbingo'), preciocarton=request.POST.get('preciocarton'), premiomayor=request.POST.get('premiomayor'), descripcionpremiomayor=request.POST.get('descripcionpremiomayor'), estadobingo=request.POST.get('estadobingo'), descripcionpremios=request.POST.get('descripcionpremios'), rutaimagenpremiomayor=request.FILES.get('rutaimagenpremiomayor'), urlvideopromocional=request.FILES.get('urlvideopromocional'))
+                unidad_venta = get_object_or_404(UnidadMonetaria, idunidadmonetaria=request.POST.get('idunidad_venta'))
+                unidad_premio = get_object_or_404(UnidadMonetaria, idunidadmonetaria=request.POST.get('idunidad_premio')) # Capturamos la moneda del pozo
+                Bingo.objects.create(idunidad_venta=unidad_venta,idunidad_premio=unidad_premio, titulobingo=request.POST.get('titulobingo'), fechaprogramadabingo=request.POST.get('fechaprogramadabingo'), tipobingo=request.POST.get('tipobingo'), lugarbingo=request.POST.get('lugarbingo'), urlsesionbingo=request.POST.get('urlsesionbingo'), preciocarton=request.POST.get('preciocarton'), premiomayor=request.POST.get('premiomayor'), descripcionpremiomayor=request.POST.get('descripcionpremiomayor'), estadobingo=request.POST.get('estadobingo'), descripcionpremios=request.POST.get('descripcionpremios'), rutaimagenpremiomayor=request.FILES.get('rutaimagenpremiomayor'), urlvideopromocional=request.FILES.get('urlvideopromocional'))
                 messages.success(request, "¡Jornada de Bingo creada exitosamente!")
                 
             elif action == 'editar_bingo':
                 bingo = Bingo.objects.get(idbingo=request.POST.get('id_bingo'))
-                bingo.idunidadmonetaria = get_object_or_404(UnidadMonetaria, idunidadmonetaria=request.POST.get('idunidadmonetaria'))
+                bingo.idunidad_venta = get_object_or_404(UnidadMonetaria, idunidadmonetaria=request.POST.get('idunidad_venta'))
+                bingo.idunidad_premio = get_object_or_404(UnidadMonetaria, idunidadmonetaria=request.POST.get('idunidad_premio'))
                 bingo.titulobingo = request.POST.get('titulobingo')
                 bingo.preciocarton = request.POST.get('preciocarton')
                 bingo.premiomayor = request.POST.get('premiomayor')
@@ -210,8 +275,22 @@ def dashboard(request):
             elif action == 'generar_cartones':
                 cantidad = int(request.POST.get('cantidad_cartones', 0))
                 if cantidad > 0:
-                    fabricar_cartones_maestros_task.delay(cantidad)
-                    messages.success(request, f"¡Orden enviada a la fábrica! Se están estampando {cantidad} cartones RNG en segundo plano.")
+                    # 1. Generamos la matemática de los cartones
+                    lote = generar_lote_cartones(cantidad)
+                    
+                    # 2. Preparamos los objetos para la base de datos (ESTO ERA LO QUE FALTABA)
+                    cartones_db = [
+                        Carton(
+                            codigocarton=c['codigo'], 
+                            matriznumeros=c['matriz'], 
+                            esmaestro=True
+                        ) for c in lote
+                    ]
+                    
+                    # 3. Guardamos todos los cartones de golpe en la base de datos
+                    Carton.objects.bulk_create(cartones_db)
+                    
+                    messages.success(request, f"¡Fábrica terminada! Se han estampado y guardado {cantidad} cartones exitosamente.")
             elif action == 'eliminar_carton':
                 Carton.objects.get(idcarton=request.POST.get('id_carton')).delete()
                 messages.success(request, "Cartón retirado del inventario general.")
@@ -320,6 +399,38 @@ def dashboard(request):
         print(f"Error en el motor del gráfico: {e}")
     # ====================================================================
 
+    bingos_lista = list(Bingo.objects.all().order_by('-fechaprogramadabingo'))
+    for b in bingos_lista:
+        # =========================================================
+        # CÁLCULO DEL POZO DINÁMICO (SOPORTE MULTIDIVISA - 45%)
+        # =========================================================
+        vendidos = CartonPartidaBingo.objects.filter(idpartida__idbingo=b).values('idcarton').distinct().count()
+        
+        # 1. Extraemos las tasas de conversión
+        tasa_venta = float(b.idunidad_venta.tasaconversionmoneda)
+        tasa_premio = float(b.idunidad_premio.tasaconversionmoneda)
+        
+        # 2. Convertimos TODO a Dólares
+        ingreso_en_dolares = float(vendidos * b.preciocarton) * tasa_venta
+        
+        # 3. El 45% va directo al Pozo Mayor
+        fondo_pozo_dolares = ingreso_en_dolares * 0.45
+        premio_base_dolares = float(b.premiomayor) * tasa_premio
+        
+        # 4. Comparamos en Dólares y lo transformamos de vuelta
+        if fondo_pozo_dolares > premio_base_dolares:
+            b.pozo_dinamico_actual = fondo_pozo_dolares / tasa_premio
+        else:
+            b.pozo_dinamico_actual = float(b.premiomayor)
+        # =========================================================
+
+    # NUEVO: Calculamos lo mismo para las partidas de la tabla inferior
+    partidas_lista = list(PartidaBingo.objects.select_related('idbingo').all())
+    for pt in partidas_lista:
+        vendidos = CartonPartidaBingo.objects.filter(idpartida__idbingo=pt.idbingo).values('idcarton').distinct().count()
+        fondo = float(vendidos * pt.idbingo.preciocarton) * 0.75
+        pt.idbingo.pozo_dinamico_actual = fondo if fondo > float(pt.idbingo.premiomayor) else float(pt.idbingo.premiomayor)
+
     contexto = {
         'total_socios': Socio.objects.count(), 'total_jugadores': Jugador.objects.count(), 'deuda_calle': Prestamo.objects.exclude(estadoprestamo='Liquidado').aggregate(total=Sum('saldopendiente'))['total'] or 0.00,
         'bingos_activos': Bingo.objects.exclude(estadobingo__in=['Finalizado', 'Cancelado']).count(), 'tipos_socio': TipoSocio.objects.all(),
@@ -333,7 +444,9 @@ def dashboard(request):
         'sesiones_monitoreo': SesionJuego.objects.all().order_by('-fechainiciosesion')[:30], 'config_web': ConfiguracionWeb.objects.first(),
         'unidades_monetarias': UnidadMonetaria.objects.filter(estadomoneda=True),
         'todas_monedas': UnidadMonetaria.objects.all(),
-        
+        'bingos': bingos_lista,
+        'partidas': PartidaBingo.objects.all(),
+        'partidas': partidas_lista,
     }
     # Agrega esto al final de tus variables de contexto
     contexto['bingos_con_pozo'] = list(PartidaBingo.objects.filter(premiomaterial='[POZO_MAYOR]').values_list('idbingo_id', flat=True))
@@ -375,6 +488,52 @@ def bingo_publico(request):
                 b.sala_abierta = False
         else:
             b.sala_abierta = False
+        # =========================================================
+        # CÁLCULO DEL POZO DINÁMICO (SOPORTE MULTIDIVISA - 45%)
+        # =========================================================
+        vendidos = CartonPartidaBingo.objects.filter(idpartida__idbingo=b).values('idcarton').distinct().count()
+        
+        # 1. Extraemos las tasas de conversión
+        tasa_venta = float(b.idunidad_venta.tasaconversionmoneda)
+        tasa_premio = float(b.idunidad_premio.tasaconversionmoneda)
+        
+        # 2. Convertimos TODO a Dólares
+        ingreso_en_dolares = float(vendidos * b.preciocarton) * tasa_venta
+        
+        # 3. El 45% va directo al Pozo Mayor
+        fondo_pozo_dolares = ingreso_en_dolares * 0.45
+        premio_base_dolares = float(b.premiomayor) * tasa_premio
+        
+        # 4. Comparamos en Dólares y lo transformamos de vuelta
+        if fondo_pozo_dolares > premio_base_dolares:
+            b.pozo_dinamico_actual = fondo_pozo_dolares / tasa_premio
+        else:
+            b.pozo_dinamico_actual = float(b.premiomayor)
+        # =========================================================
+    
+    for b in bingos_pasados:
+        # =========================================================
+        # CÁLCULO DEL POZO DINÁMICO (SOPORTE MULTIDIVISA - 45%)
+        # =========================================================
+        vendidos = CartonPartidaBingo.objects.filter(idpartida__idbingo=b).values('idcarton').distinct().count()
+        
+        # 1. Extraemos las tasas de conversión
+        tasa_venta = float(b.idunidad_venta.tasaconversionmoneda)
+        tasa_premio = float(b.idunidad_premio.tasaconversionmoneda)
+        
+        # 2. Convertimos TODO a Dólares
+        ingreso_en_dolares = float(vendidos * b.preciocarton) * tasa_venta
+        
+        # 3. El 45% va directo al Pozo Mayor
+        fondo_pozo_dolares = ingreso_en_dolares * 0.45
+        premio_base_dolares = float(b.premiomayor) * tasa_premio
+        
+        # 4. Comparamos en Dólares y lo transformamos de vuelta
+        if fondo_pozo_dolares > premio_base_dolares:
+            b.pozo_dinamico_actual = fondo_pozo_dolares / tasa_premio
+        else:
+            b.pozo_dinamico_actual = float(b.premiomayor)
+        # =========================================================
 
     contexto = {
         'bingos_activos': bingos_activos,
@@ -440,30 +599,35 @@ def sala_espera(request, id_partida):
 
 @login_required
 def sala_espera_desempate(request, id_partida):
-    # Modificada para recibir el ID dinámico de la partida
     partida = get_object_or_404(PartidaBingo, idpartidabingo=id_partida)
     
-    # Si el administrador ya resolvió y finalizó, no tiene sentido que esperen aquí
     if partida.estadopartida == 'Finalizada':
         return redirect('inicio')
     
-    # =========================================================
-    # FIX ANTI-FANTASMAS: SOLO JUGADORES CON CONEXIÓN ACTIVA
-    # =========================================================
     jugadores_en_sala = Jugador.objects.filter(
         sesionjuego__idpartida=partida,
         sesionjuego__estadosesion='Activa'
     ).distinct().order_by('aliasjugador')
-    # =========================================================
 
     jugador = Jugador.objects.filter(cedulaidentidadjugador=request.user.username).first()
     mensajes_historial = MensajeChat.objects.filter(idbingo=partida.idbingo).order_by('fechahora')
+
+    # NUEVO: Traer a los candidatos de la BD por si el jugador llega tarde o recarga la página
+    candidatos_ids = []
+    if partida.idbingadores and str(partida.idbingadores).strip().lower() != 'none':
+        for id_str in str(partida.idbingadores).split(','):
+            id_limpio = id_str.strip()
+            if id_limpio.isdigit():
+                candidatos_ids.append(int(id_limpio))
+                
+    candidatos = Jugador.objects.filter(idjugador__in=candidatos_ids)
 
     contexto = {
         'partida': partida,
         'jugador': jugador,
         'jugadores_en_sala': jugadores_en_sala,
-        'mensajes_historial': mensajes_historial
+        'mensajes_historial': mensajes_historial,
+        'candidatos': candidatos # <-- ¡Enviamos los candidatos al HTML!
     }
     return render(request, 'partida/sala_espera_desempate.html', contexto)
 
@@ -711,7 +875,7 @@ def desempate_admin(request, id_partida):
         elif decision == 'no':
             codigo_ganador = request.POST.get('codigo_ganador_unico')
             resultado = validar_carton_hibrido(codigo_ganador, partida.idpartidabingo)
-            
+                                                                                                
             if resultado['existe'] and resultado['valido']:
                 partida.estadopartida = 'Finalizada'
                 partida.idjugadororganador_id = resultado['id_jugador']
@@ -726,7 +890,7 @@ def desempate_admin(request, id_partida):
                 
                 if monto_a_pagar and monto_a_pagar > 0:
                     jugador_ganador = Jugador.objects.get(idjugador=resultado['id_jugador'])
-                    tipo_moneda = partida.idbingo.idunidadmonetaria.tipomoneda
+                    tipo_moneda = partida.idbingo.idunidad_premio.tipomoneda
                     if tipo_moneda == 'Efectivo':
                         jugador_ganador.saldocreditojugador += monto_a_pagar
                     else:
@@ -773,42 +937,62 @@ def desempate_admin(request, id_partida):
             else:
                 messages.error(request, "El código ingresado no es válido o no completó el cartón.")
                 return redirect('desempate_admin', id_partida=partida.idpartidabingo)
+        
+        elif decision == 'reanudar':
+            partida.estadopartida = 'En Juego'
+            partida.save()
+            
+            async_to_sync(channel_layer.group_send)(
+                f'bingo_partida_{id_partida}',
+                {'type': 'evento_partida', 'datos': {'evento': 'estado_cambiado', 'nuevo_estado': 'En Juego'}}
+            )
+            
+            messages.success(request, "Falsa alarma. La partida ha sido reanudada.")
+            return redirect('tablero_admin', id_partida=partida.idpartidabingo)
 
     # =========================================================
     # ESCÁNER DE GANADORES WEB EN TIEMPO REAL (RADAR ESTRICTO)
     # =========================================================
     import json
     patrones = {
-        'Tabla Llena': [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24],
-        'Las Cuatro Esquinas': [0, 4, 20, 24],
-        'En Diagonal': [0, 6, 12, 18, 24],
-        'Forma de X': [0, 4, 6, 8, 12, 16, 18, 20, 24],
-        'Forma de Cruz': [2, 7, 10, 11, 12, 13, 14, 17, 22],
-        'Marco de Foto': [0,1,2,3,4, 5,9, 10,14, 15,19, 20,21,22,23,24],
-        'Linea Vertical': [2, 7, 12, 17, 22],
-        'Forma de L': [0, 5, 10, 15, 20, 21, 22, 23, 24],
-        'Forma de C': [0,1,2,3,4, 5, 10, 15, 20,21,22,23,24],
-        'Forma de T': [0,1,2,3,4, 7, 12, 17, 22],
-        'Forma de U': [0,4, 5,9, 10,14, 15,19, 20,21,22,23,24],
-        'Forma de H': [0,4, 5,9, 10,11,12,13,14, 15,19, 20,24],
-        'Forma de Z': [0,1,2,3,4, 8, 12, 16, 20,21,22,23,24],
-        'Forma de Flecha': [2, 6, 8, 12, 17, 22]
+        'Tabla Llena': [[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]],
+        'Las Cuatro Esquinas': [[0, 4, 20, 24]],
+        'En Diagonal': [[0, 6, 12, 18, 24], [4, 8, 12, 16, 20]],
+        'Forma de X': [[0, 4, 6, 8, 12, 16, 18, 20, 24]],
+        'Forma de Cruz': [[2, 7, 10, 11, 12, 13, 14, 17, 22]],
+        'Marco de Foto': [[0,1,2,3,4, 5,9, 10,14, 15,19, 20,21,22,23,24]],
+        'Linea Vertical': [
+            [0, 5, 10, 15, 20], [1, 6, 11, 16, 21], [2, 7, 12, 17, 22], [3, 8, 13, 18, 23], [4, 9, 14, 19, 24]
+        ],
+        'Forma de L': [[0, 5, 10, 15, 20, 21, 22, 23, 24]],
+        'Forma de C': [[0,1,2,3,4, 5, 10, 15, 20,21,22,23,24]],
+        'Forma de T': [[0,1,2,3,4, 7, 12, 17, 22]],
+        'Forma de U': [[0,4, 5,9, 10,14, 15,19, 20,21,22,23,24]],
+        'Forma de H': [[0,4, 5,9, 10,11,12,13,14, 15,19, 20,24]],
+        'Forma de Z': [[0,1,2,3,4, 8, 12, 16, 20,21,22,23,24]],
+        'Forma de Flecha': [[2, 6, 8, 12, 17, 22]]
     }
     marcadas_requeridas = patrones.get(partida.modalidad_victoria, patrones['Tabla Llena'])
     
-    jugadores_conectados_ids = Jugador.objects.filter(
-        sesionjuego__idpartida=partida,
-        sesionjuego__estadosesion='Activa'
-    ).values_list('idjugador', flat=True)
-    
     cartones_en_juego = CartonPartidaBingo.objects.filter(
         idpartida=partida,
-        idjugador__in=jugadores_conectados_ids
     ).select_related('idcarton', 'idjugador')
     
     ganadores_web = []
+    cartones_en_juego = CartonPartidaBingo.objects.filter(
+        idpartida=partida,
+    ).select_related('idcarton', 'idjugador')
+    
+    ganadores_web = []
+    jugadores_en_radar = set() # NUEVO: Control para evitar clones en pantalla
+
     for c in cartones_en_juego:
-        # Extraemos los clics de la DB
+        id_jugador_actual = c.idjugador.idjugador
+            
+        # NUEVO: Si este jugador ya fue agregado al radar web por otro cartón, lo saltamos
+        if id_jugador_actual in jugadores_en_radar:
+            continue
+            
         marcados_db = []
         if getattr(c, 'numerosmarcados', None):
             try: marcados_db = json.loads(c.numerosmarcados)
@@ -817,12 +1001,9 @@ def desempate_admin(request, id_partida):
                 try: marcados_db = ast.literal_eval(c.numerosmarcados)
                 except: pass
         
-        # FILTRO LETAL: Si no marcó nada, se ignora por completo
-        if not marcados_db:
-            continue
+        if not marcados_db: continue
             
         marcados_str = [str(num) for num in marcados_db]
-
         matriz = c.idcarton.matriznumeros
         if isinstance(matriz, str):
             try: matriz = json.loads(matriz.replace("'", '"'))
@@ -832,16 +1013,29 @@ def desempate_admin(request, id_partida):
         for i in range(5):
             celdas.extend([matriz['B'][i], matriz['I'][i], matriz['N'][i], matriz['G'][i], matriz['O'][i]])
             
-        es_ganador = True
-        for idx in marcadas_requeridas:
-            if idx == 12: continue 
-            # Verificamos SOLO contra las casillas que marcó
-            if str(celdas[idx]) not in marcados_str:
-                es_ganador = False
+        # NUEVA LÓGICA DE VALIDACIÓN MULTI-PATRÓN
+        es_ganador_global = False
+        for opcion in marcadas_requeridas:
+            es_ganador_opcion = True
+            for idx in opcion:
+                if idx == 12: continue 
+                if str(celdas[idx]) not in marcados_str:
+                    es_ganador_opcion = False
+                    break
+            if es_ganador_opcion:
+                es_ganador_global = True
                 break
                 
-        if es_ganador:
+        if es_ganador_global:
+            # FIX PRIORIDAD 2: Estampar el momento exacto de la victoria si no lo tiene
+            if not c.fechaganador:
+                c.fechaganador = timezone.now()
+                c.save(update_fields=['fechaganador'])
+                
             ganadores_web.append(c)
+            jugadores_en_radar.add(id_jugador_actual)
+
+    ganadores_web.sort(key=lambda x: x.fechaganador)
 
     contexto = {
         'partida': partida,
@@ -859,16 +1053,36 @@ def consola_juego(request, id_partida):
     if partida.estadopartida == 'Finalizada':
         messages.info(request, "Esta partida ya ha finalizado.")
         return redirect('dashboard')
-    
-    candidatos_ids = []
-    if partida.idbingadores:
-        candidatos_ids = [int(id_str) for id_str in partida.idbingadores.split(',') if id_str.strip()]
         
+    # =========================================================
+    # NUEVO: CÁLCULO DEL POZO DINÁMICO PARA EL DESEMPATE
+    # =========================================================
+    vendidos = CartonPartidaBingo.objects.filter(idpartida__idbingo=partida.idbingo).values('idcarton').distinct().count()
+    tasa_venta = float(partida.idbingo.idunidad_venta.tasaconversionmoneda)
+    tasa_premio = float(partida.idbingo.idunidad_premio.tasaconversionmoneda)
+    ingreso_en_dolares = float(vendidos * partida.idbingo.preciocarton) * tasa_venta
+    fondo_pozo_dolares = ingreso_en_dolares * 0.45
+    premio_base_dolares = float(partida.idbingo.premiomayor) * tasa_premio
+    
+    if fondo_pozo_dolares > premio_base_dolares:
+        partida.idbingo.pozo_dinamico_actual = fondo_pozo_dolares / tasa_premio
+    else:
+        partida.idbingo.pozo_dinamico_actual = float(partida.idbingo.premiomayor)
+    # =========================================================
+    
+    # 1. OBTENER CANDIDATOS (Forma 100% segura y blindada)
+    candidatos_ids = []
+    if partida.idbingadores and str(partida.idbingadores).strip().lower() != 'none':
+        for id_str in str(partida.idbingadores).split(','):
+            id_limpio = id_str.strip()
+            if id_limpio.isdigit(): # Solo agregamos si es un número válido
+                candidatos_ids.append(int(id_limpio))
+                
     candidatos = Jugador.objects.filter(idjugador__in=candidatos_ids)
     
     if request.method == 'POST':
         action = request.POST.get('action')
-        
+
         if action == 'agregar_candidato':
             codigo = request.POST.get('codigo_carton')
             resultado = validar_carton_hibrido(codigo, partida.idpartidabingo)
@@ -876,29 +1090,28 @@ def consola_juego(request, id_partida):
             if resultado['existe'] and resultado['valido']:
                 nuevo_id = str(resultado['id_jugador'])
                 
-                ids_actuales = partida.idbingadores.split(',') if partida.idbingadores else []
+                # FIX BUG: Concatenación estricta de IDs para evitar pérdidas
+                ids_actuales = []
+                if partida.idbingadores and str(partida.idbingadores).strip().lower() != 'none':
+                    for i in str(partida.idbingadores).split(','):
+                        i_limpio = i.strip()
+                        if i_limpio.isdigit():
+                            ids_actuales.append(i_limpio)
+                            
                 if nuevo_id not in ids_actuales:
-                    if partida.idbingadores:
-                        partida.idbingadores += f",{nuevo_id}"
-                    else:
-                        partida.idbingadores = nuevo_id
+                    ids_actuales.append(nuevo_id)
+                    partida.idbingadores = ",".join(ids_actuales)
                     partida.save()
                     
-                    # ==========================================
-                    # EL BOLETO VIP: TELETRANSPORTE AL JUGADOR
-                    # ==========================================
                     channel_layer = get_channel_layer()
                     async_to_sync(channel_layer.group_send)(
                         f'bingo_partida_{id_partida}',
-                        {
-                            'type': 'evento_partida',
-                            'datos': {
-                                'evento': 'invitacion_vip',
-                                'id_jugador': str(resultado['id_jugador']) 
-                            }
-                        }
+                        {'type': 'evento_partida', 'datos': {
+                            'evento': 'invitacion_vip', 
+                            'id_jugador': nuevo_id,
+                            'alias': resultado['jugador'] 
+                        }}
                     )
-                    
                     messages.success(request, f"¡Cartón verificado! {resultado['jugador']} agregado al desempate.")
                 else:
                     messages.warning(request, "Este jugador ya está en la lista de desempate.")
@@ -906,6 +1119,74 @@ def consola_juego(request, id_partida):
                 messages.error(request, "Código inválido o cartón incompleto.")
             
             return redirect('consola_juego', id_partida=id_partida)
+
+        # ACCIÓN PARA FINALIZAR SI HAY UN ÚNICO GANADOR
+        elif action == 'forzar_ganador_unico':
+            ganador_id = request.POST.get('id_unico_ganador')
+            if ganador_id:
+                partida.idjugadororganador_id = ganador_id
+                partida.estadopartida = 'Finalizada'
+                partida.haydesempate = False # Corregimos el estado a Falsa Alarma de desempate
+                partida.horafin = timezone.now() 
+                partida.save()
+                
+                es_pozo_mayor = (partida.premiomaterial == '[POZO_MAYOR]')
+                monto_a_pagar = partida.idbingo.premiomayor if es_pozo_mayor else partida.valorpremio
+                
+                if monto_a_pagar and monto_a_pagar > 0:
+                    jugador_ganador = Jugador.objects.get(idjugador=ganador_id)
+                    tipo_moneda = partida.idbingo.idunidad_premio.tipomoneda
+                    if tipo_moneda == 'Efectivo':
+                        jugador_ganador.saldocreditojugador += monto_a_pagar
+                    else:
+                        jugador_ganador.saldovirtualjugador += monto_a_pagar
+                    jugador_ganador.save()
+                    
+                if not es_pozo_mayor and partida.premiomaterial and partida.premiomaterial != 'Ninguno':
+                    partida.estadopremiomaterial = 'Pendiente'
+                partida.save()
+                
+                siguiente_partida = PartidaBingo.objects.filter(
+                    idbingo=partida.idbingo, idpartidabingo__gt=partida.idpartidabingo
+                ).order_by('idpartidabingo').first()
+
+                if siguiente_partida:
+                    destino_admin = redirect('tablero_admin', id_partida=siguiente_partida.idpartidabingo)
+                else:
+                    bingo_actual = partida.idbingo
+                    bingo_actual.estadobingo = 'Finalizado'
+                    bingo_actual.save()
+                    destino_admin = redirect('dashboard')
+                
+                ganador_obj = Jugador.objects.get(idjugador=ganador_id)
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    f'bingo_partida_{id_partida}',
+                    {'type': 'evento_partida', 'datos': {
+                        'evento': 'estado_cambiado', 'nuevo_estado': 'Finalizada',
+                        'ganador': ganador_obj.aliasjugador, 'id_siguiente_partida': siguiente_partida.idpartidabingo if siguiente_partida else None
+                    }}
+                )
+                messages.success(request, "¡Ronda liquidada! Se ha asignado el premio al único ganador verificado.")
+                return destino_admin
+            
+        # ACCIÓN PARA CANCELAR EL DESEMPATE Y REGRESAR
+        elif action == 'cancelar_desempate':
+            partida.estadopartida = 'En Juego'
+            partida.haydesempate = False
+            partida.idbingadores = "" # Limpiamos a los candidatos
+            partida.sorteodesempate = {} # Limpiamos los tiros
+            partida.save()
+            
+            # Le avisamos a todos los jugadores que volvemos al tablero
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'bingo_partida_{id_partida}',
+                {'type': 'evento_partida', 'datos': {'evento': 'estado_cambiado', 'nuevo_estado': 'En Juego'}}
+            )
+            
+            messages.success(request, "Desempate abortado. La partida se ha reanudado.")
+            return redirect('tablero_admin', id_partida=partida.idpartidabingo)
         
         elif action == 'registrar_tiro_desempate':
             id_jugador_tiro = request.POST.get('id_jugador_tiro')
@@ -916,6 +1197,17 @@ def consola_juego(request, id_partida):
             partida.sorteodesempate = sorteo
             partida.save()
             
+            # Disparo de animación individual
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'bingo_partida_{id_partida}',
+                {'type': 'evento_partida', 'datos': {
+                    'evento': 'tiro_individual', 
+                    'id_jugador': id_jugador_tiro, 
+                    'numero': numero_tiro
+                }}
+            )
+
             ids_actuales = [str(i.strip()) for i in str(partida.idbingadores).split(',') if i.strip()]
             completado = all(candidato in sorteo for candidato in ids_actuales)
             
@@ -957,7 +1249,7 @@ def consola_juego(request, id_partida):
                 
                 if monto_a_pagar and monto_a_pagar > 0:
                     jugador_ganador = Jugador.objects.get(idjugador=ganador_id)
-                    tipo_moneda = partida.idbingo.idunidadmonetaria.tipomoneda
+                    tipo_moneda = partida.idbingo.idunidad_premio.tipomoneda
                     if tipo_moneda == 'Efectivo':
                         jugador_ganador.saldocreditojugador += monto_a_pagar
                     else:
@@ -1005,38 +1297,44 @@ def consola_juego(request, id_partida):
     # =========================================================
     # ESCÁNER DE GANADORES WEB EN TIEMPO REAL (RADAR ESTRICTO)
     # =========================================================
-    import json
     patrones = {
-        'Tabla Llena': [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24],
-        'Las Cuatro Esquinas': [0, 4, 20, 24],
-        'En Diagonal': [0, 6, 12, 18, 24],
-        'Forma de X': [0, 4, 6, 8, 12, 16, 18, 20, 24],
-        'Forma de Cruz': [2, 7, 10, 11, 12, 13, 14, 17, 22],
-        'Marco de Foto': [0,1,2,3,4, 5,9, 10,14, 15,19, 20,21,22,23,24],
-        'Linea Vertical': [2, 7, 12, 17, 22],
-        'Forma de L': [0, 5, 10, 15, 20, 21, 22, 23, 24],
-        'Forma de C': [0,1,2,3,4, 5, 10, 15, 20,21,22,23,24],
-        'Forma de T': [0,1,2,3,4, 7, 12, 17, 22],
-        'Forma de U': [0,4, 5,9, 10,14, 15,19, 20,21,22,23,24],
-        'Forma de H': [0,4, 5,9, 10,11,12,13,14, 15,19, 20,24],
-        'Forma de Z': [0,1,2,3,4, 8, 12, 16, 20,21,22,23,24],
-        'Forma de Flecha': [2, 6, 8, 12, 17, 22]
+        'Tabla Llena': [[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]],
+        'Las Cuatro Esquinas': [[0, 4, 20, 24]],
+        'En Diagonal': [[0, 6, 12, 18, 24], [4, 8, 12, 16, 20]],
+        'Forma de X': [[0, 4, 6, 8, 12, 16, 18, 20, 24]],
+        'Forma de Cruz': [[2, 7, 10, 11, 12, 13, 14, 17, 22]],
+        'Marco de Foto': [[0,1,2,3,4, 5,9, 10,14, 15,19, 20,21,22,23,24]],
+        'Linea Vertical': [
+            [0, 5, 10, 15, 20], [1, 6, 11, 16, 21], [2, 7, 12, 17, 22], [3, 8, 13, 18, 23], [4, 9, 14, 19, 24]
+        ],
+        'Forma de L': [[0, 5, 10, 15, 20, 21, 22, 23, 24]],
+        'Forma de C': [[0,1,2,3,4, 5, 10, 15, 20,21,22,23,24]],
+        'Forma de T': [[0,1,2,3,4, 7, 12, 17, 22]],
+        'Forma de U': [[0,4, 5,9, 10,14, 15,19, 20,21,22,23,24]],
+        'Forma de H': [[0,4, 5,9, 10,11,12,13,14, 15,19, 20,24]],
+        'Forma de Z': [[0,1,2,3,4, 8, 12, 16, 20,21,22,23,24]],
+        'Forma de Flecha': [[2, 6, 8, 12, 17, 22]]
     }
     marcadas_requeridas = patrones.get(partida.modalidad_victoria, patrones['Tabla Llena'])
     
-    jugadores_conectados_ids = Jugador.objects.filter(
-        sesionjuego__idpartida=partida,
-        sesionjuego__estadosesion='Activa'
-    ).values_list('idjugador', flat=True)
-    
     cartones_en_juego = CartonPartidaBingo.objects.filter(
         idpartida=partida,
-        idjugador__in=jugadores_conectados_ids
     ).select_related('idcarton', 'idjugador')
     
     ganadores_web = []
+    jugadores_en_radar = set()
+
     for c in cartones_en_juego:
-        # Extraemos los clics de la DB
+        id_jugador_actual = c.idjugador.idjugador
+        
+        # Ignoramos si ya está en la lista de candidatos oficiales
+        if 'candidatos_ids' in locals() and id_jugador_actual in candidatos_ids:
+            continue
+            
+        # NUEVO: Si este jugador ya fue agregado al radar web por otro cartón, lo saltamos
+        if id_jugador_actual in jugadores_en_radar:
+            continue
+            
         marcados_db = []
         if getattr(c, 'numerosmarcados', None):
             try: marcados_db = json.loads(c.numerosmarcados)
@@ -1045,12 +1343,9 @@ def consola_juego(request, id_partida):
                 try: marcados_db = ast.literal_eval(c.numerosmarcados)
                 except: pass
         
-        # FILTRO LETAL: Si no marcó nada, se ignora por completo
-        if not marcados_db:
-            continue
+        if not marcados_db: continue
             
         marcados_str = [str(num) for num in marcados_db]
-
         matriz = c.idcarton.matriznumeros
         if isinstance(matriz, str):
             try: matriz = json.loads(matriz.replace("'", '"'))
@@ -1060,22 +1355,30 @@ def consola_juego(request, id_partida):
         for i in range(5):
             celdas.extend([matriz['B'][i], matriz['I'][i], matriz['N'][i], matriz['G'][i], matriz['O'][i]])
             
-        es_ganador = True
-        for idx in marcadas_requeridas:
-            if idx == 12: continue 
-            # Verificamos SOLO contra las casillas que marcó
-            if str(celdas[idx]) not in marcados_str:
-                es_ganador = False
+        # LÓGICA DE VALIDACIÓN MULTI-PATRÓN
+        es_ganador_global = False
+        for opcion in marcadas_requeridas:
+            es_ganador_opcion = True
+            for idx in opcion:
+                if idx == 12: continue 
+                if str(celdas[idx]) not in marcados_str:
+                    es_ganador_opcion = False
+                    break
+            if es_ganador_opcion:
+                es_ganador_global = True
                 break
                 
-        if es_ganador:
+        if es_ganador_global:
+            if not c.fechaganador:
+                c.fechaganador = timezone.now()
+                c.save(update_fields=['fechaganador'])
+                
             ganadores_web.append(c)
+            jugadores_en_radar.add(id_jugador_actual)
 
-    contexto = {
-        'partida': partida,
-        'candidatos': candidatos,
-        'ganadores_web': ganadores_web 
-    }
+    ganadores_web.sort(key=lambda x: x.fechaganador)
+
+    contexto = {'partida': partida, 'candidatos': candidatos, 'ganadores_web': ganadores_web}
     return render(request, 'partida/consola_juego.html', contexto)
 
 def inicio_sesion(request):
@@ -1114,14 +1417,29 @@ def seleccion_registro(request): return render(request, 'cuentas/seleccion_regis
 
 def registro_socio(request):
     if request.method == 'POST':
-        primer_nombre, segundo_nombre = request.POST.get('primer_nombre'), request.POST.get('segundo_nombre')
-        primer_apellido, segundo_apellido = request.POST.get('primer_apellido'), request.POST.get('segundo_apellido')
-        cedula, fecha_nacimiento_str = request.POST.get('cedula'), request.POST.get('fecha_nacimiento')
-        telefono_personal, direccion = request.POST.get('telefono_personal'), request.POST.get('direccion')
-        sexo, email, password = request.POST.get('sexo'), request.POST.get('email'), request.POST.get('password')
+        # 1. Captura de variables corregida y ordenada
+        primer_nombre = request.POST.get('primer_nombre')
+        segundo_nombre = request.POST.get('segundo_nombre')
+        primer_apellido = request.POST.get('primer_apellido')
+        segundo_apellido = request.POST.get('segundo_apellido')
+        
+        cedula = request.POST.get('cedula')
+        fecha_nacimiento_str = request.POST.get('fecha_nacimiento')
+        nacionalidad = request.POST.get('nacionalidad', 'Ecuatoriana')
+        
+        # FIX: Aquí estaba el error en tu código, ya está capturando el teléfono correctamente
+        telefono_personal = request.POST.get('telefono_personal') 
+        direccion = request.POST.get('direccion')
+        
+        telefonofijo = request.POST.get('telefonofijo')
+        direcciontrabajo = request.POST.get('direcciontrabajo')
+        sexo = request.POST.get('sexo')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
 
         # ==========================================
         # FIX: ESCUDO DE INTEGRIDAD DE DATOS (10 DÍGITOS)
+        # Se subió para validar antes de hacer la matemática
         # ==========================================
         if not cedula.isdigit() or len(cedula) != 10:
             messages.error(request, "Error de seguridad: La cédula debe tener exactamente 10 dígitos numéricos.")
@@ -1132,10 +1450,24 @@ def registro_socio(request):
             return redirect('registro_socio')
         # ==========================================
 
+        # 2. Validación de la Cédula Ecuatoriana
+        if nacionalidad == 'Ecuatoriana':
+            try:
+                validar_cedula_ecuatoriana(cedula)
+            except ValidationError as e:
+                messages.error(request, f"Error de verificación: {e.message}")
+                return render(request, 'cuentas/registro_socio.html')
+            
+        # 3. Validaciones de existencia
         if User.objects.filter(username=cedula).exists():
             messages.error(request, "Esta cédula ya está registrada.")
             return redirect('registro_socio')
+            
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "Este correo electrónico ya está registrado.")
+            return redirect('registro_socio')
 
+        # 4. Validación de fecha
         try:
             fecha_nac = datetime.strptime(fecha_nacimiento_str, '%Y-%m-%d').date()
             if fecha_nac > date.today():
@@ -1145,6 +1477,7 @@ def registro_socio(request):
             messages.error(request, "Formato de fecha inválido.")
             return redirect('registro_socio')
 
+        # 5. Creación del Usuario y Socio
         try:
             user = User.objects.create_user(username=cedula, email=email, password=password, first_name=primer_nombre, last_name=primer_apellido)
             tipo_base = TipoSocio.objects.first()
@@ -1153,11 +1486,24 @@ def registro_socio(request):
                 messages.error(request, "Error crítico: No hay 'Tipos de Socio'.")
                 return redirect('registro_socio')
             
+            # AQUI SE GUARDAN LOS CAMPOS NUEVOS EN LA BASE DE DATOS
             Socio.objects.create(
-                idtiposocio=tipo_base, primernombresocio=primer_nombre, segundonombresocio=segundo_nombre,
-                primerapellidosocio=primer_apellido, segundoapellidosocio=segundo_apellido, cisocio=cedula,
-                fechanacimientosocio=fecha_nac, telefonopersonalsocio=telefono_personal,
-                direcciondomiciliosocio=direccion, sexosocio=sexo, estadosocio='Activo'
+                idtiposocio=tipo_base, 
+                primernombresocio=primer_nombre, 
+                segundonombresocio=segundo_nombre,
+                primerapellidosocio=primer_apellido, 
+                segundoapellidosocio=segundo_apellido, 
+                cisocio=cedula,
+                fechanacimientosocio=fecha_nac, 
+                telefonopersonalsocio=telefono_personal,
+                direcciondomiciliosocio=direccion, 
+                sexosocio=sexo, 
+                estadosocio='Activo',
+                # Agregados:
+                nacionalidad=nacionalidad,
+                telefonotrabajosocio=telefonofijo, 
+                direcciontrabajosocio=direcciontrabajo,
+                correosocio=email
             )
             login(request, user)
             request.session['preguntar_jugador'] = True
@@ -1167,15 +1513,26 @@ def registro_socio(request):
             if 'user' in locals() and user.id: user.delete() 
             messages.error(request, f"Error en el formulario: {str(e)}")
             return redirect('registro_socio')
+            
     return render(request, 'cuentas/registro_socio.html')
 
 def registro_jugador(request):
     if request.method == 'POST':
         alias = request.POST.get('aliasjugador')
+        # Capturamos la nacionalidad (nueva)
+        nacionalidad = request.POST.get('nacionalidad', 'Ecuatoriana') 
+
         if request.user.is_authenticated:
             try:
                 socio_vinculado = Socio.objects.get(cisocio=request.user.username)
-                Jugador.objects.create(idsocio=socio_vinculado, aliasjugador=alias, nombresjugador=socio_vinculado.primernombresocio, cedulaidentidadjugador=socio_vinculado.cisocio, correojugador=request.user.email)
+                Jugador.objects.create(
+                    idsocio=socio_vinculado, 
+                    aliasjugador=alias, 
+                    nombresjugador=socio_vinculado.primernombresocio, 
+                    cedulaidentidadjugador=socio_vinculado.cisocio, 
+                    correojugador=request.user.email,
+                    nacionalidad=nacionalidad # Guardamos el nuevo campo
+                )
                 request.session['user_nombre'] = alias
                 messages.success(request, f"¡Perfil de juego activado como '{alias}'!")
                 return redirect('inicio')
@@ -1191,14 +1548,33 @@ def registro_jugador(request):
             if cedula and (not cedula.isdigit() or len(cedula) != 10):
                 messages.error(request, "Error de seguridad: La cédula debe tener exactamente 10 dígitos numéricos.")
                 return redirect('registro_jugador')
+            
+            # NUEVO: Validación de Cédula Ecuatoriana (solo si es ecuatoriano)
+            if nacionalidad == 'Ecuatoriana':
+                try:
+                    validar_cedula_ecuatoriana(cedula)
+                except ValidationError as e:
+                    messages.error(request, f"Error de verificación: {e.message}")
+                    return redirect('registro_jugador')
             # ==========================================
             
             if User.objects.filter(username=cedula).exists():
                 messages.error(request, "Cédula ya registrada.")
                 return redirect('registro_jugador')
+            
             try:
                 user = User.objects.create_user(username=cedula, email=correo, password=password, first_name=nombres, last_name=apellidos)
-                Jugador.objects.create(aliasjugador=alias, nombresjugador=nombres, apellidosjugador=apellidos, cedulaidentidadjugador=cedula, correojugador=correo)
+                
+                # Guardamos el nuevo campo 'nacionalidad' en la creación del Jugador
+                Jugador.objects.create(
+                    aliasjugador=alias, 
+                    nombresjugador=nombres, 
+                    apellidosjugador=apellidos, 
+                    cedulaidentidadjugador=cedula, 
+                    correojugador=correo,
+                    nacionalidad=nacionalidad 
+                )
+                
                 login(request, user)
                 request.session['user_nombre'] = alias
                 messages.success(request, f"¡Bienvenido a la sala de juegos, {alias}!")
@@ -1207,6 +1583,7 @@ def registro_jugador(request):
                 if 'user' in locals() and user.id: user.delete()
                 messages.error(request, f"Error: {str(e)}")
                 return redirect('registro_jugador')
+                
     return render(request, 'cuentas/registro_jugador.html')
 
 # =========================================================
@@ -1240,14 +1617,36 @@ def venta_cartones(request):
 
         cartones_ya_comprados = CartonPartidaBingo.objects.filter(idjugador=jugador, idpartida__idbingo=bingo).values('idcarton').distinct().count()
 
+        # =========================================================
+        # NUEVA VALIDACIÓN: BLOQUEO ESTRICTO DE 50 CARTONES GLOBALES
+        # =========================================================
+        if (cartones_ya_comprados + cantidad_total_compra) > 50:
+            disponibles = 50 - cartones_ya_comprados
+            if disponibles > 0:
+                mensaje = f"Límite excedido. Ya posees {cartones_ya_comprados} cartones. Solo puedes adquirir {disponibles} cartones más para este evento."
+            else:
+                mensaje = "Has alcanzado el límite máximo de 50 cartones para este evento. No puedes realizar más compras."
+            
+            messages.error(request, mensaje)
+            return redirect('venta_cartones')
+        # =========================================================
         
 
         precio_unitario = bingo.preciocarton
         total_pagar = precio_unitario * cantidad_total_compra
 
-        if jugador.saldocreditojugador < total_pagar:
-            messages.error(request, f"Fondos insuficientes. El total es ${total_pagar} y dispones de ${jugador.saldocreditojugador}.")
-            return redirect('venta_cartones')
+        # 1. IDENTIFICAR TIPO DE MONEDA DE VENTA
+        tipo_moneda_venta = bingo.idunidad_venta.tipomoneda
+
+        # 2. VALIDAR FONDOS CORRESPONDIENTES
+        if tipo_moneda_venta == 'Efectivo':
+            if jugador.saldocreditojugador < total_pagar:
+                messages.error(request, f"Fondos insuficientes. El total es ${total_pagar} y dispones de ${jugador.saldocreditojugador} (Saldo Real).")
+                return redirect('venta_cartones')
+        else:
+            if jugador.saldovirtualjugador < total_pagar:
+                messages.error(request, f"Fondos insuficientes. El total es {total_pagar} y dispones de {jugador.saldovirtualjugador} (Saldo Virtual).")
+                return redirect('venta_cartones')
 
         partidas = PartidaBingo.objects.filter(idbingo=bingo)
         cartones_a_asignar = []
@@ -1268,9 +1667,12 @@ def venta_cartones(request):
             cartones_a_asignar.extend(list(cartones_temporales))
 
         try:
-            jugador.saldocreditojugador -= total_pagar
+            if tipo_moneda_venta == 'Efectivo':
+                jugador.saldocreditojugador -= total_pagar
+            else:
+                jugador.saldovirtualjugador -= total_pagar
             jugador.save()
-
+            
             nuevas_asignaciones = []
             for carton in cartones_a_asignar:
                 for partida in partidas:
@@ -1311,6 +1713,29 @@ def venta_cartones(request):
         porcentaje_barra = min(int((comprados / 15) * 100), 100)
         usados_ids = CartonPartidaBingo.objects.filter(idpartida__idbingo=b).values_list('idcarton', flat=True)
         catalogo = Carton.objects.filter(esmaestro=True).exclude(idcarton__in=usados_ids)[:12]
+
+        # =========================================================
+        # CÁLCULO DEL POZO DINÁMICO (SOPORTE MULTIDIVISA - 45%)
+        # =========================================================
+        vendidos = CartonPartidaBingo.objects.filter(idpartida__idbingo=b).values('idcarton').distinct().count()
+        
+        # 1. Extraemos las tasas de conversión
+        tasa_venta = float(b.idunidad_venta.tasaconversionmoneda)
+        tasa_premio = float(b.idunidad_premio.tasaconversionmoneda)
+        
+        # 2. Convertimos TODO a Dólares
+        ingreso_en_dolares = float(vendidos * b.preciocarton) * tasa_venta
+        
+        # 3. El 45% va directo al Pozo Mayor
+        fondo_pozo_dolares = ingreso_en_dolares * 0.45
+        premio_base_dolares = float(b.premiomayor) * tasa_premio
+        
+        # 4. Comparamos en Dólares y lo transformamos de vuelta
+        if fondo_pozo_dolares > premio_base_dolares:
+            b.pozo_dinamico_actual = fondo_pozo_dolares / tasa_premio
+        else:
+            b.pozo_dinamico_actual = float(b.premiomayor)
+        # =========================================================
 
         bingos_data.append({'bingo': b, 'comprados': comprados, 'porcentaje': porcentaje_barra, 'catalogo': catalogo})
 
@@ -1477,9 +1902,19 @@ def mis_cartones(request):
     # Convertimos de nuevo a lista para la plantilla HTML
     bingos_agrupados = []
     for b_id, data in bingos_dict.items():
+        # NUEVO: Verificamos si hay alguna ronda en pleno juego/verificación
+        rondas_en_juego = PartidaBingo.objects.filter(
+            idbingo=data['bingo'],
+            estadopartida__in=['En Juego', 'Verificando', 'Desempate']
+        ).exists()
+        
+        # Se puede cambiar si NO hay rondas en juego y el bingo NO ha terminado
+        puede_cambiar = not rondas_en_juego and data['bingo'].estadobingo not in ['Finalizado', 'Cancelado']
+
         bingos_agrupados.append({
             'bingo': data['bingo'],
-            'cartones': list(data['cartones_unicos'].values())
+            'cartones': list(data['cartones_unicos'].values()),
+            'puede_cambiar': puede_cambiar
         })
         
     context = {
@@ -1487,6 +1922,108 @@ def mis_cartones(request):
         'jugador': jugador
     }
     return render(request, 'cuentas/mis_cartones.html', context)
+
+@login_required
+def api_catalogo_disponible(request, id_bingo):
+    """Devuelve hasta 10 cartones maestros disponibles para un bingo específico"""
+    if request.method == 'GET':
+        usados_ids = CartonPartidaBingo.objects.filter(
+            idpartida__idbingo=id_bingo
+        ).values_list('idcarton', flat=True)
+        
+        catalogo = Carton.objects.filter(
+            esmaestro=True
+        ).exclude(idcarton__in=usados_ids)[:10]
+        
+        data = []
+        for c in catalogo:
+            # Reutilizamos tu lógica de parseo seguro[cite: 2]
+            matriz = c.matriznumeros
+            if isinstance(matriz, str):
+                import json
+                try: matriz = json.loads(matriz.replace("'", '"'))
+                except: continue
+                
+            data.append({
+                'id': c.idcarton,
+                'codigo': c.codigocarton,
+                'matriz': matriz
+            })
+            
+        return JsonResponse({'status': 'ok', 'catalogo': data})
+
+@login_required
+def cambiar_carton_boveda(request):
+    """Procesa el reemplazo del cartón validando reglas de negocio"""
+    if request.method == 'POST':
+        jugador = Jugador.objects.filter(cedulaidentidadjugador=request.user.username).first()
+        id_bingo = request.POST.get('id_bingo')
+        id_carton_viejo = request.POST.get('id_carton_viejo')
+        modalidad = request.POST.get('modalidad') 
+        id_carton_nuevo = request.POST.get('id_carton_nuevo') 
+
+        bingo = get_object_or_404(Bingo, idbingo=id_bingo)
+
+        # Regla 1: El evento no debe estar finalizado
+        if bingo.estadobingo in ['Finalizado', 'Cancelado']:
+            messages.error(request, "El evento ya concluyó, no puedes realizar cambios.")
+            return redirect('mis_cartones')
+
+        # Regla 2: Ninguna ronda debe estar en juego activo
+        rondas_activas = PartidaBingo.objects.filter(
+            idbingo=bingo, 
+            estadopartida__in=['En Juego', 'Verificando', 'Desempate']
+        ).exists()
+
+        if rondas_activas:
+            messages.error(request, "¡Acción bloqueada! Hay una ronda en juego en este instante.")
+            return redirect('mis_cartones')
+
+        # Regla 3: Filtrar SOLO las asignaciones de rondas futuras (Programada)
+        asignaciones_pendientes = CartonPartidaBingo.objects.filter(
+            idjugador=jugador, 
+            idpartida__idbingo=bingo, 
+            idcarton_id=id_carton_viejo,
+            idpartida__estadopartida='Programada'
+        )
+
+        if not asignaciones_pendientes.exists():
+            messages.error(request, "No tienes rondas futuras con este cartón para poder cambiarlo.")
+            return redirect('mis_cartones')
+
+        try:
+            with transaction.atomic():
+                nuevo_carton_obj = None
+
+                if modalidad == 'rng':
+                    lote = generar_lote_cartones(1) 
+                    c_data = lote[0]
+                    nuevo_carton_obj = Carton.objects.create(
+                        codigocarton=c_data['codigo'], 
+                        matriznumeros=c_data['matriz'], 
+                        esmaestro=False
+                    )
+                
+                elif modalidad == 'catalogo':
+                    nuevo_carton_obj = Carton.objects.get(idcarton=id_carton_nuevo, esmaestro=True)
+                    en_uso = CartonPartidaBingo.objects.filter(
+                        idpartida__idbingo=bingo, 
+                        idcarton=nuevo_carton_obj
+                    ).exists()
+                    
+                    if en_uso:
+                        messages.error(request, "¡Alguien más tomó ese cartón del catálogo! Intenta con otro.")
+                        return redirect('mis_cartones')
+
+                # FIX: Solo actualizamos las asignaciones de las rondas que aún no se juegan
+                asignaciones_pendientes.update(idcarton=nuevo_carton_obj)
+                
+                messages.success(request, f"¡Cartón cambiado exitosamente! Tu nuevo código para las rondas restantes es {nuevo_carton_obj.codigocarton}.")
+
+        except Exception as e:
+            messages.error(request, f"Error al realizar el cambio: {str(e)}")
+
+    return redirect('mis_cartones')
 
 @login_required
 def sacar_bola_api(request, id_partida):

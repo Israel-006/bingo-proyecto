@@ -38,7 +38,7 @@
                         {{ bingo.estadobingo|upper }}
                     </span>
                     <span class="position-absolute top-0 start-0 m-3 badge bg-dark border border-white fs-6 shadow">
-                        <i class="fas fa-ticket-alt text-warning me-1"></i>{{ bingo.idunidadmonetaria.simbolomoneda }}{{ bingo.preciocarton }}
+                        <i class="fas fa-ticket-alt text-warning me-1"></i>{{ bingo.idunidad_venta.simbolomoneda }}{{ bingo.preciocarton }}
                     </span>
                     
                     <div class="position-absolute bottom-0 start-0 w-100 p-3 text-start text-white text-shadow-sm z-index-1">
@@ -50,7 +50,7 @@
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <span class="text-body-secondary small fw-bold text-uppercase">Premio Mayor</span>
-                        <h3 class="text-success fw-black mb-0"><span class="text-body fw-normal">{{ bingo.idunidadmonetaria.simbolomoneda }}</span>{{ bingo.premiomayor }}</h3>
+                        <h3 class="text-success fw-black mb-0"><span class="text-body fw-normal">{{ bingo.idunidad_premio.simbolomoneda }}</span>{{ bingo.pozo_dinamico_actual|floatformat:2 }}</h3>
                     </div>
                     <p class="text-body-secondary small mb-4 line-clamp-2">{{ bingo.descripcionpremiomayor }}</p>
                     
@@ -91,7 +91,7 @@
                 </div>
                 <div class="flex-grow-1">
                     <h6 class="fw-bold text-body mb-1">{{ bingo.titulobingo }}</h6>
-                    <span class="text-success small fw-bold">Premio Entregado: <span class="text-body fw-normal">{{ bingo.idunidadmonetaria.simbolomoneda }}</span>{{ bingo.premiomayor }}
+                    <span class="text-success small fw-bold">Premio Entregado: <span class="text-body fw-normal">{{ bingo.idunidad_premio.simbolomoneda }}</span>{{ bingo.pozo_dinamico_actual|floatformat:2 }}</span>
                 </div>
                 <div>
                     {% if bingo.estadobingo == 'Cancelado' %}

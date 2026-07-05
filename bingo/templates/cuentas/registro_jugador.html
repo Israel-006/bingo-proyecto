@@ -37,10 +37,17 @@
                             <input type="text" name="cedula" class="form-control bg-transparent" maxlength="10" pattern="\d{10}" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);" title="Debe contener exactamente 10 números" required>
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Nacionalidad</label>
+                            <select name="nacionalidad" class="form-select bg-transparent">
+                                <option value="Ecuatoriana" selected>Ecuatoriana</option>
+                                <option value="Extranjera">Extranjera</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label small fw-semibold">Correo</label>
                             <input type="email" name="correojugador" class="form-control bg-transparent" required>
                         </div>
-                        <div class="col-12">
+                        <div class="col-md-6">
                             <label class="form-label small fw-semibold">Contraseña</label>
                             <div class="input-group">
                                 <input type="password" name="password" class="form-control bg-transparent toggle-password-field" required>

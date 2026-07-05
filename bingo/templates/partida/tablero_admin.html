@@ -47,40 +47,84 @@
         70% { box-shadow: 0 0 0 15px rgba(255, 193, 7, 0); }
         100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
     }
+
+    /* AGREGA ESTO AL FINAL DE TU BLOQUE <style> EXISTENTE */
+    .btn-flotante-ajustes {
+        width: 60px; height: 60px; font-size: 1.5rem;
+        display: flex; justify-content: center; align-items: center;
+        transition: transform 0.3s ease;
+    }
+    .btn-flotante-ajustes:hover i { animation: rotarTuerca 2s linear infinite; }
+    @keyframes rotarTuerca { 100% { transform: rotate(360deg); } }
 </style>
 
 {% if partida.estadopartida == 'Programada' %}
-<div class="container mt-5">
-    <div class="card shadow-lg border-0 rounded-4 mb-4" style="background: linear-gradient(135deg, #1E1B4B 0%, #4F46E5 100%);">
-        <div class="card-body text-white text-center p-5">
-            <div class="mb-4">
-                <i class="fas fa-flag-checkered fa-4x text-warning"></i>
-            </div>
-            <h1 class="fw-bold mb-3">La ronda está lista</h1>
-            <p class="fs-5 text-white-50 mb-5">
-                Los jugadores están aguardando en la sala de espera.<br>
-                Presiona el botón para abrir las mesas y comenzar el sorteo.
-            </p>
-            
-            <form method="post" action="{% url 'tablero_admin' partida.idpartidabingo %}">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="iniciar_partida">
-                <button type="submit" class="btn btn-warning btn-lg fw-bold px-5 py-3 shadow-lg rounded-pill text-dark" style="font-size: 1.2rem;">
-                    <i class="fas fa-play me-2"></i> INICIAR RONDA "{{ partida.nombreronda|upper }}"
-                </button>
-            </form>
+<div class="container-fluid py-4 px-lg-5">
+    <div class="row g-4">
+        <!-- PANEL PRINCIPAL DE INICIO -->
+        <div class="col-lg-9">
+            <div class="card shadow-lg border-0 rounded-4 h-100" style="background: linear-gradient(135deg, #1E1B4B 0%, #4F46E5 100%);">
+                <div class="card-body text-white text-center p-5 d-flex flex-column justify-content-center">
+                    <div class="mb-4">
+                        <i class="fas fa-flag-checkered fa-4x text-warning"></i>
+                    </div>
+                    <h1 class="fw-bold mb-3">La ronda está lista</h1>
+                    <p class="fs-5 text-white-50 mb-4">
+                        Los jugadores están aguardando en la sala de espera.<br>
+                        Observa el radar a la derecha y presiona el botón para comenzar el sorteo.
+                    </p>
+                    
+                    <form method="post" action="{% url 'tablero_admin' partida.idpartidabingo %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="iniciar_partida">
+                        <button type="submit" class="btn btn-warning btn-lg fw-bold px-5 py-3 shadow-lg rounded-pill text-dark" style="font-size: 1.2rem;">
+                            <i class="fas fa-play me-2"></i> INICIAR RONDA "{{ partida.nombreronda|upper }}"
+                        </button>
+                    </form>
 
-            <div class="mt-5 pt-4 border-top border-light border-opacity-25 animate__animated animate__fadeInUp">
-                <h5 class="text-info fw-bold mb-3"><i class="fas fa-bullhorn me-2"></i>Megáfono: Anuncio a la Sala de Espera</h5>
-                <div class="input-group input-group-lg w-75 mx-auto shadow-lg" style="max-width: 600px;">
-                    <input type="text" id="admin-mensaje-input" class="form-control border-0" placeholder="Ej: ¡Atención! Empezamos en 2 minutos..." autocomplete="off">
-                    <button class="btn btn-info text-white fw-bold px-4" type="button" onclick="enviarMensajeAdmin(event)">
-                        <i class="fas fa-paper-plane me-2"></i> ENVIAR AULA
-                    </button>
+                    <div class="mt-5 pt-4 border-top border-light border-opacity-25 animate__animated animate__fadeInUp">
+                        <h5 class="text-info fw-bold mb-3"><i class="fas fa-bullhorn me-2"></i>Megáfono: Anuncio a la Sala de Espera</h5>
+                        <div class="input-group input-group-lg w-75 mx-auto shadow-lg" style="max-width: 600px;">
+                            <input type="text" id="admin-mensaje-input" class="form-control border-0" placeholder="Ej: ¡Atención! Empezamos en 2 minutos..." autocomplete="off">
+                            <button class="btn btn-info text-white fw-bold px-4" type="button" onclick="enviarMensajeAdmin(event)">
+                                <i class="fas fa-paper-plane me-2"></i> ENVIAR AULA
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <small class="text-white-50 mt-2 d-block">Este mensaje aparecerá como una alerta en las pantallas de todos los jugadores conectados.</small>
             </div>
         </div>
+
+        <!-- RADAR WEB PRE-PARTIDA -->
+        <div class="col-lg-3">
+            <div class="card-minimalista p-3 shadow-sm h-100 bg-body border-top border-success border-4">
+                <h5 class="fw-bold text-center mb-3"><i class="fas fa-satellite-dish text-success me-2"></i>Radar Pre-Sala</h5>
+                
+                <div class="text-center mb-3 pb-2 border-bottom">
+                    <span class="badge bg-success px-3 py-2 rounded-pill fs-6"><span id="contador-conectados">{{ jugadores_en_sala.count|default:"0" }}</span> Conectados</span>
+                </div>
+                
+                <div class="flex-grow-1 overflow-auto" style="max-height: 55vh;">
+                    <ul class="list-group list-group-flush" id="lista-jugadores-conectados">
+                        {% for j in jugadores_en_sala %}
+                            <li class="list-group-item bg-transparent text-body d-flex align-items-center py-2 px-1 border-0 border-bottom border-secondary-subtle">
+                                <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-2 flex-shrink-0 shadow-sm" 
+                                     style="width: 30px; height: 30px; font-weight: bold; background-color: #4F46E5; font-size: 0.85rem;">
+                                    {{ j.aliasjugador|slice:":1"|upper }}
+                                </div>
+                                <span class="fw-bold text-truncate" style="font-size: 0.9rem;">{{ j.aliasjugador }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item bg-transparent border-0 text-center text-body-secondary py-5">
+                                <i class="fas fa-coffee fs-1 mb-3 text-muted opacity-50"></i><br>
+                                <span class="fw-medium">Sala de espera vacía</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 {% endif %}
@@ -97,13 +141,6 @@
                     <h5 class="fw-bold text-body mb-0 text-truncate">{{ partida.nombreronda }}</h5>
                 </div>
                 
-                <div class="form-check form-switch bg-warning bg-opacity-10 border border-warning rounded p-3 mb-3 d-flex justify-content-between align-items-center shadow-sm">
-                    <label class="form-check-label fw-bold text-body m-0" for="switchAutoDraw" style="cursor: pointer;">
-                        <i class="fas fa-robot text-warning me-2"></i> Piloto Automático (5s)
-                    </label>
-                    <input class="form-check-input fs-4 m-0" type="checkbox" role="switch" id="switchAutoDraw" onchange="toggleAutoDraw(this)" style="cursor: pointer;">
-                </div>
-
                 <button id="btn-sacar-bola" class="btn btn-indigo w-100 fw-bold py-3 mb-3 shadow" onclick="sacarSiguienteBola()">
                     <i class="fas fa-random me-2"></i> SACAR BOLA MANUAL
                 </button>
@@ -118,8 +155,8 @@
                 <div class="card border-danger mt-auto">
                     <div class="card-body text-center bg-danger bg-opacity-10 rounded p-2">
                         <h6 class="fw-bold text-danger small mb-2"><i class="fas fa-exclamation-triangle"></i> Reclamo de Bingo</h6>
-                        <form method="GET" action="{% url 'desempate_admin' id_partida=partida.idpartidabingo %}">
-                            <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold shadow-sm">
+                        <form id="form-pausar-juego-seguro" method="GET" action="{% url 'desempate_admin' id_partida=partida.idpartidabingo %}">
+                            <button type="button" class="btn btn-danger btn-sm w-100 fw-bold shadow-sm" onclick="confirmarPausa()">
                                 <i class="fas fa-pause-circle me-1"></i> PAUSAR JUEGO
                             </button>
                         </form>
@@ -201,9 +238,72 @@
     </div>
 </div>
 {% endif %}
+<!-- ======================================================== -->
+<!-- BOTÓN FLOTANTE DE AJUSTES (TUERCA) -->
+<!-- ======================================================== -->
+<div class="position-fixed bottom-0 end-0 m-4" style="z-index: 1050;">
+    <button class="btn btn-dark btn-flotante-ajustes rounded-circle shadow-lg" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasAjustes" aria-controls="offcanvasAjustes">
+        <i class="fas fa-cog"></i>
+    </button>
+</div>
+
+<!-- MENÚ LATERAL DE AJUSTES AUTOMÁTICOS -->
+<div class="offcanvas offcanvas-end bg-body-tertiary shadow-lg" tabindex="-1" id="offcanvasAjustes" aria-labelledby="offcanvasAjustesLabel">
+    <div class="offcanvas-header bg-dark text-white">
+        <h5 class="offcanvas-title fw-bold" id="offcanvasAjustesLabel"><i class="fas fa-cogs me-2"></i>Panel de Automatización</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="alert bg-primary bg-opacity-10 border border-primary text-primary small mb-4">
+            <i class="fas fa-save me-1"></i> Estos ajustes se guardan en tu navegador automáticamente.
+        </div>
+        
+        <h6 class="fw-bold text-muted mb-3 text-uppercase small">Ronda Principal</h6>
+        
+        <div class="form-check form-switch bg-body rounded p-3 mb-3 border shadow-sm d-flex justify-content-between align-items-center">
+            <label class="form-check-label fw-bold text-body m-0" for="switchAutoDrawMenu">
+                <i class="fas fa-robot text-warning me-2"></i> Piloto Automático (5s)
+            </label>
+            <input class="form-check-input fs-4 m-0" type="checkbox" role="switch" id="switchAutoDraw" onchange="toggleAutoDraw(this)">
+        </div>
+
+        <div class="form-check form-switch bg-body rounded p-3 mb-4 border shadow-sm d-flex justify-content-between align-items-center">
+            <label class="form-check-label fw-bold text-body m-0" for="switchLocutor">
+                <i class="fas fa-microphone-alt text-primary me-2"></i> Locutor del Sistema
+            </label>
+            <input class="form-check-input fs-4 m-0" type="checkbox" role="switch" id="switchLocutor" onchange="guardarAjuste('locutor', this.checked)">
+        </div>
+
+        <hr class="my-4 border-secondary-subtle">
+        <h6 class="fw-bold text-muted mb-3 text-uppercase small">Resolución de Empates</h6>
+
+        <div class="form-check form-switch bg-body rounded p-3 mb-3 border shadow-sm d-flex justify-content-between align-items-center">
+            <label class="form-check-label fw-bold text-body m-0" for="switchAutoFill">
+                <i class="fas fa-users-cog text-success me-2"></i> Jalar Empatados Auto.
+            </label>
+            <input class="form-check-input fs-4 m-0" type="checkbox" role="switch" id="switchAutoFill" onchange="guardarAjuste('autoFill', this.checked)">
+        </div>
+
+        <div class="form-check form-switch bg-body rounded p-3 mb-3 border shadow-sm d-flex justify-content-between align-items-center">
+            <label class="form-check-label fw-bold text-body m-0" for="switchAutoSpin">
+                <i class="fas fa-sync text-danger me-2"></i> Sortear Bolas Auto.
+            </label>
+            <input class="form-check-input fs-4 m-0" type="checkbox" role="switch" id="switchAutoSpin" onchange="guardarAjuste('autoSpin', this.checked)">
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    window.BINGO_CONFIG = {
+        id_partida: "{{ partida.idpartidabingo }}",
+        id_bingo: "{{ partida.idbingo.idbingo }}"
+    };
+</script>
+
 <script>
     window.BINGO_CONFIG = {
         id_partida: "{{ partida.idpartidabingo }}",
@@ -275,6 +375,86 @@
     }
     // =========================================================
 
+    // =========================================================
+    // MEMORIA DE AJUSTES Y SINCRONIZACIÓN DE INTERRUPTORES
+    // =========================================================
+    // Por defecto: Locutor, Llenado Auto y Sorteo Auto vienen encendidos (true)
+    const ajustesPorDefecto = { locutor: true, autoFill: true, autoSpin: true };
+    
+    function cargarAjustes() {
+        Object.keys(ajustesPorDefecto).forEach(key => {
+            let valorGuardado = localStorage.getItem('bingo_admin_' + key);
+            if (valorGuardado === null) {
+                valorGuardado = ajustesPorDefecto[key];
+                localStorage.setItem('bingo_admin_' + key, valorGuardado);
+            } else {
+                valorGuardado = (valorGuardado === 'true');
+            }
+            const switchElement = document.getElementById('switch' + key.charAt(0).toUpperCase() + key.slice(1));
+            if (switchElement) switchElement.checked = valorGuardado;
+        });
+    }
+
+    function guardarAjuste(llave, valor) {
+        localStorage.setItem('bingo_admin_' + llave, valor);
+    }
+
+   
+
+    document.addEventListener('DOMContentLoaded', cargarAjustes);
+
+    function syncAutoDraw(sourceSwitch) {
+        const isChecked = sourceSwitch.checked;
+        const mainSwitch = document.getElementById('switchAutoDraw');
+        const menuSwitch = document.getElementById('switchAutoDrawMenu');
+        
+        // Sincroniza ambos botones (el de la tarjeta y el del menú tuerca)
+        if (mainSwitch && mainSwitch !== sourceSwitch) mainSwitch.checked = isChecked;
+        if (menuSwitch && menuSwitch !== sourceSwitch) menuSwitch.checked = isChecked;
+        
+        toggleAutoDraw(sourceSwitch);
+    }
+
+    // =========================================================
+    // MOTOR DE VOZ DEL LOCUTOR
+    // =========================================================
+    function hablarLocutor(numero) {
+        if (localStorage.getItem('bingo_admin_locutor') !== 'true') return;
+        
+        let letra = '';
+        if (numero >= 1 && numero <= 15) letra = 'B';
+        else if (numero >= 16 && numero <= 30) letra = 'I';
+        else if (numero >= 31 && numero <= 45) letra = 'N';
+        else if (numero >= 46 && numero <= 60) letra = 'G';
+        else if (numero >= 61 && numero <= 75) letra = 'O';
+
+        const mensaje = new SpeechSynthesisUtterance(`${letra}... ${numero}`);
+        mensaje.lang = 'es-ES'; 
+        mensaje.rate = 1.0;     
+        mensaje.pitch = 1.1;    
+        
+        window.speechSynthesis.speak(mensaje);
+    }
+
+    // =========================================================
+    // FRENO DE EMERGENCIA A PRUEBA DE FALLOS
+    // =========================================================
+    function forzarApagadoPiloto() {
+        if (autoDrawInterval) {
+            clearInterval(autoDrawInterval);
+            autoDrawInterval = null;
+        }
+        
+        const btnManual = document.getElementById('btn-sacar-bola');
+        if (btnManual) {
+            btnManual.disabled = false;
+            btnManual.innerHTML = '<i class="fas fa-random me-2"></i> SACAR BOLA MANUAL';
+        }
+        
+        const mainSwitch = document.getElementById('switchAutoDraw');
+        if (mainSwitch) mainSwitch.checked = false;
+    }
+
     function sacarSiguienteBola() {
         fetch("{% url 'sacar_bola_api' id_partida=partida.idpartidabingo %}", {
             method: 'POST',
@@ -288,17 +468,72 @@
         });
     }
 
+    function confirmarPausa() {
+        Swal.fire({
+            title: '¿Pausar la partida?',
+            text: "Se detendrá la extracción de bolas para ir a la sala de resolución.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, Pausar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('form-pausar-juego-seguro').submit();
+            }
+        });
+    }
+
+    // =========================================================
+    // CONFIGURACIÓN DE NOTIFICACIÓN FLOTANTE (TOAST)
+    // =========================================================
+    const NotificacionFlotante = Swal.mixin({
+        toast: true,
+        position: 'top-end', // Aparece arriba a la derecha
+        showConfirmButton: false, // ¡Sin botones!
+        timer: 3000, // Desaparece sola en 3 segundos
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+    });
+
+    // =========================================================
+    // ESCUCHADOR DE EVENTOS BLINDADO
+    // =========================================================
     document.addEventListener('evento_partida', function(e) {
         const datos = e.detail;
         
         // -------------------------------------------------------------
-        // FRENO INSTANTÁNEO SI ALGUIEN GRITA BINGO O SE PAUSA LA SALA
+        // 1. EL VERDADERO EVENTO DE BINGO ('alerta_reclamo')
         // -------------------------------------------------------------
-        if (datos.evento === 'bingo_reclamado' || 
-           (datos.evento === 'estado_cambiado' && (datos.nuevo_estado === 'Pausada' || datos.nuevo_estado === 'Finalizada'))) {
-            apagarPilotoAutomatico();
+        if (datos.evento === 'alerta_reclamo') {
+            
+            // Freno instantáneo del temporizador
+            forzarApagadoPiloto(); 
+            
+            // ¡Notificación limpia, flotante y no intrusiva!
+            NotificacionFlotante.fire({
+                icon: 'warning',
+                title: '¡BINGO DETECTADO!',
+                text: `${datos.alias || 'Alguien'} reclama BINGO con el cartón ${datos.codigo || 'N/A'}`
+            });
+            
+            // El juego ya NO te redirige. Tú decides cuándo presionar "PAUSAR JUEGO".
+        }
+        
+        // -------------------------------------------------------------
+        // 2. FRENO SECUNDARIO POR OTROS ESTADOS
+        // -------------------------------------------------------------
+        if (datos.evento === 'estado_cambiado' && ['Pausada', 'Finalizada', 'Verificando', 'Desempate'].includes(datos.nuevo_estado)) {
+            forzarApagadoPiloto();
         }
 
+        // -------------------------------------------------------------
+        // 3. ACTUALIZACIÓN DEL TABLERO Y LOCUTOR
+        // -------------------------------------------------------------
         if (datos.evento === 'nueva_bola') {
             const numero = datos.numero;
 
@@ -316,8 +551,44 @@
                 bolaMaestra.classList.remove('ball-pending');
                 bolaMaestra.classList.add('ball-called', 'ball-latest');
             }
+
+            hablarLocutor(numero);
+        }
+        
+        // ¡OJO! Hemos eliminado el antiguo bloque "4. ACTUALIZACIÓN DEL RADAR" 
+        // porque ahora el MutationObserver de arriba se encarga de esto sin fallar.
+    });
+    
+</script>
+{% endif %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const listaRadar = document.getElementById('lista-jugadores-conectados');
+        const contadorEl = document.getElementById('contador-conectados');
+        
+        if (listaRadar && contadorEl) {
+            const actualizarContador = () => {
+                const elementos = Array.from(listaRadar.querySelectorAll('li'));
+                // Filtramos los textos vacíos de ambas pantallas (Programada y En Juego)
+                const cantidad = elementos.filter(li => 
+                    !li.textContent.includes('Nadie en la sala') && 
+                    !li.textContent.includes('Sala de espera vacía')
+                ).length;
+                
+                if (contadorEl.innerText != cantidad) {
+                    contadorEl.innerText = cantidad;
+                    contadorEl.classList.remove('animate__animated', 'animate__headShake');
+                    void contadorEl.offsetWidth; 
+                    contadorEl.classList.add('animate__animated', 'animate__headShake');
+                }
+            };
+
+            actualizarContador(); // Ejecutar al cargar la página
+            
+            // Vigilar la lista: Si bingo_socket.js mete o saca un jugador, esto lo cuenta
+            const observer = new MutationObserver(actualizarContador);
+            observer.observe(listaRadar, { childList: true, subtree: true });
         }
     });
 </script>
-{% endif %}
 {% endblock %}

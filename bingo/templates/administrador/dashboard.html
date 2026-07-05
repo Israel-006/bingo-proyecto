@@ -145,7 +145,7 @@
                         <div class="col-md-5">
                             <div class="card-minimalista p-4 h-100 border-start border-info border-4">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="fw-bold text-secondary mb-0">Clasificaciones (`TipoSocio`)</h6>
+                                    <h6 class="fw-bold text-secondary mb-0">Clasificaciones (Tipo Socio)</h6>
                                     <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoTipoSocio">
                                         <i class="fas fa-plus"></i> Nuevo
                                     </button>
@@ -170,7 +170,7 @@
                         </div>
                         <div class="col-md-7">
                             <div class="card-minimalista p-4 h-100 border-start border-success border-4">
-                                <h6 class="fw-bold text-secondary mb-3">Cuentas Bancarias (`CuentaBancaria`)</h6>
+                                <h6 class="fw-bold text-secondary mb-3">Cuentas Bancarias (Cuenta Bancaria)</h6>
                                 <div class="input-group input-group-sm mb-3">
                                     <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
                                     <input type="text" id="search-cuentas" class="form-control bg-transparent border-start-0" placeholder="Buscar banco o titular..." onkeyup="filterTable('search-cuentas', 'table-cuentas')">
@@ -202,7 +202,12 @@
                     </div>
 
                     <div class="card-minimalista p-4 mb-4 border-start border-indigo border-4">
-                        <h5 class="fw-bold mb-3">Perfiles de Juego Independientes (`Jugador`)</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <h5 class="fw-bold mb-0">Perfiles de Juego Independientes (Jugador)</h5>
+                            <button id="btn-recaudar-masivo" class="btn btn-sm btn-success fw-bold d-none shadow-sm animate__animated animate__fadeIn" data-bs-toggle="modal" data-bs-target="#modalCreditoMasivo">
+                                <i class="fas fa-coins me-1"></i> Gestionar Saldos Masivos (<span id="recaudar-count">0</span>)
+                            </button>
+                        </div>
                         <div class="input-group input-group-sm mb-3">
                             <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
                             <input type="text" id="search-jugadores" class="form-control bg-transparent border-start-0" placeholder="Buscar por alias, cédula o correo..." onkeyup="filterTable('search-jugadores', 'table-jugadores')">
@@ -211,9 +216,10 @@
                             <table class="table align-middle table-sm" id="table-jugadores">
                                 <thead>
                                     <tr class="text-secondary small text-uppercase">
+                                        <th style="width: 40px;"><input type="checkbox" id="check-all-jugadores" onclick="toggleSelectAllJugadores(this)"></th>
                                         <th>Alias Público</th>
                                         <th>Identificación/Correo</th>
-                                        <th>Crédito Disp.</th>
+                                        <th>Saldos (Real / Virtual)</th>
                                         <th>Estado Cuenta</th>
                                         <th class="text-end">Acciones</th>
                                     </tr>
@@ -221,9 +227,13 @@
                                 <tbody>
                                     {% for j in jugadores %}
                                     <tr>
+                                        <td><input type="checkbox" class="jugador-checkbox" value="{{ j.idjugador }}" onclick="actualizarBotonMasivo()"></td>
                                         <td class="fw-bold text-indigo">{{ j.aliasjugador }}</td>
                                         <td><div class="small fw-semibold">{{ j.cedulaidentidadjugador|default:"-" }}</div><div class="text-muted" style="font-size:0.75rem;">{{ j.correojugador|default:"" }}</div></td>
-                                        <td class="text-success fw-bold">${{ j.saldocreditojugador }}</td>
+                                        <td>
+                                            <span class="text-success fw-bold d-block" style="font-size: 0.85rem;"><i class="fas fa-dollar-sign me-1"></i>${{ j.saldocreditojugador }} <span class="text-muted fw-normal font-monospace">(Real)</span></span>
+                                            <span class="text-purple fw-bold d-block" style="font-size: 0.85rem;"><i class="fas fa-star me-1"></i>{{ j.saldovirtualjugador }} <span class="text-muted fw-normal font-monospace">(Virtual)</span></span>
+                                        </td>
                                         <td><span class="badge {% if j.estadocuentajugador == 'Activo' %}bg-success-subtle text-success{% elif j.estadocuentajugador == 'Suspendido' %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning{% endif %}">{{ j.estadocuentajugador }}</span></td>
                                         <td class="text-end">
                                             <button class="btn btn-sm btn-outline-primary border-0 p-1 px-2" data-bs-toggle="modal" data-bs-target="#modalEditarJugador{{ j.idjugador }}">
@@ -242,7 +252,7 @@
                     
                     <div class="card-minimalista p-4 mb-4 border-start border-danger border-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold mb-0">Créditos de la Cooperativa (`Prestamo`)</h5>
+                            <h5 class="fw-bold mb-0">Créditos de la Cooperativa (Prestamo)</h5>
                             <a href="{% url 'reporte_cartera_prestamos' %}" class="btn btn-sm btn-danger shadow-sm fw-bold">
                                 <i class="fas fa-file-excel me-2"></i> Exportar Cartera Vencida
                             </a>
@@ -282,7 +292,7 @@
                     <div class="row g-4 mb-4">
                         <div class="col-xl-7">
                             <div class="card-minimalista p-4 h-100 border-start border-success border-4">
-                                <h5 class="fw-bold mb-3">Validación de Amortizaciones (`Pago`)</h5>
+                                <h5 class="fw-bold mb-3">Validación de Amortizaciones (Pago)</h5>
                                 <div class="input-group input-group-sm mb-3">
                                     <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
                                     <input type="text" id="search-pagos" class="form-control bg-transparent border-start-0" placeholder="Buscar por referencia o canal..." onkeyup="filterTable('search-pagos', 'table-pagos')">
@@ -314,7 +324,7 @@
                         
                         <div class="col-xl-5">
                             <div class="card-minimalista p-4 h-100 border-start border-info border-4">
-                                <h6 class="fw-bold text-secondary mb-3">Fondos de Ahorro (`Ahorro`)</h6>
+                                <h6 class="fw-bold text-secondary mb-3">Fondos de Ahorro (Ahorro)</h6>
                                 <div class="table-responsive animate__animated animate__fadeInDown">
                                     {% for a in ahorros %}
                                     <div class="border-bottom py-2 small">
@@ -332,7 +342,7 @@
 
                     <div class="card-minimalista p-4 mb-4 border-start border-warning border-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold mb-0">Control de Caja Semanal (`AporteSemanal`)</h5>
+                            <h5 class="fw-bold mb-0">Control de Caja Semanal (Aporte Semanal)</h5>
                             <a href="{% url 'reporte_caja_semanal_pdf' %}" target="_blank" class="btn btn-sm btn-warning shadow-sm fw-bold text-dark">
                                 <i class="fas fa-file-pdf me-2"></i> Emitir Cierre de Caja (PDF)
                             </a>
@@ -369,115 +379,196 @@
                     <div class="row g-4 mb-4">
                         <div class="col-xl-7">
                             <div class="card-minimalista p-4 h-100 border-start border-primary border-4">
-                                <h5 class="fw-bold mb-4">Parámetros del Evento Matriz (`Bingo`)</h5>
+                                <h5 class="fw-bold mb-4">Parámetros del Evento (Bingo)</h5>
                                 
                                 <form id="form-live-bingo" method="post" action="{% url 'dashboard' %}" enctype="multipart/form-data">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="crear_bingo">
-                                    <div class="row g-3">
-                                        <div class="col-12">
-                                            <label class="form-label small fw-bold">Título Organizacional</label>
-                                            <input type="text" name="titulobingo" id="in-titulo" class="form-control bg-transparent" placeholder="Ej: Bingo Confraternidad" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label small fw-bold">Costo del Cartón</label>
-                                            <input type="number" step="0.01" min="0" oninput="validity.valid||(value='');" name="preciocarton" id="in-precio" class="form-control bg-transparent" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label small fw-bold">Premio Mayor Líquido</label>
-                                            <input type="number" step="0.01" min="0" oninput="validity.valid||(value='');" name="premiomayor" id="in-premio" class="form-control bg-transparent" required>
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label small fw-bold">Detalle del Premio Principal</label>
-                                            <input type="text" name="descripcionpremiomayor" id="in-desc" class="form-control bg-transparent" required>
-                                        </div>
-                                        
-                                        <div class="col-12">
-                                            <label class="form-label small fw-bold">Descripción Otros Premios (Opcional)</label>
-                                            <textarea name="descripcionpremios" class="form-control bg-transparent" rows="2"></textarea>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label small fw-bold">Imagen del Premio</label>
-                                            <input type="file" name="rutaimagenpremiomayor" class="form-control bg-transparent" accept="image/*">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label small fw-bold">Video Promocional</label>
-                                            <input type="file" name="urlvideopromocional" class="form-control bg-transparent" accept="video/*">
-                                        </div>
+    {% csrf_token %}
+    <input type="hidden" name="action" value="crear_bingo">
+    
+    <div class="row g-3">
+        <div class="col-12">
+            <label class="form-label small fw-bold">Título Organizacional</label>
+            <input type="text" name="titulobingo" id="in-titulo" class="form-control bg-transparent" placeholder="Ej: Bingo Confraternidad" required>
+        </div>
 
-                                        <div class="col-12">
-                                            <label class="form-label small fw-bold">Fecha y Hora de la Convocatoria</label>
-                                            <input type="datetime-local" name="fechaprogramadabingo" id="in-fecha" class="form-control bg-transparent" required>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small fw-bold">Estructura del Evento</label>
-                                            <select name="tipobingo" id="in-tipo" class="form-select bg-transparent" onchange="toggleCamposLugar(this.value)">
-                                                <option value="Virtual">Virtual</option>
-                                                <option value="Presencial">Presencial</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small fw-bold">Moneda / Divisa</label>
-                                            <select name="idunidadmonetaria" id="in-moneda" class="form-select bg-transparent" required>
-                                                {% for u in unidades_monetarias %}
-                                                <option value="{{ u.idunidadmonetaria }}" data-tipo="{{ u.tipomoneda }}" data-simbolo="{{ u.simbolomoneda }}">{{ u.nombremoneda }} ({{ u.simbolomoneda }})</option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small fw-bold">Estado Operativo</label>
-                                            <select name="estadobingo" id="in-estado" class="form-select bg-transparent">
-                                                <option value="Programado">Programado</option>
-                                                <option value="En Curso">En Curso</option>
-                                                <option value="Finalizado">Finalizado</option>
-                                                <option value="Cancelado">Cancelado</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-12" id="div-lugar" style="display: none;">
-                                            <label class="form-label small fw-bold">Lugar del Evento (Presencial)</label>
-                                            <input type="text" name="lugarbingo" id="in-lugar" class="form-control bg-transparent" placeholder="Ej: Coliseo Central">
-                                        </div>
-                                        <div class="col-12" id="div-sesion">
-                                            <label class="form-label small fw-bold">Link de la Sesión (Virtual)</label>
-                                            <input type="url" name="urlsesionbingo" id="in-sesion" class="form-control bg-transparent" placeholder="https://zoom.us/j/...">
-                                        </div>
-                                    </div>
-                                    <div class="mt-4 text-end">
-                                        <button type="submit" class="btn btn-indigo shadow-sm"><i class="fas fa-save me-2"></i> Lanzar Evento</button>
-                                    </div>
-                                </form>
+        <div class="col-12 mt-2 border-top pt-3">
+            <h6 class="fw-bold text-secondary mb-1"><i class="fas fa-exchange-alt me-2"></i> Economía del Evento</h6>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold text-success"><i class="fas fa-shopping-cart me-1"></i> Moneda de Venta (Cartones)</label>
+            <select name="idunidad_venta" id="in-moneda-venta" class="form-select bg-transparent" required>
+                {% for u in unidades_monetarias %}
+                    <option value="{{ u.idunidadmonetaria }}" data-tipo="{{ u.tipomoneda }}" data-simbolo="{{ u.simbolomoneda }}" data-tasa="{{ u.tasaconversionmoneda }}">{{ u.nombremoneda }} ({{ u.simbolomoneda }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold text-warning"><i class="fas fa-trophy me-1"></i> Moneda de Premio (Pozo)</label>
+            <select name="idunidad_premio" id="in-moneda-premio" class="form-select bg-transparent" required>
+                {% for u in unidades_monetarias %}
+                    <option value="{{ u.idunidadmonetaria }}" data-tipo="{{ u.tipomoneda }}" data-simbolo="{{ u.simbolomoneda }}" data-tasa="{{ u.tasaconversionmoneda }}">{{ u.nombremoneda }} ({{ u.simbolomoneda }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Costo del Cartón</label>
+            <input type="number" step="0.01" min="0" oninput="validity.valid||(value='');" name="preciocarton" id="in-precio" class="form-control bg-transparent" required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Premio Mayor Líquido</label>
+            <input type="number" step="0.01" min="0" oninput="validity.valid||(value='');" name="premiomayor" id="in-premio" class="form-control bg-transparent" required>
+        </div>
+
+        <div class="col-12 mt-2">
+            <label class="form-label small fw-bold">Detalle del Premio Principal</label>
+            <input type="text" name="descripcionpremiomayor" id="in-desc" class="form-control bg-transparent" required>
+        </div>
+        <div class="col-12">
+            <label class="form-label small fw-bold">Descripción Otros Premios (Opcional)</label>
+            <textarea name="descripcionpremios" class="form-control bg-transparent" rows="2"></textarea>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Imagen del Premio</label>
+            <input type="file" name="rutaimagenpremiomayor" class="form-control bg-transparent" accept="image/*">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Video Promocional</label>
+            <input type="file" name="urlvideopromocional" class="form-control bg-transparent" accept="video/*">
+        </div>
+
+        <div class="col-12 mt-3 border-top pt-3">
+            <h6 class="fw-bold text-secondary mb-1"><i class="fas fa-calendar-alt me-2"></i> Logística del Evento</h6>
+        </div>
+        <div class="col-12">
+            <label class="form-label small fw-bold">Fecha y Hora de la Convocatoria</label>
+            <input type="datetime-local" name="fechaprogramadabingo" id="in-fecha" class="form-control bg-transparent" required>
+        </div>
+        
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Estructura del Evento</label>
+            <select name="tipobingo" id="in-tipo" class="form-select bg-transparent" onchange="toggleCamposLugar(this.value)">
+                <option value="Virtual">Virtual</option>
+                <option value="Presencial">Presencial</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-bold">Estado Operativo</label>
+            <select name="estadobingo" id="in-estado" class="form-select bg-transparent">
+                <option value="Programado">Programado</option>
+                <option value="En Curso">En Curso</option>
+                <option value="Finalizado">Finalizado</option>
+                <option value="Cancelado">Cancelado</option>
+            </select>
+        </div>
+        
+        <div class="col-12" id="div-lugar" style="display: none;">
+            <label class="form-label small fw-bold">Lugar del Evento (Presencial)</label>
+            <input type="text" name="lugarbingo" id="in-lugar" class="form-control bg-transparent" placeholder="Ej: Coliseo Central">
+        </div>
+        <div class="col-12" id="div-sesion">
+            <label class="form-label small fw-bold">Link de la Sesión (Virtual)</label>
+            <input type="url" name="urlsesionbingo" id="in-sesion" class="form-control bg-transparent" placeholder="https://zoom.us/j/...">
+        </div>
+    </div>
+    
+    <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-indigo shadow-sm"><i class="fas fa-save me-2"></i> Lanzar Evento</button>
+    </div>
+</form>
                             </div>
                         </div>
 
-                        <div class="col-xl-5">
-                            <div class="card border-0 rounded-4 overflow-hidden shadow h-100" style="background: linear-gradient(135deg, #312e81 0%, #4f46e5 100%);">
-                                <div class="p-4 text-white d-flex flex-column justify-content-between h-100">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <span id="out-estado" class="badge bg-warning text-dark font-monospace fw-bold">PROGRAMADO</span>
-                                        <span id="out-tipo" class="badge bg-body-secondary text-body text-indigo">VIRTUAL</span>
-                                    </div>
-                                    <div class="my-4">
-                                        <h4 id="out-titulo" class="fw-bold text-white mb-2" style="word-break: break-word;">Título Inicial del Evento</h4>
-                                        <p id="out-desc" class="small text-white-50 mb-3" style="word-break: break-word;">Escribe en la descripción del formulario para simular la visualización comercial del socio.</p>
-                                        
-                                        <div class="bg-dark bg-opacity-25 rounded p-2 mb-2 border border-white border-opacity-25">
-                                            <i class="fas fa-map-marker-alt text-warning me-2"></i> 
-                                            <span id="out-lugar" class="small fw-medium text-white" style="word-break: break-word;">Enlace no definido</span>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center border-top border-white border-opacity-25 pt-3 mt-auto">
-                                        <div>
-                                            <span class="small text-white-50 d-block">Pozo Mayor</span>
-                                            <h3 id="out-premio" class="fw-bold text-warning mb-0">$0.00</h3>
-                                        </div>
-                                        <div class="text-end">
-                                            <span class="small text-white-50 d-block">Valor Entrada</span>
-                                            <span id="out-precio" class="fw-bold fs-5 text-white">$0.00</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="col-xl-5 d-flex flex-column">
+    <!-- Navegación de Pestañas (Toggle) -->
+    <ul class="nav nav-pills mb-3 justify-content-center bg-body-tertiary p-1 rounded-3 border flex-shrink-0" id="pills-simulador" role="tablist">
+        <li class="nav-item" role="presentation" style="width: 50%;">
+            <button class="nav-link active w-100 fw-bold small text-uppercase" id="pills-visual-tab" data-bs-toggle="pill" data-bs-target="#pills-visual" type="button" role="tab">
+                <i class="fas fa-eye me-1"></i> Comercial
+            </button>
+        </li>
+        <li class="nav-item" role="presentation" style="width: 50%;">
+            <button class="nav-link w-100 fw-bold small text-uppercase" id="pills-finanzas-tab" data-bs-toggle="pill" data-bs-target="#pills-finanzas" type="button" role="tab">
+                <i class="fas fa-chart-line me-1"></i> Finanzas
+            </button>
+        </li>
+    </ul>
+
+    <!-- CORRECCIÓN: flex-grow-1 hace que se adapte perfecto sin desbordarse -->
+    <div class="tab-content flex-grow-1" id="pills-tabContent">
+        <!-- CARA A: Vista Previa Comercial -->
+        <div class="tab-pane fade show active h-100" id="pills-visual" role="tabpanel">
+            <div class="card border-0 rounded-4 overflow-hidden shadow h-100" style="background: linear-gradient(135deg, #312e81 0%, #4f46e5 100%);">
+                <div class="p-4 text-white d-flex flex-column justify-content-between h-100">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <span id="out-estado" class="badge bg-warning text-dark font-monospace fw-bold">PROGRAMADO</span>
+                        <span id="out-tipo" class="badge bg-body-secondary text-body text-indigo">VIRTUAL</span>
+                    </div>
+                    <div class="my-4">
+                        <h4 id="out-titulo" class="fw-bold text-white mb-2" style="word-break: break-word;">Título Inicial del Evento</h4>
+                        <p id="out-desc" class="small text-white-50 mb-3" style="word-break: break-word;">Escribe en la descripción del formulario para simular la visualización comercial del socio.</p>
+                        
+                        <div class="bg-dark bg-opacity-25 rounded p-2 mb-2 border border-white border-opacity-25">
+                            <i class="fas fa-map-marker-alt text-warning me-2"></i> 
+                            <span id="out-lugar" class="small fw-medium text-white" style="word-break: break-word;">Enlace no definido</span>
                         </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center border-top border-white border-opacity-25 pt-3 mt-auto">
+                        <div>
+                            <span class="small text-white-50 d-block">Pozo Mayor</span>
+                            <h3 id="out-premio" class="fw-bold text-warning mb-0">$0.00</h3>
+                        </div>
+                        <div class="text-end">
+                            <span class="small text-white-50 d-block">Valor Entrada</span>
+                            <span id="out-precio" class="fw-bold fs-5 text-white">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARA B: Simulador Financiero -->
+        <div class="tab-pane fade h-100" id="pills-finanzas" role="tabpanel">
+            <div class="card border-success border-2 rounded-4 shadow h-100 bg-body">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="fw-bold text-success mb-3"><i class="fas fa-calculator me-2"></i> Simulador de Riesgo</h5>
+                    
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-secondary">¿Cuántos cartones proyectas vender?</label>
+                        <input type="number" id="sim-proyeccion" class="form-control border-success bg-success bg-opacity-10 fw-bold text-center fs-5" value="100" min="1">
+                    </div>
+
+                    <ul class="list-group list-group-flush mb-4 flex-grow-1">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                            <span class="small fw-semibold">Recaudación Estimada</span>
+                            <span id="sim-ingreso" class="fw-bold text-success font-monospace">$0.00</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                            <span class="small fw-semibold">Obligación (Premio Mayor)</span>
+                            <span id="sim-gasto" class="fw-bold text-danger font-monospace">-$0.00</span>
+                        </li>
+                        
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                            <span class="small fw-semibold text-primary">Fondo Rondas Menores (30%)</span>
+                            <span id="sim-otros-premios" class="fw-bold text-primary font-monospace">$0.00</span>
+                        </li>
+                        
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent border-top border-2 border-dark mt-2 pt-2">
+                            <span class="fw-bold">Utilidad Neta Proyectada</span>
+                            <span id="sim-utilidad" class="fw-bold fs-4 font-monospace">$0.00</span>
+                        </li>
+                    </ul>
+
+                    <div class="alert alert-info py-3 mb-0 text-center" id="sim-alerta">
+                        <span class="d-block small text-muted mb-1">Punto de Equilibrio (Break-even)</span>
+                        <div class="fw-bold text-dark"><i class="fas fa-ticket-alt text-primary me-1"></i> <span id="sim-equilibrio" class="fs-5">0</span> cartones</div>
+                        <span class="small" id="sim-mensaje">Para cubrir el premio sin pérdidas.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
                     </div>
 
                     <div class="card-minimalista p-4 mb-4 border-start border-secondary border-4">                              
@@ -503,8 +594,12 @@
                                     <tr>
                                         <td class="fw-bold text-body">{{ b.titulobingo }}</td>
                                         <td>{{ b.tipobingo }}</td>
-                                        <td>${{ b.preciocarton }}</td>
-                                        <td class="text-success fw-bold">${{ b.premiomayor }}</td>
+                                        <td>
+                                            {{ b.idunidad_venta.simbolomoneda|default:"$" }}{{ b.preciocarton }}
+                                        </td>
+                                        <td class="text-success fw-bold">
+                                            {{ b.idunidad_premio.simbolomoneda|default:"$" }}{{ b.pozo_dinamico_actual|floatformat:2 }}
+                                        </td>
                                         <td><span class="badge bg-body-secondary text-body border">{{ b.estadobingo }}</span></td>
                                         <td class="text-end">
                                             <a href="{% url 'reporte_liquidacion_bingo' b.idbingo %}" class="btn btn-sm btn-outline-success border-0 p-1 px-2" data-bs-toggle="tooltip" title="Exportar Liquidación Contable">
@@ -532,7 +627,7 @@
                         <div class="col-md-7">
                             <div class="card-minimalista p-4 h-100 border-start border-success border-4">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="fw-bold text-secondary mb-0">Rondas de Juego Activas (`PartidaBingo`)</h6>
+                                    <h6 class="fw-bold text-secondary mb-0">Rondas de Juego Activas (Partidas de Bingo)</h6>
                                     <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaPartida">
                                         <i class="fas fa-plus"></i> Nueva Ronda
                                     </button>
@@ -562,78 +657,95 @@
                                 <div class="table-responsive animate__animated animate__fadeInDown">
                                     <table class="table table-sm align-middle" id="table-rondas" style="font-size:0.85rem;">
                                         <thead>
-                                            <tr class="text-muted">
-                                                <th>Ronda</th>
-                                                <th>Premio</th>
-                                                <th>Estado</th>
-                                                <th>Última Bola</th>
-                                                <th class="text-end">Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for pt in partidas %}
-                                            <tr data-bingo-name="{{ pt.idbingo.titulobingo|lower }}">
-                                                <td class="fw-semibold">{{ pt.nombreronda }} <br><span class="text-muted" style="font-size: 0.65rem;">({{ pt.idbingo.titulobingo }})</span></td>
-                                                
-                                                <td>
-                                                    {% if pt.premiomaterial == '[POZO_MAYOR]' %}
-                                                        <span class="badge bg-warning text-dark fw-black px-2 shadow-sm animate__animated animate__pulse animate__infinite">
-                                                            <i class="fas fa-crown"></i> POZO MAYOR: ${{ pt.idbingo.premiomayor }}
-                                                        </span>
-                                                    {% elif pt.valorpremio and pt.valorpremio > 0 %}
-                                                        <span class="text-primary fw-bold">${{ pt.valorpremio }}</span>
-                                                    {% elif pt.premiomaterial and pt.premiomaterial != 'Ninguno' %}
-                                                        <span class="text-warning fw-bold"><i class="fas fa-gift me-1"></i> Físico</span>
-                                                        <div class="small text-muted text-truncate" style="font-size: 0.75rem; max-width: 150px;" title="{{ pt.premiomaterial }}">{{ pt.premiomaterial }}</div>
-                                                        
-                                                        {% if pt.estadopremiomaterial %}
-                                                            <div class="mt-1">
-                                                                <span class="badge {% if pt.estadopremiomaterial == 'Entregado' %}bg-success{% elif pt.estadopremiomaterial == 'Pendiente' %}bg-warning text-dark{% else %}bg-secondary{% endif %} shadow-sm" style="font-size: 0.65rem;">
-                                                                    <i class="fas {% if pt.estadopremiomaterial == 'Entregado' %}fa-check-circle{% else %}fa-clock{% endif %} me-1"></i>{{ pt.estadopremiomaterial }}
-                                                                </span>
-                                                            </div>
-                                                        {% endif %}
-                                                    {% else %}
-                                                        <span class="text-muted small">Sin premio</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td><span class="badge bg-body-secondary text-body border">{{ pt.estadopartida }}</span></td>
-                                                <td class="font-monospace text-center fw-bold bg-body-secondary rounded-circle text-body" style="width:30px; height:30px;">{{ pt.ultimabola }}</td>
-                                                <td class="text-end text-nowrap">
-                                                    
-                                                    {% if pt.premiomaterial and pt.premiomaterial != 'Ninguno' and pt.premiomaterial != '[POZO_MAYOR]' and pt.estadopremiomaterial == 'Pendiente' %}
-                                                    <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Confirmas que el premio físico ya fue entregado al ganador?');">
-                                                        {% csrf_token %}
-                                                        <input type="hidden" name="action" value="entregar_premio_fisico">
-                                                        <input type="hidden" name="id_partida" value="{{ pt.idpartidabingo }}">
-                                                        <button type="submit" class="btn btn-sm btn-outline-warning border-0 p-1 px-2 me-1" data-bs-toggle="tooltip" title="Marcar Premio como Entregado">
-                                                            <i class="fas fa-box-open fs-6"></i>
-                                                        </button>
-                                                    </form>
-                                                    {% endif %}
+        <tr class="text-muted">
+            <th>Ronda</th>
+            <th>Premio</th>
+            <th>Estado</th>
+            <th>Ganador</th> <th>Última Bola</th>
+            <th class="text-end">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for pt in partidas %}
+        <tr data-bingo-name="{{ pt.idbingo.titulobingo|lower }}">
+            <td class="fw-semibold">{{ pt.nombreronda }} <br><span class="text-muted" style="font-size: 0.65rem;">({{ pt.idbingo.titulobingo }})</span></td>
+            
+            <td>
+                {% if pt.premiomaterial == '[POZO_MAYOR]' %}
+                    <span class="badge bg-warning text-dark fw-black px-2 shadow-sm animate__animated animate__pulse animate__infinite">
+                        <i class="fas fa-crown"></i> POZO MAYOR: {{ pt.idbingo.idunidad_premio.simbolomoneda|default:"$" }}{{ pt.idbingo.pozo_dinamico_actual|floatformat:2 }}
+                    </span>
+                {% elif pt.valorpremio and pt.valorpremio > 0 %}
+                    <span class="text-primary fw-bold">{{ pt.idbingo.idunidad_premio.simbolomoneda|default:"$" }}{{ pt.valorpremio }}</span>
+                {% elif pt.premiomaterial and pt.premiomaterial != 'Ninguno' %}
+                    <span class="text-warning fw-bold"><i class="fas fa-gift me-1"></i> Físico</span>
+                    <div class="small text-muted text-truncate" style="font-size: 0.75rem; max-width: 150px;" title="{{ pt.premiomaterial }}">{{ pt.premiomaterial }}</div>
+                {% else %}
+                    <span class="text-muted small">Sin premio</span>
+                {% endif %}
+            </td>
+            
+            <td><span class="badge bg-body-secondary text-body border">{{ pt.estadopartida }}</span></td>
+            
+            <td>
+                {% if pt.estadopartida == 'Finalizada' and pt.idjugadororganador %}
+                    <span class="fw-bold text-indigo"><i class="fas fa-trophy text-warning me-1"></i> {{ pt.idjugadororganador.aliasjugador }}</span>
+                {% elif pt.estadopartida == 'Finalizada' %}
+                    <span class="text-danger small fw-bold">Sin ganador</span>
+                {% else %}
+                    <span class="text-muted small">En espera...</span>
+                {% endif %}
+            </td>
 
-                                                    <a href="{% url 'tablero_admin' pt.idpartidabingo %}" class="btn btn-sm btn-outline-success border-0 p-1 px-2 me-1" data-bs-toggle="tooltip" title="Panel de Control de esta Ronda">
-                                                        <i class="fas fa-gamepad fs-6"></i>
-                                                    </a>
+            <td class="font-monospace text-center fw-bold bg-body-secondary rounded-circle text-body" style="width:30px; height:30px; display:inline-block; line-height:30px;">{{ pt.ultimabola }}</td>
+            
+            <td class="text-end text-nowrap">
+                
+                {% if pt.estadopartida == 'Finalizada' and pt.idjugadororganador %}
+                <button class="btn btn-sm btn-outline-info border-0 p-1 px-2 me-1" data-bs-toggle="modal" data-bs-target="#modalGanador{{ pt.idpartidabingo }}" title="Ver detalles del ganador">
+                    <i class="fas fa-medal fs-6"></i>
+                </button>
+                {% endif %}
 
-                                                    <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar esta ronda?');">
-                                                        {% csrf_token %}
-                                                        <input type="hidden" name="action" value="eliminar_partida">
-                                                        <input type="hidden" name="id_partida" value="{{ pt.idpartidabingo }}">
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger border-0 p-1 px-2"><i class="fas fa-trash-alt"></i></button>
-                                                    </form>
-                                                    
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
+                {% if pt.premiomaterial and pt.premiomaterial != 'Ninguno' and pt.premiomaterial != '[POZO_MAYOR]' and pt.estadopremiomaterial == 'Pendiente' %}
+                <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Confirmas que el premio físico ya fue entregado al ganador?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="entregar_premio_fisico">
+                    <input type="hidden" name="id_partida" value="{{ pt.idpartidabingo }}">
+                    <button type="submit" class="btn btn-sm btn-outline-warning border-0 p-1 px-2 me-1" data-bs-toggle="tooltip" title="Marcar Premio como Entregado">
+                        <i class="fas fa-box-open fs-6"></i>
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if pt.estadopartida == 'Finalizada' %}
+                    <button class="btn btn-sm btn-outline-secondary border-0 p-1 px-2 me-1 opacity-50" data-bs-toggle="tooltip" title="Panel Bloqueado (Ronda Finalizada)" disabled>
+                        <i class="fas fa-gamepad fs-6"></i>
+                    </button>
+                {% else %}
+                    <a href="{% url 'tablero_admin' pt.idpartidabingo %}" class="btn btn-sm btn-outline-success border-0 p-1 px-2 me-1" data-bs-toggle="tooltip" title="Panel de Control de esta Ronda">
+                        <i class="fas fa-gamepad fs-6"></i>
+                    </a>
+                {% endif %}
+
+                <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar esta ronda?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="e liminar_partida">
+                    <input type="hidden" name="id_partida" value="{{ pt.idpartidabingo }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger border-0 p-1 px-2"><i class="fas fa-trash-alt"></i></button>
+                </form>
+                
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-5">
                             <div class="card-minimalista p-4 h-100 border-start border-warning border-4">
-                                <h6 class="fw-bold text-secondary mb-3">Catálogo de Premios Físicos (`Regalo`)</h6>
+                                <h6 class="fw-bold text-secondary mb-3">Catálogo de Premios Físicos (Regalo)</h6>
                                 <div class="list-group list-group-flush animate__animated animate__fadeInDown">
                                     {% for r in regalos %}
                                     <div class="list-group-item bg-transparent px-0 py-2 small d-flex justify-content-between align-items-center">
@@ -655,7 +767,7 @@
                         
                         <div class="col-xl-5">
                             <div class="card-minimalista p-4 h-100 border-start border-indigo border-4">
-                                <h5 class="fw-bold mb-3"><i class="fas fa-industry me-2 text-indigo"></i> Fábrica Central (RNG)</h5>
+                                <h5 class="fw-bold mb-3"><i class="fas fa-industry me-2 text-indigo"></i> Fábrica Central </h5>
                                 <p class="text-secondary small">El motor RNG asegura matemáticamente que ningún cartón de 75 bolas se repita, validando firmas únicas antes de la inyección a la base de datos.</p>
                                 
                                 <form method="post" action="{% url 'dashboard' %}" class="mt-4">
@@ -673,7 +785,7 @@
 
                         <div class="col-xl-7">
                             <div class="card-minimalista p-4 h-100 border-start border-info border-4">
-                                <h5 class="fw-bold mb-3">Inventario y Control (`Carton`)</h5>
+                                <h5 class="fw-bold mb-3">Inventario y Control (Cartones)</h5>
                                 <p class="text-secondary small">Selecciona un cartón del catálogo para inspeccionar su estructura.</p>
                                 
                                 <div class="table-responsive animate__animated animate__fadeInDown">
@@ -682,7 +794,6 @@
                                             <tr class="text-secondary small text-uppercase">
                                                 <th>Serial</th>
                                                 <th>Jerarquía</th>
-                                                <th>Victoria Est.</th>
                                                 <th class="text-end">Operación</th>
                                             </tr>
                                         </thead>
@@ -691,10 +802,9 @@
                                             
                                             {{ ct.matriznumeros|json_script:ct.codigocarton }}
                                             
-                                            <tr onclick='cargarMatrizPrevia("{{ ct.codigocarton }}", "{{ ct.indicevictoria }}", "{{ ct.esmaestro }}")' style="cursor: pointer;">
+                                            <tr onclick='cargarMatrizPrevia("{{ ct.codigocarton }}", "{{ ct.esmaestro }}")' style="cursor: pointer;">
                                                 <td class="font-monospace fw-bold text-indigo">{{ ct.codigocarton }}</td>
                                                 <td>{% if ct.esmaestro %}<span class="badge bg-dark text-white">Maestro</span>{% else %}<span class="badge bg-dark text-white">Estándar</span>{% endif %}</td>
-                                                <td>{{ ct.indicevictoria }}%</td>
                                                 <td class="text-end">
                                                     <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Seguro que deseas destruir este cartón de forma permanente?');">
                                                         {% csrf_token %}
@@ -736,7 +846,7 @@
                     </div>
 
                     <div class="card-minimalista p-4 mb-4 border-start border-success border-4">
-                        <h5 class="fw-bold mb-3">Asignación por Rondas (`CartonPartidaBingo`)</h5>
+                        <h5 class="fw-bold mb-3">Asignación por Rondas (Cartones de la Partida del Bingo)</h5>
                         <div class="table-responsive animate__animated animate__fadeInDown">
                             <table class="table align-middle table-sm">
                                 <thead>
@@ -746,7 +856,6 @@
                                         <th>Precio Pagado</th>
                                         <th>Aciertos</th>
                                         <th>Estado Flujo</th>
-                                        <th>Resultado</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -757,7 +866,6 @@
                                         <td>${{ cj.preciopagado|default:"0.00" }}</td>
                                         <td class="text-center fw-bold">{{ cj.cantidadaciertos }}</td>
                                         <td><span class="badge bg-dark text-white">{{ cj.estadocarton }}</span></td>
-                                        <td>{% if cj.esganador %}<span class="badge bg-success text-white"><i class="fas fa-crown me-1"></i> Ganador</span>{% else %}<span class="text-muted small">No premiado</span>{% endif %}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -770,7 +878,7 @@
                     
                     <div class="card-minimalista p-4 mb-4 border-start border-primary border-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold mb-0">Licencias e Infraestructura (`PlataformaJuego`)</h5>
+                            <h5 class="fw-bold mb-0">Licencias e Infraestructura (Plataforma de Juego)</h5>
                             <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaPlataforma">
                                 <i class="fas fa-plus"></i> Integrar Plataforma
                             </button>
@@ -813,7 +921,7 @@
                     </div>
                     
                     <div class="card-minimalista p-4 mb-4 border-start border-danger border-4">
-                        <h5 class="fw-bold mb-3">Consola de Conectividad (`SesionJuego`)</h5>
+                        <h5 class="fw-bold mb-3">Consola de Conectividad (Sesion de Juego)</h5>
                         <div class="input-group input-group-sm mb-3">
                             <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
                             <input type="text" id="search-sesiones" class="form-control bg-transparent border-start-0" placeholder="Buscar por ID, IP o dispositivo..." onkeyup="filterTable('search-sesiones', 'table-sesiones')">
@@ -825,7 +933,6 @@
                                         <th>Jugador ID</th>
                                         <th>Dirección IP</th>
                                         <th>Navegador / Dispositivo</th>
-                                        <th>Ping Latencia</th>
                                         <th>Conexión</th>
                                     </tr>
                                 </thead>
@@ -835,7 +942,6 @@
                                         <td class="fw-bold text-indigo">ID: {{ ss.idjugador_id }}</td>
                                         <td class="font-monospace">{{ ss.ipconexion|default:"127.0.0.1" }}</td>
                                         <td><span class="small text-muted">{{ ss.navegadorweb|truncatechars:20 }} ({{ ss.dispositivoconexion|default:"PC" }})</span></td>
-                                        <td class="font-monospace"><span class="fw-bold text-success">{{ ss.latenciaping|default:"0" }} ms</span></td>
                                         <td><span class="badge bg-success">{{ ss.estadosesion }}</span></td>
                                     </tr>
                                     {% endfor %}
@@ -846,7 +952,7 @@
 
                     <div class="card-minimalista p-4 mb-4 border-start border-warning border-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold mb-0"><i class="fas fa-coins me-2 text-warning"></i> Economía y Divisas (`UnidadMonetaria`)</h5>
+                            <h5 class="fw-bold mb-0"><i class="fas fa-coins me-2 text-warning"></i> Economía y Divisas (Unidad Monetaria)</h5>
                             <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaMoneda">
                                 <i class="fas fa-plus"></i> Nueva Divisa
                             </button>
@@ -955,15 +1061,15 @@
                 <input type="hidden" name="action" value="crear_partida">
                 <div class="modal-body">
                     
-                    <div class="mb-3">
+                    <div class="mb-3">  
                         <label class="form-label small fw-bold">Evento Matriz (Bingo Asociado)</label>
                         <select name="idbingo" id="select_bingo_partida" class="form-select bg-transparent" required>
-                            {% for b in bingos %}
-                                <option value="{{ b.idbingo }}">
-                                    {{ b.titulobingo }} (Moneda: {{ b.idunidadmonetaria.nombreunidadmonetaria|default:"Estándar" }})
-                                </option>
-                            {% endfor %}
-                        </select>
+                        {% for b in bingos %}
+                            <option value="{{ b.idbingo }}">
+                                {{ b.titulobingo }} (Pozo en: {{ b.idunidad_premio.nombremoneda|default:"Estándar" }})
+                            </option>
+                        {% endfor %}
+                    </select>
                     </div>
                     
                     <div class="row g-2 mb-3">
@@ -1064,6 +1170,43 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalCreditoMasivo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-minimalista border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold">Modificación Masiva de Saldos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'dashboard' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="recarga_masiva_credito">
+                <input type="hidden" name="jugadores_ids" id="hidden-jugadores-ids">
+                
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-indigo">Parámetro Saldo a Modificar</label>
+                        <select name="tipo_saldo" class="form-select bg-transparent" required>
+                            <option value="real">Saldo/Crédito Comercial (Dinero Real - saldocreditojugador)</option>
+                            <option value="virtual">Saldo Virtual de Puntos (Tokens - saldovirtualjugador)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-success">Monto / Puntos a Inyectar</label>
+                        <input type="number" step="0.01" min="0.01" oninput="validity.valid||(value='');" name="monto" class="form-control bg-transparent" placeholder="Ej: 20.00" required>
+                        <div class="form-text small text-muted">
+                            <i class="fas fa-info-circle me-1"></i> El valor ingresado se sumará directamente al saldo actual de todos los perfiles marcados.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn bg-body-tertiary text-body border" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-indigo shadow-sm fw-bold">Aplicar Recarga Global</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="modalNuevaPlataforma" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content card-minimalista border-0 shadow">
@@ -1140,11 +1283,23 @@
                             <input type="text" name="titulobingo" class="form-control bg-transparent" value="{{ b.titulobingo }}" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold">Costo del Cartón</label>
+                            <label class="form-label small fw-bold text-success"><i class="fas fa-shopping-cart me-1"></i> Moneda de Venta (Cartones)</label>
+                            <select name="idunidad_venta" class="form-select bg-transparent" required>
+                                {% for u in unidades_monetarias %}
+                                    <option value="{{ u.idunidadmonetaria }}" {% if b.idunidad_venta.idunidadmonetaria == u.idunidadmonetaria %}selected{% endif %}>{{ u.nombremoneda }} ({{ u.simbolomoneda }})</option>
+                                {% endfor %}
+                            </select>
+                            <label class="form-label small fw-bold">Costo Carton</label>
                             <input type="number" step="0.01" name="preciocarton" class="form-control bg-transparent" value="{{ b.preciocarton }}" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold">Premio Mayor</label>
+                            <label class="form-label small fw-bold text-warning"><i class="fas fa-trophy me-1"></i> Moneda de Premio (Pozo)</label>
+                            <select name="idunidad_premio" class="form-select bg-transparent" required>
+                                {% for u in unidades_monetarias %}
+                                    <option value="{{ u.idunidadmonetaria }}" {% if b.idunidad_premio.idunidadmonetaria == u.idunidadmonetaria %}selected{% endif %}>{{ u.nombremoneda }} ({{ u.simbolomoneda }})</option>
+                                {% endfor %}
+                            </select>
+                            <label class="form-label small fw-bold">Premio Pozo</label>
                             <input type="number" step="0.01" name="premiomayor" class="form-control bg-transparent" value="{{ b.premiomayor }}" required>
                         </div>
                         <div class="col-12">
@@ -1438,6 +1593,77 @@
 </div>
 {% endfor %}
 
+{% for pt in partidas %}
+    <div class="modal fade notranslate" id="modalGanador{{ pt.idpartidabingo }}" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" translate="no">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            
+            <div class="modal-content card-minimalista border-0 shadow-lg">
+                <div class="modal-header border-bottom-0 pb-0 d-flex justify-content-between align-items-start">
+                    <!-- Espaciador fantasma para equilibrar la X -->
+                    <div style="width: 32px;"></div> 
+                    
+                    <h5 class="modal-title fw-bold text-success text-center flex-grow-1">
+                        <i class="fas fa-certificate me-1"></i> Certificado de Victoria
+                    </h5>
+                    
+                    <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body text-center pb-4 pt-2">
+                    <div class="mb-3">
+                        <i class="fas fa-user-circle text-secondary" style="font-size: 3rem;"></i>
+                    </div>
+                    
+                    {% if pt.idjugadororganador %}
+                        <h5 class="fw-bold text-indigo mb-0">{{ pt.idjugadororganador.aliasjugador }}</h5>
+                        <p class="small text-muted mb-3">ID Jugador: #{{ pt.idjugadororganador.idjugador }}</p>
+                    {% else %}
+                        <h5 class="fw-bold text-indigo mb-0">Ganador no asignado</h5>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-center gap-2 mb-3">
+                        <div class="bg-body-tertiary p-2 rounded border w-50">
+                            <span class="d-block small text-muted" style="font-size: 0.7rem;">Modalidad</span>
+                            <span class="fw-bold" style="font-size: 0.8rem;">{{ pt.modalidad_victoria }}</span>
+                        </div>
+                        <div class="bg-body-tertiary p-2 rounded border w-50">
+                            <span class="d-block small text-muted" style="font-size: 0.7rem;">Premio Entregado</span>
+                            <span class="fw-bold text-success" style="font-size: 0.8rem;">
+                                {% if pt.premiomaterial == '[POZO_MAYOR]' %}${{ pt.idbingo.premiomayor }}
+                                {% elif pt.valorpremio > 0 %}${{ pt.valorpremio }}
+                                {% else %}Premio Físico{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-center gap-2 mb-0">
+    
+                    <div class="bg-success bg-opacity-10 p-2 rounded border border-success {% if not pt.haydesempate %}w-100{% else %}w-50{% endif %}">
+                        <span class="d-block small text-success fw-bold" style="font-size: 0.7rem;">Última Bola Cantada</span>
+                        <span class="fw-black font-monospace text-dark fs-4">{{ pt.ultimabola|default:"-" }}</span>
+                    </div>
+
+                    {% if pt.haydesempate %}
+                    <div class="bg-danger bg-opacity-10 p-2 rounded border border-danger w-50">
+                        <span class="d-block small text-danger fw-bold" style="font-size: 0.7rem;"><i class="fas fa-balance-scale"></i> Ganador Desempate</span>
+                        <span class="fw-black font-monospace text-dark fs-4">{{ pt.bolamayordesempate|default:"-" }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    </div>
+                        
+                        {% if pt.haydesempate %}
+                            <hr class="my-2 border-success opacity-25">
+                            <span class="d-block small text-danger fw-bold"><i class="fas fa-balance-scale me-1"></i> Resolución por Desempate</span>
+                            <span class="small text-dark">Bola mayor obtenida: <b class="font-monospace fs-6"><span class="notranslate" translate="no">{{ pt.bolamayordesempate|default:"-" }}</span></b></span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+{% endfor %}
+
 <script>
     // ==========================================
     // MAGIA 1: MEMORIA DE SCROLL Y PESTAÑAS
@@ -1652,43 +1878,169 @@
         }
     }
 
+    // ==========================================
+    // MAGIA VISUAL Y FINANCIERA (UNIFICADA Y SIN ERRORES)
+    // ==========================================
     function actualizarPreciosVisuales() {
-        let selectMoneda = document.getElementById('in-moneda');
-        let simbolo = '$';
-        if (selectMoneda && selectMoneda.selectedIndex >= 0) {
-            simbolo = selectMoneda.options[selectMoneda.selectedIndex].getAttribute('data-simbolo') || '$';
-        }
+        let selectVenta = document.getElementById('in-moneda-venta');
+        let selectPremio = document.getElementById('in-moneda-premio');
+        
+        let simVenta = selectVenta.options[selectVenta.selectedIndex] ? selectVenta.options[selectVenta.selectedIndex].getAttribute('data-simbolo') : '$';
+        let simPremio = selectPremio.options[selectPremio.selectedIndex] ? selectPremio.options[selectPremio.selectedIndex].getAttribute('data-simbolo') : '$';
+        
         let valPrecio = document.getElementById('in-precio').value;
         let valPremio = document.getElementById('in-premio').value;
-        document.getElementById('out-precio').innerText = valPrecio ? simbolo + parseFloat(valPrecio).toFixed(2) : simbolo + '0.00';
-        document.getElementById('out-premio').innerText = valPremio ? simbolo + parseFloat(valPremio).toFixed(2) : simbolo + '0.00';
+        
+        document.getElementById('out-precio').innerText = valPrecio ? simVenta + parseFloat(valPrecio).toFixed(2) : simVenta + '0.00';
+        document.getElementById('out-premio').innerText = valPremio ? simPremio + parseFloat(valPremio).toFixed(2) : simPremio + '0.00';
     }
 
-    const formFieldsTexto = ['titulo', 'desc'];
-    formFieldsTexto.forEach(id => {
-        document.getElementById(`in-${id}`).addEventListener('input', function(e) {
-            let val = e.target.value;
-            if(!val && id === 'titulo') val = 'Título Inicial del Evento';
-            if(!val && id === 'desc') val = 'Escribe en la descripción del formulario...';
-            document.getElementById(`out-${id}`).innerText = val;
-        });
-    });
+    function calcularSimulacionFinanciera() {
+        try {
+            let precioCarton = parseFloat(document.getElementById('in-precio').value) || 0;
+            let premioGarantizadoCrudo = parseFloat(document.getElementById('in-premio').value) || 0;
+            let cartonesProyectados = parseInt(document.getElementById('sim-proyeccion').value) || 0;
+            
+            // EL NUEVO MODELO DE NEGOCIO
+            let porcentajeRetencion = 0.25; // 25% Casa
+            let porcentajePozo = 0.45;      // 45% Pozo Mayor
+            let porcentajeOtros = 0.30;     // 30% Rondas Menores
 
-    document.getElementById('in-precio').addEventListener('input', actualizarPreciosVisuales);
-    document.getElementById('in-premio').addEventListener('input', actualizarPreciosVisuales);
-    document.getElementById('in-moneda').addEventListener('change', actualizarPreciosVisuales); 
+            let selectVenta = document.getElementById('in-moneda-venta');
+            let optVenta = selectVenta.options[selectVenta.selectedIndex];
+            let simVenta = optVenta ? optVenta.getAttribute('data-simbolo') : '$';
+            let rawTasaVenta = (optVenta && optVenta.getAttribute('data-tasa')) ? optVenta.getAttribute('data-tasa') : '1.0';
+            let tasaVenta = parseFloat(String(rawTasaVenta).replace(',', '.')); 
 
-    function actualizarLugarEspejo() {
-        let tipo = document.getElementById('in-tipo').value;
-        let valLugar = document.getElementById('in-lugar').value;
-        let valSesion = document.getElementById('in-sesion').value;
-        
-        if (tipo === 'Virtual') {
-            document.getElementById('out-lugar').innerText = valSesion ? valSesion : "Enlace no definido";
-        } else {
-            document.getElementById('out-lugar').innerText = valLugar ? valLugar : "Ubicación no definida";
+            let selectPremio = document.getElementById('in-moneda-premio');
+            let optPremio = selectPremio.options[selectPremio.selectedIndex];
+            let simPremio = optPremio ? optPremio.getAttribute('data-simbolo') : '$';
+            let rawTasaPremio = (optPremio && optPremio.getAttribute('data-tasa')) ? optPremio.getAttribute('data-tasa') : '1.0';
+            let tasaPremio = parseFloat(String(rawTasaPremio).replace(',', '.'));
+
+            let ingresoCrudo = precioCarton * cartonesProyectados;
+            let ingresoTotalDolares = ingresoCrudo * tasaVenta;
+            let premioGarantizadoDolares = premioGarantizadoCrudo * tasaPremio;
+
+            // División del dinero en Dólares
+            let fondoPozoDolares = ingresoTotalDolares * porcentajePozo; 
+            let fondoOtrosDolares = ingresoTotalDolares * porcentajeOtros;
+            let comisionEsperadaDolares = ingresoTotalDolares * porcentajeRetencion; 
+
+            let premioFinalDolares = 0;
+            let utilidadNetaDolares = 0;
+
+            if (fondoPozoDolares > premioGarantizadoDolares) {
+                premioFinalDolares = fondoPozoDolares;
+                utilidadNetaDolares = comisionEsperadaDolares; // El 25% está intacto
+            } else {
+                premioFinalDolares = premioGarantizadoDolares;
+                // Si el pozo no se cubre con su 45%, la diferencia afecta temporalmente tu ganancia, asumiendo que el 30% de rondas menores sí lo vas a pagar.
+                utilidadNetaDolares = ingresoTotalDolares - premioGarantizadoDolares - fondoOtrosDolares;
+            }
+
+            let premioFinalCrudo = premioFinalDolares / tasaPremio;
+            let fondoOtrosCrudo = fondoOtrosDolares / tasaVenta; 
+            let fondoOtrosPremioCrudo = fondoOtrosDolares / tasaPremio;
+            let valorCartonDolar = precioCarton * tasaVenta;
+            
+            
+            // Cálculos del umbral
+            let puntoCero = valorCartonDolar > 0 ? Math.ceil(premioGarantizadoDolares / valorCartonDolar) : 0; 
+            let metaRentable = valorCartonDolar > 0 ? Math.ceil((premioGarantizadoDolares / porcentajePozo) / valorCartonDolar) : 0; 
+
+            // ================= PINTAR LA UI =================
+            document.getElementById('sim-ingreso').innerText = `${simVenta}${ingresoCrudo.toFixed(2)} (≈ $${ingresoTotalDolares.toFixed(2)})`;
+            
+            let gastoUI = document.getElementById('sim-gasto');
+            gastoUI.innerText = `-${simPremio}${premioFinalCrudo.toFixed(2)} (≈ $${premioFinalDolares.toFixed(2)})`;
+            
+            if(fondoPozoDolares > premioGarantizadoDolares) {
+                gastoUI.previousElementSibling.innerHTML = '<i class="fas fa-arrow-up text-warning"></i> Pozo Dinámico Estimado (45%)';
+                gastoUI.className = "fw-bold text-warning font-monospace"; 
+            } else {
+                gastoUI.previousElementSibling.innerHTML = 'Obligación (Premio Base)';
+                gastoUI.className = "fw-bold text-danger font-monospace";
+            }
+
+            let otrosPremiosUI = document.getElementById('sim-otros-premios');
+            if(otrosPremiosUI) {
+                otrosPremiosUI.innerText = `${simVenta}${fondoOtrosCrudo.toFixed(2)} (≈ $${fondoOtrosDolares.toFixed(2)})`;
+                otrosPremiosUI.innerText = `${simPremio}${fondoOtrosPremioCrudo.toFixed(2)} (≈ $${fondoOtrosDolares.toFixed(2)})`;
+            }
+
+            let utilDOM = document.getElementById('sim-utilidad');
+            utilDOM.innerText = "$" + utilidadNetaDolares.toFixed(2) + " USD";
+            utilDOM.className = utilidadNetaDolares > 0 ? "fw-bold fs-4 font-monospace text-success" : "fw-bold fs-4 font-monospace text-danger";
+            
+            document.getElementById('sim-equilibrio').innerText = metaRentable;
+
+            let alertaDOM = document.getElementById('sim-alerta');
+            let mensajeDOM = document.getElementById('sim-mensaje');
+
+            if (precioCarton === 0 && premioGarantizadoCrudo === 0) {
+                alertaDOM.className = "alert alert-secondary py-3 mb-0 text-center";
+                mensajeDOM.innerText = "Ingresa precios para simular.";
+            } else if (utilidadNetaDolares < 0) {
+                alertaDOM.className = "alert alert-danger py-3 mb-0 text-center border-danger border-2";
+                mensajeDOM.innerHTML = `<strong>¡Pérdida Segura!</strong> Faltan ventas. (Recuperas costos base a los ${puntoCero} cartones)`;
+            } else if (cartonesProyectados < metaRentable) {
+                alertaDOM.className = "alert alert-warning py-3 mb-0 text-center border-warning border-2";
+                mensajeDOM.innerHTML = `<strong>Ganancia Afectada:</strong> Pagas el premio base, pero no alcanzas tu 25% neto completo. (Meta ideal: ${metaRentable} cartones)`;
+            } else {
+                alertaDOM.className = "alert alert-success py-3 mb-0 text-center border-success border-2";
+                mensajeDOM.innerHTML = `<strong>¡Modelo Perfecto!</strong> Casa: 25% | Rondas: 30% | Pozo (45%) subió a ${simPremio}${premioFinalCrudo.toFixed(2)}`;
+            }
+        } catch(e) {
+            console.error("Error en cálculos de simulación:", e);
         }
     }
+
+    // ==========================================
+    // CÓDIGO LIMPIO: Cartelera y Simulador
+    // ==========================================
+    function actualizarTodo() {
+        actualizarPreciosVisuales();
+        calcularSimulacionFinanciera();
+    }
+
+    // Listener para los campos de entrada de números
+    ['in-precio', 'in-premio', 'sim-proyeccion'].forEach(id => {
+        let el = document.getElementById(id);
+        if(el) el.addEventListener('input', actualizarTodo);
+    });
+
+    // Listener para los cambios de moneda
+    ['in-moneda-venta', 'in-moneda-premio'].forEach(id => {
+        let el = document.getElementById(id);
+        if(el) el.addEventListener('change', actualizarTodo);
+    });
+
+    // Listener para el texto (Título y Descripción)
+    const formFieldsTexto = ['titulo', 'desc'];
+    formFieldsTexto.forEach(id => {
+        let el = document.getElementById(`in-${id}`);
+        if(el) {
+            el.addEventListener('input', function(e) {
+                let val = e.target.value;
+                if(!val && id === 'titulo') val = 'Título Inicial del Evento';
+                if(!val && id === 'desc') val = 'Escribe en la descripción...';
+                document.getElementById(`out-${id}`).innerText = val;
+            });
+        }
+    });
+
+        function actualizarLugarEspejo() {
+            let tipo = document.getElementById('in-tipo').value;
+            let valLugar = document.getElementById('in-lugar').value;
+            let valSesion = document.getElementById('in-sesion').value;
+            
+            if (tipo === 'Virtual') {
+                document.getElementById('out-lugar').innerText = valSesion ? valSesion : "Enlace no definido";
+            } else {
+                document.getElementById('out-lugar').innerText = valLugar ? valLugar : "Ubicación no definida";
+            }
+        }
 
     document.getElementById('in-lugar').addEventListener('input', actualizarLugarEspejo);
     document.getElementById('in-sesion').addEventListener('input', actualizarLugarEspejo);
@@ -1697,9 +2049,9 @@
         document.getElementById('out-estado').innerText = e.target.value.toUpperCase();
     });
 
-    function cargarMatrizPrevia(serial, victoria, esMaestro) {
+    function cargarMatrizPrevia(serial, esMaestro) {
         document.getElementById('matriz-serial').innerText = `Serial Activo: ${serial}`;
-        document.getElementById('matriz-info').innerText = `Victoria Estimada: ${victoria}% | Tipo: ${esMaestro === 'True' ? 'Maestro' : 'Estándar'}`;
+        document.getElementById('matriz-info').innerText = `Tipo: ${esMaestro === 'True' ? 'Maestro' : 'Estándar'}`;
         let matrizJson = JSON.parse(document.getElementById(serial).textContent);
         let gridContainer = document.getElementById('grid-maqueta-carton');
         gridContainer.innerHTML = ''; 
@@ -1785,5 +2137,34 @@
         selectorTiempo.addEventListener('change', function() { actualizarGrafico(this.value); });
         actualizarGrafico(selectorTiempo.value);
     });
+    // Función para marcar/desmarcar todos los jugadores de golpe
+    function toggleSelectAllJugadores(masterCheck) {
+        const checkboxes = document.querySelectorAll('.jugador-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = masterCheck.checked;
+        });
+        actualizarBotonMasivo();
+    }
+
+    // Escucha el estado de los checkboxes para armar la lista de IDs y mostrar el botón administrativo
+    function actualizarBotonMasivo() {
+        const checkboxes = document.querySelectorAll('.jugador-checkbox:checked');
+        const btnMasivo = document.getElementById('btn-recaudar-masivo');
+        const countSpan = document.getElementById('recaudar-count');
+        const hiddenInput = document.getElementById('hidden-jugadores-ids');
+
+        if (checkboxes.length > 0) {
+            btnMasivo.classList.remove('d-none');
+            countSpan.innerText = checkboxes.length;
+            
+            // Unimos todos los IDs seleccionados en una sola cadena separada por comas (ej: "1,4,12")
+            const ids = Array.from(checkboxes).map(cb => cb.value).join(',');
+            hiddenInput.value = ids;
+        } else {
+            btnMasivo.classList.add('d-none');
+            hiddenInput.value = '';
+            document.getElementById('check-all-jugadores').checked = false;
+        }
+    }
 </script>
 {% endblock %}

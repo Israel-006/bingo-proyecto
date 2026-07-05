@@ -1,170 +1,226 @@
 {% extends 'comunes/base.html' %}
-{% load static %} {% block title %}Consola de Desempate - CoopBingo{% endblock %}
+{% load static %} {% block title %}Consola de Desempate - Admin{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4 px-lg-5">
-    
-    
+<style>
+    /* Estilos sincronizados con la Arena de los Jugadores */
+    .ruleta-bola { 
+        width: 80px; height: 80px; font-size: 2.5rem; 
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto; border-radius: 50%; background: #1e293b; color: #fff;
+        border: 4px solid #475569; font-weight: 900;
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+    }
+    .animando-ruleta {
+        animation: spin-color-admin 0.1s infinite alternate;
+        color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+    }
+    .ganador-highlight {
+        background: #10b981 !important; border-color: #059669 !important;
+        transform: scale(1.10); box-shadow: 0 0 20px rgba(16, 185, 129, 0.6) !important;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes spin-color-admin {
+        0% { border-color: #3b82f6; }
+        100% { border-color: #ef4444; }
+    }
+    .input-secreto {
+        cursor: default !important; 
+        caret-color: transparent !important; 
+        color: transparent !important;
+    }
 
-    <div class="d-flex align-items-center justify-content-between mb-4 animate__animated animate__fadeInDown p-3 rounded shadow-sm border-start border-danger border-5 bg-body">
+    .input-secreto::-webkit-outer-spin-button,
+    .input-secreto::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    .input-secreto[type=number] {
+        -moz-appearance: textfield;
+    }
+</style>
+
+<div class="container-fluid py-4 px-lg-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <span class="badge bg-danger fs-6 mb-1 animate__animated animate__pulse animate__infinite">MODO DESEMPATE EN VIVO</span>
-            <h3 class="fw-bold mb-0 text-body">{{ partida.nombreronda }}</h3>
+            <h3 class="fw-black text-body mb-0"><i class="fas fa-gamepad text-danger me-2"></i> CONSOLA DE DESEMPATE</h3>
+            <span class="text-muted small">Ronda: <strong>{{ partida.nombreronda }}</strong> | Premio: <strong>{% if partida.premiomaterial == '[POZO_MAYOR]' %}POZO MAYOR: {{ partida.idbingo.idunidad_premio.simbolomoneda }}{{ partida.idbingo.pozo_dinamico_actual|floatformat:2 }}{% else %}{{ partida.idbingo.idunidad_premio.simbolomoneda }}{{ partida.valorpremio }}{% endif %}</strong></span>
         </div>
-        <div class="text-end">
-            <span class="text-muted small fw-bold d-block">Premio en Juego</span>
-            <h3 class="text-success fw-bold mb-0">${{ partida.valorpremio }}</h3>
-        </div>
+        
+        <form method="POST" id="form-regresar" class="m-0" onsubmit="return confirm('¿Estás seguro de cancelar el desempate y reanudar la partida normal?');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="cancelar_desempate">
+            <button type="submit" class="btn btn-outline-danger fw-bold shadow-sm" id="btn-regresar">
+                <i class="fas fa-times me-2"></i> Abortar Desempate
+            </button>
+        </form>
     </div>
 
     <div class="row g-4">
+        <!-- PANEL IZQUIERDO: RECLUTAMIENTO -->
         <div class="col-lg-4">
-            <div class="card-minimalista shadow-sm p-4 h-100 border-top border-primary border-4 bg-body">
-                <h5 class="fw-bold mb-3 text-body"><i class="fas fa-barcode text-primary me-2"></i>Validar Cartón</h5>
-                <p class="text-muted small">Ingrese el código del cartón para verificar si la matriz coincide con las bolas cantadas en esta ronda.</p>
-                
-                <form method="post" action="{% url 'consola_juego' id_partida=partida.idpartidabingo %}" class="mt-4">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="agregar_candidato">
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-body-secondary">Código del Cartón</label>
-                        <input type="text" id="input_codigo_carton" name="codigo_carton" class="form-control form-control-lg font-monospace text-center text-uppercase border-primary bg-body text-body" placeholder="Ej: CTN-1234ABCD" required autofocus>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">
-                        <i class="fas fa-plus-circle me-2"></i> Verificar y Agregar
-                    </button>
-                </form>
-
-                <hr class="my-4 border-secondary-subtle">
-                
-                <div class="p-3 rounded border border-secondary-subtle text-center bg-body-tertiary">
-                    <i class="fas fa-info-circle text-info mb-2 fs-4"></i>
-                    <p class="small text-muted mb-0">Los jugadores están viendo la pantalla de espera mientras resuelves el duelo.</p>
+            
+            <!-- Agregar Manualmente -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-body">
+                <div class="card-header bg-primary text-white rounded-top-4 py-3 border-0">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-user-plus me-2"></i> Agregar Candidato</h6>
+                </div>
+                <div class="card-body bg-body-tertiary rounded-bottom-4">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="agregar_candidato">
+                        <div class="input-group shadow-sm">
+                            <span class="input-group-text bg-white border-primary"><i class="fas fa-barcode text-primary"></i></span>
+                            <input type="text" name="codigo_carton" class="form-control text-uppercase fw-bold border-primary" placeholder="Código MYT-XXXX" required>
+                            <button class="btn btn-primary fw-bold" type="submit">Validar</button>
+                        </div>
+                    </form>
                 </div>
             </div>
-        </div>
 
-        <div class="col-lg-5">
-            <div class="card-minimalista shadow-sm p-4 h-100 border-top border-warning border-4 bg-body overflow-hidden">
-                <h5 class="fw-bold mb-3 text-body"><i class="fas fa-trophy text-warning me-2"></i>Candidatos Oficiales ({{ candidatos|length }})</h5>
-                
-                {% if candidatos %}
-                    <div class="table-responsive bg-body rounded border border-secondary-subtle mb-4 shadow-sm">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-secondary">
-                                <tr>
-                                    <th class="ps-3 text-body">Jugador / Alias</th>
-                                    <th class="text-body">Cédula</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for c in candidatos %}
-                                <tr>
-                                    <td class="ps-3 fw-bold text-primary">{{ c.aliasjugador|default:c.nombresjugador }}</td>
-                                    <td class="font-monospace text-muted">{{ c.cedulaidentidadjugador }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {% if candidatos|length >= 2 %}
-                        <div class="bg-body-tertiary p-3 rounded-4 border border-warning shadow-sm animate__animated animate__fadeIn mt-2 w-100">
-                            <h6 class="fw-bold text-body mb-4 border-bottom border-warning-subtle pb-2"><i class="fas fa-dice text-danger me-2"></i>Arena de Desempate</h6>
-                            
-                            <div class="row g-3 mb-4">
-                                {% for c in candidatos %}
-                                <div class="col-6">
-                                    <div class="card border border-2 border-secondary-subtle text-center h-100 candidato-card shadow-sm bg-body" data-id="{{ c.idjugador }}">
-                                        <div class="card-body p-3 d-flex flex-column align-items-center">
-                                            <span class="fw-bold text-truncate w-100 d-block mb-3 text-body" style="font-size: 0.9rem;">{{ c.aliasjugador|default:c.nombresjugador }}</span>
-                                            
-                                            <div class="display-bola bg-body-secondary text-body rounded-circle d-flex justify-content-center align-items-center shadow-sm border border-3 border-secondary-subtle mb-3 position-relative" style="width: 70px; height: 70px; font-size: 2rem; font-weight: 900; transition: all 0.3s;">
-                                                ?
-                                            </div>
-                                            
-                                            <button type="button" class="btn btn-outline-primary btn-sm w-100 fw-bold rounded-pill shadow-sm" onclick="sortearBola(this, '{{ c.idjugador }}')">
-                                                <i class="fas fa-sync-alt me-1"></i> Sortear
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
+            <!-- Radar Web -->
+            <div class="card border-0 shadow-sm rounded-4 bg-body h-100" style="max-height: 450px;">
+                <div class="card-header bg-success text-white rounded-top-4 py-3 border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-satellite-dish me-2"></i> Radar Web</h6>
+                    <span class="badge bg-white text-success rounded-pill">{{ ganadores_web|length }}</span>
+                </div>
+                <div class="card-body p-0 bg-body-tertiary rounded-bottom-4 overflow-auto">
+                    <ul class="list-group list-group-flush">
+                        {% for g in ganadores_web %}
+                        <li class="list-group-item bg-transparent border-bottom p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-body"><i class="fas fa-user-circle text-success me-1"></i> {{ g.idjugador.aliasjugador }}</span>
+                                <span class="badge bg-dark font-monospace">{{ g.idcarton.codigocarton }}</span>
                             </div>
-
-                            <form method="post" action="{% url 'consola_juego' id_partida=partida.idpartidabingo %}" id="form-resolucion" class="d-none mt-2">
+                            <form method="POST">
                                 {% csrf_token %}
-                                <input type="hidden" name="action" value="resolver_desempate">
-                                <input type="hidden" name="ganador_final" id="input_ganador_final" required>
-                                <input type="hidden" name="bola_mayor" id="input_bola_mayor" required>
-                                
-                                <div class="alert bg-success bg-opacity-10 border border-success text-center mb-4 rounded-4">
-                                    <span class="d-block small text-success fw-bold text-uppercase mb-1">Ganador del Desempate</span>
-                                    <h4 class="fw-black text-body mb-0"><i class="fas fa-crown text-warning me-2"></i><span id="nombre-ganador-texto"></span></h4>
-                                </div>
-                                
-                                <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold py-3 text-dark shadow-lg border border-warning hover-elevate" onclick="return confirm('¿Está seguro de asignar el premio a este jugador? Esta acción liquidará la partida y transferirá los fondos automáticamente.')">
-                                    <i class="fas fa-gavel me-2"></i> Finalizar Ronda y Validar
+                                <input type="hidden" name="action" value="agregar_candidato">
+                                <input type="hidden" name="codigo_carton" value="{{ g.idcarton.codigocarton }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success w-100 fw-bold rounded-pill">
+                                    <i class="fas fa-arrow-right me-1"></i> Agregar al Sorteo
                                 </button>
                             </form>
-                        </div>
-                    {% else %}
-                        <div class="alert bg-body-secondary border border-secondary-subtle text-center text-body mt-3 mb-0">
-                            <i class="fas fa-hourglass-half me-2"></i> Agregue al menos un candidato más para poder realizar el desempate.
-                        </div>
-                    {% endif %}
-
-                {% else %}
-                    <div class="text-center py-5 rounded border border-secondary-subtle bg-body-tertiary h-100 d-flex flex-column justify-content-center">
-                        <i class="fas fa-users-slash fs-1 text-muted opacity-50 mb-3"></i>
-                        <h6 class="fw-bold text-body-secondary">No hay candidatos verificados</h6>
-                        <p class="text-muted small px-3">Utilice el panel izquierdo o el Radar Web para validar y agregar los cartones empatados.</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="col-lg-3">
-            <div class="card shadow-sm border-0 rounded-4 h-100 bg-body">
-                <div class="card-header bg-success text-white text-center py-3 rounded-top-4 border-0">
-                    <h5 class="mb-0 fw-bold"><i class="fas fa-satellite-dish me-2"></i>Radar Web</h5>
-                    <small style="font-size: 0.75rem;">Detectados por el sistema</small>
-                </div>
-                <div class="card-body p-0 bg-body-tertiary rounded-bottom-4" style="max-height: 600px; overflow-y: auto; overflow-x: hidden;">
-                    <ul class="list-group list-group-flush h-100">
-                        {% for ganador in ganadores_web %}
-                            <li class="list-group-item p-3 border-bottom border-secondary-subtle bg-transparent hover-bg">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="fw-bold text-body fs-6"><i class="fas fa-user-circle text-primary me-2"></i> {{ ganador.idjugador.aliasjugador }}</span>
-                                </div>
-                                <div class="text-center mb-3">
-                                    <span class="badge text-bg-dark px-3 py-2 shadow-sm font-monospace" style="font-size: 0.85rem;">{{ ganador.idcarton.codigocarton }}</span>
-                                </div>
-                                <button type="button" class="btn btn-outline-success btn-sm w-100 fw-bold rounded-pill shadow-sm" onclick="pegarCodigo('{{ ganador.idcarton.codigocarton }}')">
-                                    <i class="fas fa-copy me-1"></i> USAR CÓDIGO
-                                </button>
-                            </li>
+                        </li>
                         {% empty %}
-                            <li class="list-group-item text-center py-5 text-muted bg-transparent border-0 d-flex flex-column justify-content-center h-100">
-                                <i class="fas fa-search fs-1 mb-3 opacity-25"></i>
-                                <span class="fw-medium small">Aún no se detectan ganadores<br>en la plataforma web.</span>
-                            </li>
+                        <li class="list-group-item bg-transparent text-center py-5 text-muted border-0">
+                            <i class="fas fa-check-circle fa-2x mb-2 opacity-25"></i><br>
+                            <small>No hay jugadores pendientes en el radar.</small>
+                        </li>
                         {% endfor %}
                     </ul>
                 </div>
             </div>
+
         </div>
 
+        <!-- PANEL DERECHO: LA ARENA DE DESEMPATE -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg rounded-4 bg-dark text-white h-100" style="background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);">
+                <div class="card-header bg-transparent border-secondary border-opacity-25 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-black text-warning"><i class="fas fa-crosshairs me-2"></i> ARENA EN VIVO</h5>
+                        <h5 class="text-success fw-bold mb-0">{% if partida.premiomaterial == '[POZO_MAYOR]' %}{{ partida.idbingo.idunidad_premio.simbolomoneda }}{{ partida.idbingo.pozo_dinamico_actual|floatformat:2 }}{% else %}{{ partida.idbingo.idunidad_premio.simbolomoneda }}{{ partida.valorpremio }}{% endif %}</h5>
+                    </div>
+                </div>
+                
+                <div class="card-body p-4">
+                    {% if candidatos %}
+                        <!-- Botón Maestro de Inicio de Sorteo -->
+                        <div id="btn-iniciar-sorteo-container" class="text-center mb-4 d-none">
+                            <button class="btn btn-warning btn-lg fw-bold shadow-lg text-dark border border-warning hover-elevate" onclick="comenzarSorteoDesempate()">
+                                <i class="fas fa-play-circle me-2"></i> INICIAR SORTEO DE DESEMPATE
+                            </button>
+                        </div>
+
+                        <div class="row g-4 justify-content-center" id="grid-candidatos-admin">
+                            {% for c in candidatos %}
+                            <div class="col-6 col-md-4 animate__animated animate__zoomIn candidato-card" data-id="{{ c.idjugador }}">
+                                <div class="bg-body-tertiary rounded-4 p-3 border border-secondary border-opacity-25 shadow text-center position-relative h-100 d-flex flex-column align-items-center justify-content-between">
+                                    <i class="fas fa-user-astronaut fs-1 text-primary mb-2 mt-1"></i>
+                                    <span class="fw-bold text-body text-truncate px-1 mb-3 d-block w-100">{{ c.aliasjugador|default:c.nombresjugador }}</span>
+                                    
+                                    <!-- La Ruleta -->
+                                    <div class="ruleta-bola mb-4 shadow display-bola" id="bola-{{ c.idjugador }}">?</div>
+                                    
+                                    <!-- Controles del Admin (Ocultos hasta que empiece el sorteo) -->
+                                    <div class="input-group input-group-sm mt-auto controles-sorteo d-none" id="controles-{{ c.idjugador }}">
+                                        <span class="input-group-text bg-warning border-warning text-dark fw-bold"><i class="fas fa-hashtag"></i></span>
+                                        
+                                        <div class="form-control p-0 border-warning position-relative d-flex align-items-center justify-content-center bg-white">
+                                            <span class="text-secondary position-absolute" style="pointer-events: none;">Bola</span>
+                                            
+                                            <input type="number" id="input-tiro-{{ c.idjugador }}" class="w-100 h-100 border-0 text-center input-secreto" min="1" max="75" style="background: transparent; outline: none; z-index: 2; box-shadow: none;">
+                                        </div>
+
+                                        <button class="btn btn-warning fw-bold text-dark btn-sortear" type="button" onclick="lanzarBola(this, '{{ c.idjugador }}')">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                    </div>
+                                    <!-- Insignia de listo (oculta por defecto) -->
+                                    <div id="listo-{{ c.idjugador }}" class="d-none mt-2 text-success fw-bold small">
+                                        <i class="fas fa-check-circle me-1"></i> Sorteado
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- PANEL DE RESOLUCIÓN (Se muestra cuando todos tiraron) -->
+                        <div id="panel-resolucion" class="mt-5 p-4 border border-success rounded-4 bg-success bg-opacity-10 d-none animate__animated animate__fadeInUp">
+                            <h4 class="fw-black text-success text-center mb-4"><i class="fas fa-trophy me-2"></i> SORTEO COMPLETADO</h4>
+                            <form method="POST" action="{% url 'consola_juego' id_partida=partida.idpartidabingo %}" id="form-resolucion">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="resolver_desempate">
+                                <div class="row justify-content-center g-3">
+                                    <div class="col-md-5">
+                                        <label class="form-label text-success fw-bold small">ID del Ganador</label>
+                                        <input type="text" name="ganador_final" id="input_ganador_final" class="form-control form-control-lg text-center fw-bold bg-dark text-white border-success" readonly required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label text-success fw-bold small">Bola Mayor</label>
+                                        <input type="text" name="bola_mayor" id="input_bola_mayor" class="form-control form-control-lg text-center fw-bold bg-dark text-warning border-success" readonly required>
+                                    </div>
+                                    <div class="col-md-8 mt-4">
+                                        <button type="submit" class="btn btn-success btn-lg w-100 fw-black shadow hover-elevate" onclick="return confirm('¿Está seguro de asignar el premio a este jugador? Esta acción liquidará la partida y transferirá los fondos automáticamente.')">
+                                            LIQUIDAR Y TRANSFERIR PREMIO <i class="fas fa-arrow-right ms-2"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Forzar Ganador Único (Por si hay solo 1 en la arena) -->
+                        {% if candidatos|length == 1 %}
+                        <div class="mt-5 text-center">
+                            <hr class="border-secondary opacity-25">
+                            <p class="text-white-50 small mb-3">Si este jugador está solo en la arena, no hay necesidad de sorteo.</p>
+                            <form method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="forzar_ganador_unico">
+                                <input type="hidden" name="id_unico_ganador" value="{{ candidatos.0.idjugador }}">
+                                <button type="submit" class="btn btn-outline-success rounded-pill px-4 fw-bold shadow-sm" onclick="return confirm('¿Declarar victoria inmediata por ausencia de rivales?');">
+                                    <i class="fas fa-award me-2"></i> Declarar Ganador Directo
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+
+                    {% else %}
+                        <div class="text-center py-5 text-white-50">
+                            <i class="fas fa-ghost display-1 mb-4 opacity-25"></i>
+                            <h4 class="fw-light">La Arena está vacía</h4>
+                            <p class="small">Agrega candidatos desde el radar web o verificando sus códigos manualmente para iniciar la muerte súbita.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <style>
-    .hover-bg { transition: background-color 0.2s ease; }
-    .hover-bg:hover { background-color: rgba(25, 135, 84, 0.1) !important; }
-    .hover-elevate { transition: transform 0.2s ease; }
-    .hover-elevate:hover { transform: translateY(-3px); }
+    .hover-elevate { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .hover-elevate:hover { transform: translateY(-5px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
 </style>
 
 {% if candidatos %}
@@ -181,177 +237,258 @@
 <script src="{% static 'js/bingo_socket.js' %}"></script>
 
 <script>
-    // 1. Script de Radar Web
-    function pegarCodigo(codigo) {
-        const inputCodigo = document.getElementById('input_codigo_carton');
-        if(inputCodigo) {
-            inputCodigo.value = codigo;
-            inputCodigo.classList.add('bg-success', 'text-white', 'animate__animated', 'animate__headShake');
-            inputCodigo.classList.remove('bg-body', 'text-body');
+    let registroTiros = {}; // Memoria temporal del sorteo
+    const totalCandidatos = {{ candidatos|length|default:"0" }};
+    let bolasDisponibles = Array.from({length: 75}, (_, i) => i + 1);
+
+    {% if candidatos %}
+    // =======================================================
+    // MEMORIA DE SORTEO (Recuperar estado previo)
+    // =======================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        const memoriaElement = document.getElementById('memoria-sorteo');
+        const memoriaSorteo = memoriaElement ? JSON.parse(memoriaElement.textContent) : {};
+
+        Object.keys(memoriaSorteo).forEach(idJugador => {
+            const numero = memoriaSorteo[idJugador];
+            registroTiros[idJugador] = numero; // Cargar en memoria local
             
+            const card = document.querySelector(`.candidato-card[data-id="${idJugador}"]`);
+            if (card) {
+                const display = card.querySelector('.display-bola');
+                const btnCtrl = document.getElementById(`controles-${idJugador}`);
+                if(btnCtrl) btnCtrl.classList.add('d-none');
+                
+                document.getElementById(`listo-${idJugador}`).classList.remove('d-none');
+                
+                display.innerText = numero;
+                display.classList.remove('bg-body-secondary', 'text-body', 'border-secondary-subtle');
+                display.classList.add('bg-primary', 'text-white', 'border-primary', 'shadow-lg');
+                
+                const index = bolasDisponibles.indexOf(numero);
+                if (index > -1) bolasDisponibles.splice(index, 1);
+            }
+        });
+
+        if (Object.keys(memoriaSorteo).length >= totalCandidatos && totalCandidatos >= 2) {
+             prepararResolucion(); // Si ya tiraron todos, ir a resolución
+        }
+    }); 
+    {% endif %}
+
+
+    function lanzarBola(btnElement, idJugador) {
+        const inputNum = document.getElementById(`input-tiro-${idJugador}`);
+        // Si el admin no pone número, se saca uno aleatorio de los disponibles
+        let numero = parseInt(inputNum.value);
+        
+        if (isNaN(numero) || numero < 1 || numero > 75) {
+             if(bolasDisponibles.length === 0) {
+                 alert("No hay más bolas disponibles"); return;
+             }
+             const indiceAleatorio = Math.floor(Math.random() * bolasDisponibles.length);
+             numero = bolasDisponibles.splice(indiceAleatorio, 1)[0];
+        } else {
+            // Validar que el número no se haya usado
+            const index = bolasDisponibles.indexOf(numero);
+            if (index > -1) {
+                bolasDisponibles.splice(index, 1);
+            } else {
+                alert('Esa bola ya salió o es inválida.');
+                return;
+            }
+        }
+
+        // 1. Bloquear controles para evitar doble envío
+        document.getElementById(`controles-${idJugador}`).classList.add('d-none');
+        document.getElementById(`listo-${idJugador}`).classList.remove('d-none');
+
+        // 2. Ejecutar Animación Local
+        animarExtraccion(idJugador, numero);
+        
+        // 3. Guardar en memoria
+        registroTiros[idJugador] = numero;
+
+        // 4. Enviar Silenciosamente al Servidor (API)
+        const formData = new FormData();
+        formData.append('action', 'registrar_tiro_desempate');
+        formData.append('id_jugador_tiro', idJugador);
+        formData.append('numero_tiro', numero);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch("{% url 'consola_juego' id_partida=partida.idpartidabingo %}", {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.completado || Object.keys(registroTiros).length === totalCandidatos) {
+                prepararResolucion();
+            }
+        }).catch(err => console.error('Error al registrar tiro:', err));
+    }
+
+    function animarExtraccion(idJugador, numeroFinal) {
+        let bolaContenedor = document.getElementById(`bola-${idJugador}`);
+        bolaContenedor.classList.add('animando-ruleta');
+        let counter = 0;
+        
+        let interval = setInterval(() => {
+            bolaContenedor.innerText = Math.floor(Math.random() * 75) + 1;
+            counter++;
+            if (counter > 20) {
+                clearInterval(interval);
+                bolaContenedor.classList.remove('animando-ruleta');
+                bolaContenedor.innerText = numeroFinal;
+                bolaContenedor.classList.add('ganador-highlight');
+                // Estilo final
+                bolaContenedor.classList.remove('bg-body-secondary', 'text-body', 'border-secondary-subtle');
+            }
+        }, 100);
+    }
+
+    function prepararResolucion() {
+        let idGanador = null;
+        let bolaMayor = -1;
+        let nombreGanador = 'Ganador Oficial';
+
+        // Calculamos localmente quién sacó el número más alto
+        for (const [id, num] of Object.entries(registroTiros)) {
+            if (num > bolaMayor) {
+                bolaMayor = num;
+                idGanador = id;
+            }
+        }
+        
+        const winnerCard = document.querySelector(`.candidato-card[data-id="${idGanador}"]`);
+        if(winnerCard) {
+            nombreGanador = winnerCard.querySelector('span.fw-bold').innerText;
+        }
+
+        setTimeout(() => {
+            ejecutarSentencia(idGanador, bolaMayor, nombreGanador);
+        }, 2200); // Esperar a que terminen las animaciones de la ruleta
+    }
+    
+    function ejecutarSentencia(ganadorId, ganadorNum, ganadorNombre) {
+        document.querySelectorAll('.candidato-card').forEach(card => {
+            const idCard = String(card.getAttribute('data-id'));
+            
+            if (idCard === String(ganadorId)) {
+                card.classList.add('border-success', 'border-4', 'bg-success', 'bg-opacity-10', 'animate__animated', 'animate__pulse');
+                
+                const display = card.querySelector('.display-bola');
+                if (display) {
+                    display.classList.replace('bg-primary', 'bg-success');
+                    display.classList.replace('border-primary', 'border-success');
+                    display.innerHTML = `<i class="fas fa-crown text-warning position-absolute translate-middle-x top-0 start-50 mt-n2 shadow-sm" style="font-size: 1.5rem; transform: translateY(-50%);"></i>${ganadorNum}`;
+                }
+            } else {
+                card.style.opacity = '0.5';
+                card.classList.add('border-danger');
+            }
+        });
+
+        const inputGanador = document.getElementById('input_ganador_final');
+        if (inputGanador) inputGanador.value = ganadorId;
+        
+        const inputBola = document.getElementById('input_bola_mayor');
+        if (inputBola) inputBola.value = ganadorNum;
+        
+        const spanNombre = document.getElementById('nombre-ganador-texto');
+        if (spanNombre) spanNombre.innerText = ganadorNombre;
+        
+        const form = document.getElementById('panel-resolucion');
+        if (form) {
+            form.classList.remove('d-none');
             setTimeout(() => {
-                inputCodigo.classList.remove('bg-success', 'text-white', 'animate__animated', 'animate__headShake');
-                inputCodigo.classList.add('bg-body', 'text-body');
-            }, 800);
+                form.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 300);
         }
     }
 
-    // 2. Motor de Sorteo Justo (RNG)
-    {% if candidatos %}
-        const totalCandidatos = {{ candidatos|length }};
-        let bolasDisponibles = Array.from({length: 75}, (_, i) => i + 1);
-
-        // =======================================================
-        // FIX 2: ESPERAMOS A QUE EL HTML ESTÉ LISTO (Adiós TypeError)
-        // =======================================================
-        document.addEventListener('DOMContentLoaded', () => {
-            const memoriaElement = document.getElementById('memoria-sorteo');
-            const memoriaSorteo = memoriaElement ? JSON.parse(memoriaElement.textContent) : {};
-
-            // 1. PINTAR ESTADO PERSISTENTE (INMUNIDAD AL F5)
-            Object.keys(memoriaSorteo).forEach(idJugador => {
-                const numero = memoriaSorteo[idJugador];
-                const card = document.querySelector(`.candidato-card[data-id="${idJugador}"]`);
-                
-                if (card) {
-                    const btn = card.querySelector('button');
-                    const display = card.querySelector('.display-bola');
-                    
-                    display.innerText = numero;
-                    display.classList.remove('bg-body-secondary', 'text-body', 'border-secondary-subtle');
-                    display.classList.add('bg-primary', 'text-white', 'border-primary', 'shadow-lg');
-                    
-                    btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Sorteado';
-                    btn.classList.replace('btn-outline-primary', 'btn-primary');
-                    btn.disabled = true;
-                    
-                    const index = bolasDisponibles.indexOf(numero);
-                    if (index > -1) bolasDisponibles.splice(index, 1);
-                }
-            });
-
-            // Caso B: Refrescaste la página con F5 y el servidor YA tenía al ganador
-            if (Object.keys(memoriaSorteo).length >= totalCandidatos && totalCandidatos >= 2) {
-                let maxNum = -1;
-                let winnerId = null;
-                for (const [id, num] of Object.entries(memoriaSorteo)) {
-                    if (num > maxNum) { maxNum = num; winnerId = id; }
-                }
-                const winnerCard = document.querySelector(`.candidato-card[data-id="${winnerId}"]`);
-                const winnerName = winnerCard ? winnerCard.querySelector('span.fw-bold').innerText : 'Ganador Oficial';
-                
-                ejecutarSentencia(winnerId, maxNum, winnerName);
-            }
-        });
-
-        // =======================================================
-        // FUNCIÓN DE LA RULETA (CON FIX DE SEGURIDAD CSRF)
-        // =======================================================
-        function sortearBola(btn, idJugador) {
-            btn.disabled = true;
-            btn.classList.remove('btn-outline-primary');
-            btn.classList.add('btn-secondary', 'text-white');
-            
-            const card = btn.closest('.candidato-card');
-            const display = card.querySelector('.display-bola');
-            
-            let tiempo = 0;
-            const tiempoMaximo = 1500; 
-            
-            const intervalo = setInterval(() => {
-                display.innerText = Math.floor(Math.random() * 75) + 1;
-                tiempo += 50;
-                
-                if (tiempo >= tiempoMaximo) {
-                    clearInterval(intervalo);
-                    
-                    const indiceAleatorio = Math.floor(Math.random() * bolasDisponibles.length);
-                    const bolaGanadora = bolasDisponibles.splice(indiceAleatorio, 1)[0];
-                    
-                    display.innerText = bolaGanadora;
-                    display.classList.remove('bg-body-secondary', 'text-body', 'border-secondary-subtle');
-                    display.classList.add('bg-primary', 'text-white', 'border-primary', 'shadow-lg', 'animate__animated', 'animate__tada');
-                    
-                    btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Sorteado';
-                    btn.classList.replace('btn-secondary', 'btn-primary');
-                    
-                    // ==========================================
-                    // FIX 1: INYECTAMOS EL TOKEN CSRF (Adiós 403 Forbidden)
-                    // ==========================================
-                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-                    const formData = new FormData();
-                    formData.append('action', 'registrar_tiro_desempate');
-                    formData.append('id_jugador_tiro', idJugador);
-                    formData.append('numero_tiro', bolaGanadora);
-
-                    fetch('', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRFToken': csrfToken // <-- LA LLAVE MÁGICA
-                        }
-                    });
-                }
-            }, 50);
+    // Escuchador para sincronizar si la sentencia llega por websocket
+    document.addEventListener('evento_partida', function(e) {
+        const datos = e.detail;
+        if (datos.evento === 'desempate_completado') {
+             // CORRECCIÓN VISUAL: Añadimos la misma espera de la animación para no interrumpir el suspenso
+             setTimeout(() => {
+                 if(document.getElementById('panel-resolucion') && document.getElementById('panel-resolucion').classList.contains('d-none')) {
+                    ejecutarSentencia(datos.ganador_id, datos.ganador_numero, datos.ganador_nombre);
+                 }
+             }, 2200);
         }
+    });
 
-        // =======================================================
-        // LA ORDEN DEL SERVIDOR (VERSIÓN BLINDADA Y A PRUEBA DE ERRORES)
-        // =======================================================
-        function ejecutarSentencia(ganadorId, ganadorNum, ganadorNombre) {
-            // 1. Colorear las tarjetas
-            document.querySelectorAll('.candidato-card').forEach(card => {
-                const idCard = String(card.getAttribute('data-id'));
-                
-                if (idCard === String(ganadorId)) {
-                    card.classList.remove('border-2', 'border-secondary-subtle');
-                    card.classList.add('border-success', 'border-4', 'bg-success', 'bg-opacity-10', 'animate__animated', 'animate__pulse');
-                    
-                    const display = card.querySelector('.display-bola');
-                    if (display) {
-                        display.classList.replace('bg-primary', 'bg-success');
-                        display.classList.replace('border-primary', 'border-success');
-                        display.innerHTML = `<i class="fas fa-crown text-warning position-absolute translate-middle-x top-0 start-50 mt-n2 shadow-sm" style="font-size: 1.5rem; transform: translateY(-50%);"></i>${ganadorNum}`;
-                    }
-                } else {
-                    card.style.opacity = '0.5';
-                    card.classList.add('border-danger');
+    // =======================================================
+    // CONTROL DEL FLUJO DE SORTEO
+    // =======================================================
+    function comenzarSorteoDesempate() {
+        // Ocultar botón gigante y mostrar las barras de control
+        document.getElementById('btn-iniciar-sorteo-container').classList.add('d-none');
+        document.querySelectorAll('.controles-sorteo').forEach(c => c.classList.remove('d-none'));
+
+        // Si el Piloto de Sorteo está activo, dispara el ciclo
+        const autoSpinOn = localStorage.getItem('bingo_admin_autoSpin') === 'true';
+        if (autoSpinOn) {
+            const botonesSorteo = document.querySelectorAll('.btn-sortear');
+            let delay = 0;
+            botonesSorteo.forEach((btn) => {
+                if(!btn.disabled) {
+                    setTimeout(() => { btn.click(); }, delay * 2000);
+                    delay++;
                 }
             });
+        }
+    }
+    
+    // =======================================================
+    // MAGIA DE AUTOMATIZACIÓN CORREGIDA
+    // =======================================================
+    window.addEventListener('load', () => {
+        const autoFillOn = localStorage.getItem('bingo_admin_autoFill') === 'true';
+        const autoSpinOn = localStorage.getItem('bingo_admin_autoSpin') === 'true';
 
-            // 2. Llenar inputs de forma segura (Verificando que existan primero)
-            const inputGanador = document.getElementById('input_ganador_final');
-            if (inputGanador) inputGanador.value = ganadorId;
-            
-            const inputBola = document.getElementById('input_bola_mayor');
-            if (inputBola) inputBola.value = ganadorNum;
-            
-            const spanNombre = document.getElementById('nombre-ganador-texto');
-            if (spanNombre) spanNombre.innerText = ganadorNombre;
-            
-            // 3. APARICIÓN A PRUEBA DE BALAS DEL BOTÓN
-            const form = document.getElementById('form-resolucion');
-            if (form) {
-                form.classList.remove('d-none');
-                form.style.display = 'block';
-                form.classList.add('animate__animated', 'animate__fadeInUp');
-                
-                setTimeout(() => {
-                    form.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                }, 300);
-            } else {
-                console.error("CRÍTICO: No se encontró el formulario 'form-resolucion' en el HTML.");
+        // PRIORIDAD 1: Bloqueo de flecha para no romper el flujo
+        const btnRegresar = document.getElementById('btn-regresar');
+        const formRegresar = document.getElementById('form-regresar');
+        const radarVacio = (document.querySelectorAll('.list-group-item form button[type="submit"]').length === 0);
+        const trampaMortal = (totalCandidatos === 0 && radarVacio);
+        
+        //if (btnRegresar && (autoFillOn || autoSpinOn) && !trampaMortal) {
+            //btnRegresar.disabled = true;
+            //btnRegresar.style.opacity = '0.3';
+            //formRegresar.onsubmit = function(e) {
+                //e.preventDefault();
+                //alert('Debes volver al tablero principal y apagar los pilotos para cancelar.');
+            //};
+        //}
+
+        // PRIORIDAD 2: AUTO LLENADO (Corregido el selector del botón dentro del formulario)
+        if (autoFillOn) {
+            const btnUsar = document.querySelector('.list-group-item form button[type="submit"]');
+            if (btnUsar) {
+                const formValidar = btnUsar.closest('form');
+                if (formValidar) {
+                    btnUsar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Agregando Auto...';
+                    btnUsar.disabled = true;
+                    formValidar.submit();
+                    return; 
+                }
             }
         }
 
-        // Caso A: El Servidor nos grita por WebSocket en tiempo real
-        document.addEventListener('evento_partida', function(e) {
-            const datos = e.detail;
-            if (datos.evento === 'desempate_completado') {
-                ejecutarSentencia(datos.ganador_id, datos.ganador_numero, datos.ganador_nombre);
-            }
-        });
-    {% endif %}
+        // PRIORIDAD 3: VALIDACIÓN DE INICIO DE SORTEO
+        const memoryLength = Object.keys(registroTiros).length;
+        if (radarVacio && totalCandidatos >= 2 && memoryLength < totalCandidatos) {
+            // Todos están en la arena, mostramos el botón de Iniciar Sorteo
+            const btnInicio = document.getElementById('btn-iniciar-sorteo-container');
+            if (btnInicio) btnInicio.classList.remove('d-none');
+        } else if (memoryLength > 0 && memoryLength < totalCandidatos) {
+            // Sorteo en progreso manual, mostramos controles
+            document.querySelectorAll('.controles-sorteo').forEach(c => c.classList.remove('d-none'));
+        }
+    });
 </script>
 {% endblock %}

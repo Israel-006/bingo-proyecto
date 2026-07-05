@@ -40,8 +40,11 @@
                         <i class="fas fa-wallet fs-3"></i>
                     </div>
                     <div>
-                        <h6 class="mb-0 animate__animated animate__fadeInDown text-uppercase fw-bold">Saldo Disponible</h6>
-                        <h2 class="mb-0 fw-bold">${{ jugador.saldocreditojugador }}</h2>
+                        <h6 class="mb-0 animate__animated animate__fadeInDown text-uppercase fw-bold">Saldos Disponibles</h6>
+                        <div class="d-flex gap-3">
+                            <h3 class="mb-0 fw-bold text-success" title="Dinero Real">${{ jugador.saldocreditojugador }} <span class="fs-6 text-white-50">Real</span></h3>
+                            <h3 class="mb-0 fw-bold text-warning" title="Moneda Virtual"><i class="fas fa-gem me-1"></i>{{ jugador.saldovirtualjugador }} <span class="fs-6 text-white-50">Virtual</span></h3>
+                        </div>
                     </div>
                 </div>
                 <div class="text-center text-md-end">
@@ -57,9 +60,10 @@
                     {% for item in bingos_data %}
                     <div class="col-12">
                         <div class="card-minimalista p-3 p-md-4 bingo-store" 
-                             data-bingoid="{{ item.bingo.idbingo }}" 
-                             data-price="{{ item.bingo.preciocarton }}" 
-                             data-comprados="{{ item.comprados }}">
+                            data-bingoid="{{ item.bingo.idbingo }}" 
+                            data-price="{{ item.bingo.preciocarton }}" 
+                            data-simbolo="{{ item.bingo.idunidad_venta.simbolomoneda }}"
+                            data-comprados="{{ item.comprados }}">
                             
                             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center border-bottom pb-3 mb-3">
                                 <div class="mb-3 mb-lg-0">
@@ -67,11 +71,13 @@
                                     <h4 class="fw-bold mb-1">{{ item.bingo.titulobingo }}</h4>
                                     <span class="small text-muted d-block d-md-inline mb-1 mb-md-0"><i class="far fa-calendar-alt me-1"></i> {{ item.bingo.fechaprogramadabingo|date:"d/m/Y H:i" }}</span>
                                     <span class="small text-muted d-none d-md-inline mx-2">|</span>
-                                    <span class="small text-muted d-block d-md-inline">Premio: <span class="text-success fw-bold">${{ item.bingo.premiomayor }}</span></span>
+                                    <!-- AQUI: Moneda de Premio -->
+                                    <span class="small text-muted d-block d-md-inline">Premio: <span class="text-success fw-bold">{{ item.bingo.idunidad_premio.simbolomoneda }}{{ item.bingo.pozo_dinamico_actual|floatformat:2 }}</span></span>
                                 </div>
                                 <div class="text-start text-lg-end bg-body-tertiary bg-lg-transparent p-2 p-lg-0 rounded">
                                     <span class="small text-body-secondary fw-bold d-block">Precio Unitario</span>
-                                    <span class="fs-4 fw-bold text-body">${{ item.bingo.preciocarton }}</span>
+                                    <!-- AQUI: Moneda de Venta -->
+                                    <span class="fs-4 fw-bold text-body">{{ item.bingo.idunidad_venta.simbolomoneda }}{{ item.bingo.preciocarton }}</span>
                                 </div>
                             </div>
                             
@@ -110,6 +116,18 @@
                                             <button type="button" class="btn btn-warning fw-bold text-dark px-4 py-2 btn-girar" data-bingoid="{{ item.bingo.idbingo }}"><i class="fas fa-sync-alt me-2"></i> Girar</button>
                                             <button type="button" class="btn btn-success fw-bold px-4 py-2 btn-quedar" data-bingoid="{{ item.bingo.idbingo }}"><i class="fas fa-cart-plus me-2"></i> Agregar a Bandeja</button>
                                         </div>
+                                        <!-- NUEVO BLOQUE: Generación por Lotes -->
+                                    <div class="d-flex justify-content-center align-items-center gap-2 border-top border-secondary-subtle pt-3">
+                                        <div class="form-text small text-muted mt-3 text-center bg-warning bg-opacity-10 p-2 rounded border border-warning border-opacity-50">
+                                            <i class="fas fa-info-circle text-warning me-1"></i> <strong>Límite RNG:</strong> Puedes generar hasta 50 cartones por clic para no sobrecargar el sistema.<br>
+                                            <em>Límite Global: El sistema permite un máximo estricto de 50 cartones por jugador en este evento.</em>
+                                        </div>
+                                        <span class="small fw-bold text-muted">Generación Rápida:</span>
+                                        <input type="number" id="lote-gen-{{ item.bingo.idbingo }}" class="form-control text-center fw-bold" style="width: 80px;" value="50" min="1" max="50">
+                                        <button type="button" class="btn btn-indigo fw-bold btn-lote" data-bingoid="{{ item.bingo.idbingo }}">
+                                            <i class="fas fa-bolt me-1"></i> Generar Lote
+                                        </button>
+                                    </div>
                                     </div>
                                 </div>
 
@@ -117,12 +135,13 @@
                                     <div class="vitrina-scroll p-2 bg-body-tertiary border rounded">
                                         <div class="row g-2 g-md-3">
                                             {% for c in item.catalogo %}
+                                            {{ c.matriznumeros|json_script:c.codigocarton }}
+
                                             <div class="col-6 col-sm-4 col-md-3">
                                                 <div class="card p-2 text-center catalog-item cursor-pointer border shadow-sm h-100 d-flex flex-column justify-content-between" 
-                                                     data-id="{{ c.idcarton }}" 
-                                                     data-codigo="{{ c.codigocarton }}"
-                                                     data-matriz="{{ c.matriznumeros }}"
-                                                     data-bingoid="{{ item.bingo.idbingo }}">
+                                                    data-id="{{ c.idcarton }}" 
+                                                    data-codigo="{{ c.codigocarton }}"
+                                                    data-bingoid="{{ item.bingo.idbingo }}">
                                                     <div class="catalog-grid-container mb-2 mt-1"></div>
                                                     <div>
                                                         <span class="font-monospace fw-bold text-body d-block text-truncate" style="font-size: 0.75rem;">{{ c.codigocarton }}</span>
@@ -161,7 +180,7 @@
                                     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
                                         <div class="d-flex flex-row flex-sm-column justify-content-between align-items-center align-items-sm-start">
                                             <span class="small text-white-50 fw-bold">Cant: <span id="cart-count-{{ item.bingo.idbingo }}" class="text-white fs-6">0</span></span>
-                                            <span class="small text-white-50 fw-bold">Total: <span id="cart-total-{{ item.bingo.idbingo }}" class="text-success fs-4">$0.00</span></span>
+                                            <span class="small text-white-50 fw-bold">Total: <span id="cart-total-{{ item.bingo.idbingo }}" class="text-success fs-4">{{ item.bingo.idunidad_venta.simbolomoneda }}0.00</span></span>
                                         </div>
                                         <button type="submit" class="btn btn-primary btn-lg fw-bold shadow-sm px-5 w-100 w-sm-auto" id="btn-pay-{{ item.bingo.idbingo }}" disabled>Pagar</button>
                                     </div>
@@ -210,9 +229,13 @@
         return html + '</div>';
     }
 
-    function initStore(bingoId, price, limitBase) {
+    function initStore(bingoId, price, limitBase, simbolo) {
+        let precioLimpio = price ? price.toString().replace(',', '.') : '0';
+
         StoreData[bingoId] = {
-            price: parseFloat(price),
+            price: parseFloat(precioLimpio),
+            simbolo: simbolo,
+            comprados: parseInt(limitBase) || 0, // NUEVO: Guardamos el historial del jugador
             selectedCatalogIds: new Set(),
             generatedCards: [],
             currentDraft: null
@@ -260,8 +283,11 @@
         
         store.selectedCatalogIds.forEach(id => {
             let el = document.querySelector(`.catalog-item[data-id="${id}"]`);
-            let matriz = parseMatriz(el.dataset.matriz);
             let codigo = el.dataset.codigo;
+            
+            // FIX: Leer desde el json_script en vez de el dataset viejo
+            let jsonEl = document.getElementById(codigo);
+            let matriz = jsonEl ? JSON.parse(jsonEl.textContent) : null;
             
             list.innerHTML += `
                 <li class="d-flex justify-content-between align-items-center gap-2 mb-2 bg-body-tertiary text-body p-2 rounded border shadow-sm">
@@ -285,7 +311,7 @@
 
         let total = store.selectedCatalogIds.size + store.generatedCards.length;
         document.getElementById(`cart-count-${bId}`).innerText = total;
-        document.getElementById(`cart-total-${bId}`).innerText = "$" + (total * store.price).toFixed(2);
+        document.getElementById(`cart-total-${bId}`).innerText = store.simbolo + (total * store.price).toFixed(2);
         
         // FIX: Se quitó la barra de progreso limitante.
         
@@ -331,11 +357,13 @@
     document.addEventListener("DOMContentLoaded", function() {
         document.querySelectorAll('.bingo-store').forEach(storeEl => {
             let bId = storeEl.dataset.bingoid;
-            initStore(bId, storeEl.dataset.price, storeEl.dataset.comprados);
+            initStore(bId, storeEl.dataset.price, storeEl.dataset.comprados, storeEl.dataset.simbolo);
             
             storeEl.querySelectorAll('.catalog-item').forEach(item => {
-                let matriz = parseMatriz(item.dataset.matriz);
-                if (matriz) {
+                // LEER DE FORMA SEGURA
+                let jsonEl = document.getElementById(item.dataset.codigo);
+                if (jsonEl) {
+                    let matriz = JSON.parse(jsonEl.textContent);
                     let gridContainer = item.querySelector('.catalog-grid-container');
                     gridContainer.innerHTML = renderMiniGrid(matriz);
                 }
@@ -345,7 +373,8 @@
             const tiendaSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/tienda/${bId}/`);
             
             tiendaSocket.onmessage = function(e) {
-                const data = JSON.parse(e.data);
+                const rawData = JSON.parse(e.data);
+                const data = rawData.datos ? rawData.datos : rawData;
                 if (data.evento === 'carton_vendido') {
                     const cartonId = data.id_carton.toString();
                     const cardEl = document.querySelector(`.catalog-item[data-bingoid="${bId}"][data-id="${cartonId}"]`);
@@ -373,24 +402,81 @@
             };
         });
 
-        // FIX: Botón de RNG Generador sin Límite
-        document.querySelectorAll('.btn-girar').forEach(btn => {
-            btn.addEventListener('click', function() { rollMatrix(this.dataset.bingoid); });
-        });
-
-        // FIX: Botón "Agregar a Bandeja" sin barreras lógicas
+        // NUEVO: Función para el botón "Agregar a Bandeja" (1 en 1)
         document.querySelectorAll('.btn-quedar').forEach(btn => {
             btn.addEventListener('click', function() {
                 let bId = this.dataset.bingoid;
                 let store = StoreData[bId];
-                // LÍMITE ELIMINADO
-                store.generatedCards.push(store.currentDraft);
-                rollMatrix(bId);
-                updateCartUI(bId);
+
+                // Calculamos el total real: Cartones de catálogo + Cartones generados
+                let totalActual = store.comprados + store.selectedCatalogIds.size + store.generatedCards.length;
+
+                if (totalActual >= 50) {
+                    alert("Has alcanzado el límite máximo de 50 cartones por compra.");
+                    return; // Frena la acción
+                }
+
+                // Si hay un cartón en el visor, lo guardamos
+                if (store.currentDraft) {
+                    store.generatedCards.push(store.currentDraft);
+                    
+                    // Giramos la ruleta automáticamente para que no agregue el mismo dos veces
+                    rollMatrix(bId); 
+                    
+                    // Actualizamos la vista de la bandeja
+                    updateCartUI(bId);
+                }
             });
         });
 
-        // FIX: Clic en el Catálogo Oficial sin Límite
+        // CORREGIDO: Botón para generar Lotes validando el límite global
+        document.querySelectorAll('.btn-lote').forEach(btn => {
+            btn.addEventListener('click', function() {
+                let bId = this.dataset.bingoid;
+                let store = StoreData[bId];
+                let input = document.getElementById(`lote-gen-${bId}`);
+                let cant = parseInt(input.value) || 0;
+
+                if (cant <= 0) return;
+                
+                // Calculamos el total actual
+                let totalActual = store.comprados + store.selectedCatalogIds.size + store.generatedCards.length;
+
+                // Verificamos si al sumar el lote nos pasamos de 50
+                if ((totalActual + cant) > 50) {
+                    let disponibles = 50 - totalActual;
+                    if (disponibles === 0) {
+                        alert("Ya tienes 50 cartones en la bandeja. No puedes agregar más.");
+                        return;
+                    } else {
+                        alert("Solo puedes agregar " + disponibles + " cartones más para alcanzar el límite de 50.");
+                        cant = disponibles; // Ajustamos la cantidad a lo que queda disponible
+                        input.value = cant;
+                    }
+                }
+
+                // Generamos la cantidad ajustada
+                for (let x = 0; x < cant; x++) {
+                    let b = generateCol(1, 15);
+                    let i = generateCol(16, 30);
+                    let n = generateCol(31, 45); n[2] = "FREE";
+                    let g = generateCol(46, 60);
+                    let o = generateCol(61, 75);
+
+                    let cod = "MYT-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+                    store.generatedCards.push({
+                        codigo: cod,
+                        matriz: { 'B': b, 'I': i, 'N': n, 'G': g, 'O': o }
+                    });
+                }
+                
+                rollMatrix(bId); 
+                updateCartUI(bId); 
+            });
+        });
+
+        // CORREGIDO: Clic en el Catálogo Oficial validando el límite global
         document.querySelectorAll('.catalog-item').forEach(item => {
             item.addEventListener('click', function() {
                 let bId = this.dataset.bingoid;
@@ -401,12 +487,20 @@
                 if (store.selectedCatalogIds.has(cId)) {
                     removeFromCart(bId, 'cat', cId);
                 } else {
-                    // LÍMITE ELIMINADO
+                    // Calculamos el total actual
+                    let totalActual = store.comprados + store.selectedCatalogIds.size + store.generatedCards.length;
+                    
+                    if (totalActual >= 50) {
+                        alert("Has alcanzado el límite máximo de 50 cartones por compra.");
+                        return; 
+                    }
+
                     store.selectedCatalogIds.add(cId);
                     this.classList.add('bg-primary-subtle', 'border-primary');
                     badge.classList.replace('bg-body-secondary', 'bg-primary');
                     badge.classList.replace('text-body', 'text-white');
                     badge.innerText = 'Seleccionado';
+                    
                     updateCartUI(bId);
                 }
             });
@@ -418,5 +512,6 @@
             });
         });
     });
+    
 </script>
 {% endblock %}

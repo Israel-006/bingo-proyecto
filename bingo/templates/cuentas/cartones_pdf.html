@@ -2,104 +2,136 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Mis Cartones - {{ bingo.titulobingo }}</title>
     <style>
         @page {
             size: A4 portrait;
-            margin: 1.5cm;
+            margin: 3.5cm 1.5cm 1.5cm 1.5cm;
+            @frame header {
+                -pdf-frame-content: header_content;
+                top: 1cm;
+                left: 1.5cm;
+                right: 1.5cm;
+                height: 2.5cm;
+            }
         }
-        body { font-family: Helvetica, Arial, sans-serif; }
-        .carton-container {
-            border: 3px solid #1e1b4b;
-            padding: 15px;
-            margin-bottom: 25px;
-            border-radius: 10px;
-        }
-        .header-table { width: 100%; margin-bottom: 15px; }
-        .header-table td { vertical-align: middle; }
-        .coop-name { font-size: 14px; color: #666; font-weight: bold; text-transform: uppercase; margin-bottom: 2px;}
-        .bingo-title { font-size: 24px; font-weight: bold; color: #1e1b4b; text-transform: uppercase; }
-        .player-info { font-size: 14px; color: #444; text-align: right; }
+        body { font-family: sans-serif; }
         
-        /* Ajustes de CSS para evitar bugs visuales en xhtml2pdf */
-        .grid-table {
+        .page-header {
             width: 100%;
-            text-align: center;
-            border-collapse: collapse;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
         }
-        .grid-table th {
-            background-color: #4f46e5;
-            color: white;
-            font-size: 26px;
-            padding: 10px;
-            border: 2px solid #1e1b4b;
+        
+        /* Ajuste: Separación original restaurada para mantener la estructura 2x3 */
+        .layout-table { width: 100%; border-collapse: separate; border-spacing: 15px; }
+        .cell-carton { 
+            width: 50%; 
+            vertical-align: top; 
+            padding: 5px; /* Reducido para ahorrar espacio */
         }
-        .grid-table td {
-            font-size: 30px;
-            font-weight: bold;
-            padding: 15px; /* Reducido para no romper fondos */
-            border: 2px solid #1e1b4b;
-            color: #222;
+
+        /* Estilo del cartón (unidad indivisible) */
+        .carton-box { 
+            border: 2px solid #333; 
+            border-radius: 8px; 
+            width: 100%; 
+            background-color: #fff;
         }
-        /* Color amarillo seguro */
-        .free-cell { 
-            background-color: #fef08a; 
-            font-size: 20px; /* Letra un poco más chica para que encaje bien */
-        } 
-        .footer-info { font-size: 11px; margin-top: 8px; text-align: center; color: #666; }
+        
+        /* AHORRO DE TINTA Y TAMAÑO REDUCIDO */
+        .header-carton { 
+            background-color: #fff; /* Fondo blanco para no gastar tinta */
+            color: #333; /* Texto oscuro para que contraste */
+            padding: 4px 8px; /* Menos espacio interno */
+            font-size: 11px; /* Letra un poco más pequeña */
+            font-weight: bold; 
+            text-align: left;
+            border-bottom: 2px solid #333; /* Mantiene la línea divisoria negra */
+        }
+        
+        .grid-bingo { width: 100%; border-collapse: collapse; }
+        .grid-bingo th { color: white; padding: 4px; font-size: 12px; } /* Letra un poco más chica */
+        
+        /* Celdas de los números más compactas */
+        .grid-bingo td { 
+            font-size: 14px; /* Tamaño de número reducido (antes 16px) */
+            font-weight: bold; 
+            text-align: center; 
+            border: 1px solid #ccc; 
+            padding: 4px; /* Menos espacio alrededor del número (antes 6px) */
+            color: #333; 
+        }
+        
+        /* Colores B-I-N-G-O */
+        .col-b { background-color: #0d6efd; }
+        .col-i { background-color: #dc3545; }
+        .col-n { background-color: #6c757d; }
+        .col-g { background-color: #198754; }
+        .col-o { background-color: #ffc107; }
+        
+        .star-cell { background-color: #ffc107 !important; font-size: 16px !important; }
     </style>
 </head>
 <body>
 
-    {% for c in cartones %}
-        
-        <div class="carton-container">
-            <table class="header-table">
-                <tr>
-                    <td width="60%">
-                        <div class="coop-name">CoopBingo Oficial</div>
-                        <div class="bingo-title">{{ bingo.titulobingo }}</div>
-                        <div style="font-size: 14px; margin-top: 5px;"><strong>Fecha del Evento:</strong> {{ bingo.fechaprogramadabingo|date:"d/m/Y H:i" }}</div>
-                    </td>
-                    <td width="40%" class="player-info">
-                        <div style="margin-bottom: 4px;"><strong>Jugador:</strong> {{ jugador.aliasjugador }}</div>
-                        <div><strong>Serial:</strong> {{ c.codigo }}</div>
-                    </td>
-                </tr>
-            </table>
+    <div id="header_content" class="page-header">
+        <table style="width:100%">
+            <tr>
+                <td>
+                    <div style="font-weight: bold; font-size: 14px;">CoopBingo Oficial</div>
+                    <div style="font-size: 18px; color: #1e1b4b; font-weight: bold;">{{ bingo.titulobingo }}</div>
+                </td>
+                <td style="text-align: right; font-size: 12px;">
+                    <div><strong>Jugador Oficial:</strong> {{ jugador.aliasjugador }}</div>
+                    <div><strong>Fecha:</strong> {{ bingo.fechaprogramadabingo|date:"d/m/Y H:i" }}</div>
+                </td>
+            </tr>
+        </table>
+    </div>
 
-            <table class="grid-table">
-                <thead>
-                    <tr>
-                        <th width="20%">B</th>
-                        <th width="20%">I</th>
-                        <th width="20%">N</th>
-                        <th width="20%">G</th>
-                        <th width="20%">O</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for fila in c.filas %}
-                    <tr>
-                        {% for numero in fila %}
-                            {% if numero == 'FREE' %}
-                                <td class="free-cell">LIBRE</td>
-                            {% else %}
-                                <td>{{ numero }}</td>
-                            {% endif %}
-                        {% endfor %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <div class="footer-info">Cartón maestro validado criptográficamente. Este cartón es válido para todas las rondas de la jornada actual.</div>
-        </div>
+    <table class="layout-table">
+        {% for c in cartones %}
+            {% if forloop.counter0|divisibleby:2 %}<tr>{% endif %}
+            
+            <td class="cell-carton">
+                <div class="carton-box">
+                    <div class="header-carton">
+                        CARTÓN <span style="float: right;">{{ c.codigo }}</span>
+                    </div>
+                    <table class="grid-bingo">
+                        <thead>
+                            <tr>
+                                <th class="col-b">B</th>
+                                <th class="col-i">I</th>
+                                <th class="col-n">N</th>
+                                <th class="col-g">G</th>
+                                <th class="col-o">O</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fila in c.filas %}
+                            <tr>
+                                {% for numero in fila %}
+                                    {% if numero == 'FREE' %}
+                                        <td class="star-cell">&#9733;</td>
+                                    {% else %}
+                                        <td>{{ numero }}</td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </td>
 
-        {% if forloop.counter|divisibleby:2 and not forloop.last %}
-            <pdf:nextpage />
-        {% endif %}
-
-    {% endfor %}
+            {% if forloop.counter|divisibleby:2 or forloop.last %}</tr>{% endif %}
+            
+            {% if forloop.counter|divisibleby:6 and not forloop.last %}
+                </table><pdf:nextpage /><table class="layout-table">
+            {% endif %}
+        {% endfor %}
+    </table>
 
 </body>
 </html>

@@ -45,7 +45,8 @@ urlpatterns = [
     path('perfil/', views.perfil, name='perfil'),
     path('perfil/mis_cartones', views.mis_cartones, name='mis_cartones'),
     path('perfil/mis_cartones/pdf/<int:id_bingo>/', views.descargar_cartones_pdf, name='descargar_cartones_pdf'),
-    
+    path('cambiar-carton/', views.cambiar_carton_boveda, name='cambiar_carton_boveda'),
+    path('api/catalogo-disponible/<int:id_bingo>/', views.api_catalogo_disponible, name='api_catalogo_disponible'),
 
     # ==========================================
     # 3. ADMINISTRADOR (Consolas de Mando)

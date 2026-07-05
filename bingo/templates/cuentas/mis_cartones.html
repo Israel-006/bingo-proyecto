@@ -39,13 +39,18 @@
                         <h4 class="fw-bold mb-0">{{ b.bingo.titulobingo }}</h4>
                         <span class="small text-muted"><i class="far fa-calendar-alt me-1"></i> {{ b.bingo.fechaprogramadabingo|date:"d/m/Y H:i" }}</span>
                     </div>
-                    <div class="text-md-end text-start mt-3 mt-md-0">
-                        <!-- LÓGICA DE BLOQUEO DE PDFs PARA EVENTOS CADUCADOS -->
+                    <div class="text-md-end text-start mt-3 mt-md-0 d-flex align-items-center justify-content-md-end flex-wrap gap-3">
                         {% if b.bingo.estadobingo == 'Finalizado' or b.bingo.estadobingo == 'Cancelado' %}
                             <div class="badge bg-danger-subtle text-danger p-2 border border-danger border-opacity-25 shadow-sm">
                                 <i class="fas fa-lock me-1"></i> Evento Finalizado (Caducados)
                             </div>
                         {% else %}
+                            <div class="form-check m-0">
+                                <input class="form-check-input border-secondary shadow-sm" type="checkbox" id="check-all-{{ b.bingo.idbingo }}" onclick="toggleSelectAll('{{ b.bingo.idbingo }}', this)" style="cursor: pointer; width: 1.2rem; height: 1.2rem;">
+                                <label class="form-check-label fw-bold small mt-1" for="check-all-{{ b.bingo.idbingo }}" style="cursor: pointer;">
+                                    Seleccionar Todos
+                                </label>
+                            </div>
                             <button type="submit" class="btn btn-danger fw-bold shadow-sm">
                                 <i class="fas fa-file-pdf me-2"></i> Generar PDF
                             </button>
@@ -75,6 +80,13 @@
                                 <span class="d-block font-monospace fw-bold animate__animated animate__fadeInDown text-break {% if b.bingo.estadobingo == 'Finalizado' or b.bingo.estadobingo == 'Cancelado' %}text-decoration-line-through text-muted{% else %}text-body{% endif %}" style="font-size: clamp(0.7rem, 2.5vw, 1rem);">
                                     {{ c.idcarton.codigocarton }}
                                 </span>
+                                <!-- NUEVO: Botón de Cambio (Solo visible si el Bingo está Programado) -->
+                                {% if b.puede_cambiar %}
+                                <button type="button" class="btn btn-sm btn-outline-warning w-100 mt-2 fw-bold shadow-sm" 
+                                        onclick="abrirModalCambio('{{ b.bingo.idbingo }}', '{{ c.idcarton.idcarton }}', '{{ c.idcarton.codigocarton }}')">
+                                    <i class="fas fa-exchange-alt me-1"></i> Cambiar
+                                </button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -92,7 +104,50 @@
         </div>
     {% endif %}
 </div>
+<!-- Modal de Intercambio -->
+<div class="modal fade" id="modalCambioCarton" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-warning text-dark border-0">
+                <h5 class="modal-title fw-bold"><i class="fas fa-random me-2"></i> Cambiar Cartón <span id="spanCodigoViejo"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="text-muted small mb-4">¿Cómo deseas obtener tu nuevo cartón? Recuerda que el cartón anterior será destruido.</p>
+                
+                <form id="formCambioCarton" method="POST" action="{% url 'cambiar_carton_boveda' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="id_bingo" id="inputBingoId">
+                    <input type="hidden" name="id_carton_viejo" id="inputCartonViejo">
+                    <input type="hidden" name="modalidad" id="inputModalidad">
+                    <input type="hidden" name="id_carton_nuevo" id="inputCartonNuevo">
 
+                    <div class="d-grid gap-3">
+                        <!-- Opción 1: RNG -->
+                        <button type="button" class="btn btn-indigo btn-lg fw-bold" onclick="ejecutarCambio('rng')">
+                            <i class="fas fa-dice me-2"></i> Generación Automática (RNG)
+                        </button>
+                        
+                        <div class="text-muted small fw-bold">O</div>
+                        
+                        <!-- Opción 2: Catálogo -->
+                        <button type="button" class="btn btn-success btn-lg fw-bold" onclick="cargarCatalogo()">
+                            <i class="fas fa-book-open me-2"></i> Elegir del Catálogo Maestro
+                        </button>
+                    </div>
+
+                    <!-- Contenedor del mini catálogo (oculto por defecto) -->
+                    <div id="contenedorCatalogo" class="mt-4 d-none">
+                        <h6 class="fw-bold mb-3 text-start">Selecciona un cartón disponible:</h6>
+                        <div class="row g-2" id="gridCatalogoModal" style="max-height: 250px; overflow-y: auto;">
+                            <!-- Aquí se inyectan los cartones con JS -->
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
     function renderMiniGrid(matriz) {
         if (!matriz) return '';
@@ -147,5 +202,77 @@
             }
         });
     });
+    // NUEVO: Función para Seleccionar Todos los cartones de un Bingo
+    function toggleSelectAll(bingoId, masterCheck) {
+        const formContainer = document.getElementById('bingo-' + bingoId);
+        const checkboxes = formContainer.querySelectorAll('input[name="cartones_seleccionados"]');
+        checkboxes.forEach(cb => {
+            cb.checked = masterCheck.checked;
+        });
+    }
+    let modalCambio;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        modalCambio = new bootstrap.Modal(document.getElementById('modalCambioCarton'));
+    });
+
+    function abrirModalCambio(bingoId, cartonId, codigoCarton) {
+        document.getElementById('inputBingoId').value = bingoId;
+        document.getElementById('inputCartonViejo').value = cartonId;
+        document.getElementById('spanCodigoViejo').innerText = codigoCarton;
+        
+        // Resetear la vista del modal
+        document.getElementById('contenedorCatalogo').classList.add('d-none');
+        document.getElementById('gridCatalogoModal').innerHTML = '';
+        
+        modalCambio.show();
+    }
+
+    function ejecutarCambio(modalidad, nuevoId = '') {
+        document.getElementById('inputModalidad').value = modalidad;
+        if (nuevoId) {
+            document.getElementById('inputCartonNuevo').value = nuevoId;
+        }
+        document.getElementById('formCambioCarton').submit();
+    }
+
+    function cargarCatalogo() {
+        let bingoId = document.getElementById('inputBingoId').value;
+        let grid = document.getElementById('gridCatalogoModal');
+        let contenedor = document.getElementById('contenedorCatalogo');
+        
+        grid.innerHTML = '<div class="col-12 text-center text-muted"><i class="fas fa-spinner fa-spin fs-3"></i><br>Buscando cartones...</div>';
+        contenedor.classList.remove('d-none');
+
+        // Llamada a la API que creamos en views.py
+        fetch(`/api/catalogo-disponible/${bingoId}/`)
+            .then(response => response.json())
+            .then(data => {
+                grid.innerHTML = '';
+                if(data.catalogo.length === 0) {
+                    grid.innerHTML = '<div class="col-12 text-center text-danger small fw-bold">El catálogo maestro está agotado. Usa la generación automática.</div>';
+                    return;
+                }
+                
+                data.catalogo.forEach(c => {
+                    // Reutilizamos tu función renderMiniGrid[cite: 3]
+                    let visualGrid = renderMiniGrid(c.matriz); 
+                    grid.innerHTML += `
+                        <div class="col-6 col-sm-4">
+                            <div class="border rounded p-2 text-center cursor-pointer catalog-item-modal" 
+                                onclick="ejecutarCambio('catalogo', '${c.id}')"
+                                style="transition: 0.2s; cursor: pointer;">
+                                <div class="mb-1">${visualGrid}</div>
+                                <span class="small font-monospace fw-bold text-primary">${c.codigo}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            })
+            .catch(error => {
+                grid.innerHTML = '<div class="col-12 text-center text-danger small">Error al conectar con el servidor.</div>';
+            });
+    }
+
 </script>
 {% endblock %}

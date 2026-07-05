@@ -524,8 +524,10 @@
                 verificarCartones();
             }
 
-        } else if (datos.evento === 'estado_cambiado') {
-            if (datos.nuevo_estado === 'Verificando') {
+        } else if (datos.evento === 'estado_cambiado')   {
+            if (datos.nuevo_estado === 'En Juego') {
+                window.location.reload(); 
+            } else if (datos.nuevo_estado === 'Verificando') {
                 const divPausa = document.createElement('div');
                 divPausa.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background-color:var(--bs-body-bg);z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;";
                 divPausa.innerHTML = '<div class="text-center px-4 w-100"><div class="spinner-border text-danger mb-3" style="width:4rem;height:4rem;"></div><h2 class="fw-bold text-body display-5">¡Juego Pausado!</h2><p class="text-muted fs-5">Auditoría de cartones en curso...</p></div>';

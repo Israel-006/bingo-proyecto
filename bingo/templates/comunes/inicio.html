@@ -24,6 +24,13 @@
                         <i class="fas fa-store me-2"></i> Tienda de Cartones
                     </a>
                 </div>
+            {% elif es_socio %}
+                <!-- 👈 NUEVO: Si ya es socio pero NO jugador, le invitamos a jugar -->
+                <div class="mt-4">
+                    <a href="{% url 'registro_jugador' %}" class="btn btn-success btn-lg shadow-sm px-5 rounded-pill w-100 w-sm-auto">
+                        <i class="fas fa-gamepad me-2"></i> Activar Perfil de Juego
+                    </a>
+                </div>
             {% else %}
                 <div class="mt-4">
                     <button class="btn btn-indigo btn-lg shadow-sm px-5 rounded-pill w-100 w-sm-auto" data-bs-toggle="modal" data-bs-target="#modalPromoSocio">
@@ -98,11 +105,11 @@
                     <div class="d-flex justify-content-between align-items-center border-top border-white border-opacity-25 pt-3 mt-auto">
                         <div>
                             <span class="small text-white-50 d-block">Pozo Mayor</span>
-                            <h3 class="fw-bold text-warning mb-0">{{ b.idunidadmonetaria.simbolomoneda }}{{ b.premiomayor }}</h3>
+                            <h3 class="fw-bold text-warning mb-0">{{ b.idunidad_premio.simbolomoneda }}{{ b.pozo_dinamico_actual|floatformat:2 }}</h3>
                         </div>
                         <div class="text-end">
                             <span class="small text-white-50 d-block">Valor Entrada</span>
-                            <span class="fw-bold fs-5 text-white">{{ b.idunidadmonetaria.simbolomoneda }}{{ b.preciocarton }}</span>
+                            <span class="fw-bold fs-5 text-white">{{ b.idunidad_venta.simbolomoneda }}{{ b.preciocarton }}</span>
                         </div>
                     </div>
                     {% if b.sala_abierta %}
