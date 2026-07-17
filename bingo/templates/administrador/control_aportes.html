@@ -1,0 +1,166 @@
+{% extends 'comunes/base.html' %} {% comment %} Asegúrate de que esta sea la ruta correcta a tu plantilla base {% endcomment %}
+{% load static %}
+
+{% block title %}Control de Aportes - CoopBingo{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 animate__animated animate__fadeIn">
+    {% include 'componentes/alertas.html' %}
+
+    <!-- Header y Botones -->
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-8 d-flex align-items-center gap-3">
+            <!-- BOTÓN 5: Volver al Dashboard -->
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-zoom" style="width: 45px; height: 45px;" title="Volver al Dashboard">
+                <i class="fas fa-arrow-left fs-5"></i>
+            </a>
+            <div>
+                <h2 class="h3 mb-0 text-primary fw-bold">
+                    <i class="fas fa-money-check-alt me-2"></i> Control de Ahorros Semanales
+                </h2>
+                <p class="text-secondary mb-0">Auditoría y registro manual de aportes por socio.</p>
+            </div>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <button class="btn btn-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarPago">
+                <i class="fas fa-plus-circle me-1"></i> Registrar Pago Manual
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+        <div class="card-header py-3 bg-body d-flex flex-column flex-md-row justify-content-between align-items-md-center border-bottom border-primary border-3">
+            <h6 class="m-0 font-weight-bold text-dark mb-2 mb-md-0">
+                Matriz del Evento: <span class="text-primary">{{ bingo_seleccionado.titulobingo }}</span>
+            </h6>
+            
+            <form method="GET" class="form-inline m-0">
+                <div class="input-group input-group-sm shadow-sm">
+                    <span class="input-group-text bg-body-secondary border-end-0"><i class="fas fa-filter text-muted"></i></span>
+                    <select name="bingo_id" class="form-select border-start-0" onchange="this.form.submit()">
+                        {% for b in todos_los_bingos %}
+                            <option value="{{ b.idbingo }}" {% if b.idbingo == bingo_seleccionado.idbingo %}selected{% endif %}>
+                                {{ b.titulobingo }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+        
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                <table class="table table-hover table-bordered text-center align-middle mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-dark" style="position: sticky; top: 0; z-index: 10;">
+                        <tr>
+                            <th class="text-start ps-3" style="min-width: 250px;">Socio / Colaborador</th>
+                            {% for sem in semanas %}
+                                <th>Sem {{ sem }}</th>
+                            {% endfor %}
+                            <th class="bg-success text-white">Total Ahorro</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for renglon in matriz_socios %}
+                        <tr>
+                            <td class="text-start ps-3 fw-bold text-body">
+                                {{ renglon.objeto_socio.primerapellidosocio }} {{ renglon.objeto_socio.primernombresocio }}
+                                <small class="text-muted d-block fw-normal">{{ renglon.objeto_socio.cisocio }}</small>
+                            </td>
+
+                            {% for sem in semanas %}
+                                <td class="p-2">
+                                    {% for num_sem, info in renglon.semanas_data.items %}
+                                        {% if num_sem == sem %}
+                                            {% if info %}
+                                                {% if info.estado == 'Al Dia' %}
+                                                    <div class="bg-success bg-opacity-25 text-success p-1 rounded fw-bold border border-success">
+                                                        ${{ info.monto }}
+                                                    </div>
+                                                {% else %}
+                                                    <div class="bg-danger bg-opacity-25 text-danger p-1 rounded fw-bold border border-danger" title="Atrasado">
+                                                        ${{ info.monto }}
+                                                    </div>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted opacity-50" style="font-size: 1.2rem;">-</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                            {% endfor %}
+
+                            <td class="fw-bold bg-success-subtle text-success fs-6">
+                                ${{ renglon.total_acumulado }}
+                            </td>
+
+                            <td>
+                                {% if renglon.tiene_atrasos %}
+                                    <span class="badge bg-warning text-dark shadow-sm">Con Atrasos</span>
+                                {% else %}
+                                    <span class="badge bg-success shadow-sm">Al Día</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{{ semanas|length|add:3 }}" class="text-center text-muted py-5">
+                                <i class="fas fa-users-slash fa-3x mb-3 opacity-25"></i><br>
+                                No hay socios activos registrados para desplegar la matriz.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalRegistrarPago" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold text-primary"><i class="fas fa-plus-circle me-2"></i> Registrar Aporte Manual</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'control_aportes' %}">
+                {% csrf_token %}
+                <input type="hidden" name="id_bingo" value="{{ bingo_seleccionado.idbingo }}">
+                
+                <div class="modal-body py-4">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">1. Socio / Colaborador</label>
+                            <select name="id_socio" class="form-select shadow-sm" required>
+                                <option value="" disabled selected>-- Selecciona un Socio --</option>
+                                {% for renglon in matriz_socios %}
+                                    <option value="{{ renglon.objeto_socio.idsocio }}">
+                                        {{ renglon.objeto_socio.primerapellidosocio }} {{ renglon.objeto_socio.primernombresocio }} ({{ renglon.objeto_socio.cisocio }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">2. Semana a Pagar</label>
+                            <input type="number" name="numero_semana" class="form-control shadow-sm" placeholder="Ej: 1" min="1" max="50" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">3. Monto Cancelado ($)</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-body-secondary fw-bold text-body">$</span>
+                                <input type="number" step="0.01" name="monto" class="form-control" placeholder="0.00" min="0" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn bg-body-tertiary border" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm">Guardar Pago</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

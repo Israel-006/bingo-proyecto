@@ -57,6 +57,18 @@
                                 </a>
                             </li>
                             {% endif %}
+                            {% if request.session.es_socio_activo %}
+                            <li>
+                                <a class="dropdown-item" href="{% url 'aporte_y_regalos' %}">
+                                    <i class="fas fa-gift text-success me-2"></i> Mis Regalos
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-2 fw-medium" href="{% url 'cuenta_bancaria' %}">
+                                    <i class="fas fa-piggy-bank text-success me-2"></i> Cuentas Bancarias
+                                </a>
+                            </li>
+                            {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form action="{% url 'logout' %}" method="post" class="px-2">

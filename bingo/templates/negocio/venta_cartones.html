@@ -402,6 +402,30 @@
             };
         });
 
+        // ==========================================
+        // FIX: Función para el botón "Girar" (RNG Manual)
+        // ==========================================
+        document.querySelectorAll('.btn-girar').forEach(btn => {
+            btn.addEventListener('click', function() {
+                let bId = this.dataset.bingoid;
+                
+                // 1. Animación visual del ícono girando
+                let icon = this.querySelector('i');
+                icon.classList.add('fa-spin');
+                setTimeout(() => icon.classList.remove('fa-spin'), 400);
+                
+                // 2. Animación 3D del cartón cambiando
+                let cajaMatriz = document.getElementById(`matrix-${bId}`);
+                if (cajaMatriz) {
+                    cajaMatriz.classList.add('animate__animated', 'animate__flipInX');
+                    setTimeout(() => cajaMatriz.classList.remove('animate__animated', 'animate__flipInX'), 500);
+                }
+
+                // 3. Ejecutar la función matemática de crear nueva matriz
+                rollMatrix(bId);
+            });
+        });
+
         // NUEVO: Función para el botón "Agregar a Bandeja" (1 en 1)
         document.querySelectorAll('.btn-quedar').forEach(btn => {
             btn.addEventListener('click', function() {

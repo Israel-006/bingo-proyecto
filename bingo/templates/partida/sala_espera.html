@@ -146,6 +146,8 @@
     document.addEventListener('evento_partida', function(e) {
         const datos = e.detail;
         
+        
+        
         if (datos.evento === 'estado_cambiado' && datos.nuevo_estado === 'En Juego') {
             const divPausa = document.createElement('div');
             divPausa.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(49, 46, 129, 0.95);z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;";

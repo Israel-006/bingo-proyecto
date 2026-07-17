@@ -1,0 +1,366 @@
+{% extends 'comunes/base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Aportes y Regalos - CoopBingo{% endblock %}
+
+{% block content %}
+<style>
+    .custom-toggle-container {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 50rem;
+        display: inline-flex;
+        padding: 4px;
+    }
+    .custom-toggle-btn {
+        border-radius: 50rem;
+        padding: 8px 24px;
+        font-weight: 600;
+        color: #6c757d;
+        border: none;
+        background: transparent;
+        transition: all 0.3s ease;
+    }
+    .custom-toggle-btn.active {
+        background-color: #0d6efd; /* Color azul estilo "Saldo Real" */
+        color: white;
+        box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);
+    }
+    .custom-toggle-btn:not(.active):hover {
+        color: #5a32fa; /* Color morado al pasar el mouse */
+        background-color: #e9ecef;
+    }
+    .btn-indigo {
+        background-color: #4f46e5;
+        color: white;
+    }
+    .btn-indigo:hover {
+        background-color: #4338ca;
+        color: white;
+    }
+</style>
+
+<div class="container py-5">
+    {% include 'componentes/alertas.html' %}
+
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6 mb-3 mb-md-0">
+            <h2 class="fw-bold text-primary mb-1"><i class="fas fa-hand-holding-usd me-2"></i> Mis Aportes y Regalos</h2>
+            <p class="text-secondary mb-0">Gestiona tus cuotas semanales y los premios físicos donados.</p>
+        </div>
+        <div class="col-md-6 text-md-end text-center">
+            <ul class="nav custom-toggle-container shadow-sm" id="pills-tab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link custom-toggle-btn active" id="pills-aportes-tab" data-bs-toggle="pill" data-bs-target="#pills-aportes" type="button" role="tab" aria-controls="pills-aportes" aria-selected="true">
+                        <i class="fas fa-calendar-check me-1"></i> Cuota Semanal
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link custom-toggle-btn" id="pills-regalos-tab" data-bs-toggle="pill" data-bs-target="#pills-regalos" type="button" role="tab" aria-controls="pills-regalos" aria-selected="false">
+                        <i class="fas fa-gift me-1"></i> Regalos Físicos
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="tab-content mt-4" id="pills-tabContent">
+        
+        <div class="tab-pane fade show active" id="pills-aportes" role="tabpanel" aria-labelledby="pills-aportes-tab">
+            <div class="row g-4 animate__animated animate__fadeIn">
+                <div class="col-lg-5">
+                    <div class="card shadow-sm border-0 border-top border-warning border-4 h-100">
+                        <div class="card-header bg-body py-3">
+                            <h5 class="card-title mb-0 fw-bold"><i class="fas fa-upload text-warning me-2"></i> Reportar Cuota Semanal</h5>
+                        </div>
+                        <div class="card-body bg-body-tertiary">
+                            <form method="POST" action="{% url 'aporte_y_regalos' %}" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="registrar_aporte">
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-muted">1. Selecciona el Evento (Bingo)</label>
+                                    <select class="form-select shadow-sm" name="id_bingo" required>
+                                        <option value="" disabled selected>-- Elige el Bingo --</option>
+                                        {% for b in bingos_activos %}
+                                            <option value="{{ b.idbingo }}">{{ b.titulobingo }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-muted">2. N° de Semana a Pagar</label>
+                                    <select class="form-select shadow-sm" name="numero_semana" required>
+                                        <option value="" disabled selected>-- Elige una semana (1 al 5) --</option>
+                                        <option value="1">Semana 1</option>
+                                        <option value="2">Semana 2</option>
+                                        <option value="3">Semana 3</option>
+                                        <option value="4">Semana 4</option>
+                                        <option value="5">Semana 5</option>
+                                    </select>
+                                    <div class="form-text small mt-1 text-muted"><i class="fas fa-lock text-secondary"></i> El ciclo de cobro está limitado a 5 semanas.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-muted">3. ¿A qué cuenta o método depositaste?</label>
+                                    <input type="text" class="form-control shadow-sm" name="cuenta_destino" placeholder="Ej: Banco Pichincha, Efectivo entregado a Geovanny..." required>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold small text-muted">4. Monto Total (Bingo + Ahorro)</label>
+                                    <div class="input-group input-group-lg shadow-sm">
+                                        <span class="input-group-text bg-body-tertiary text-warning-emphasis fw-bold">$</span>
+                                        <input type="number" class="form-control fw-bold" name="monto_pagado" step="0.01" min="1" placeholder="Ejemplo: $2.00" required>
+                                    </div>
+                                    <div class="form-text small mt-1"><i class="fas fa-info-circle"></i> Recuerda incluir tu valor de ahorro y el de la cuota del Bingo.</div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold small text-muted">5. Comprobante del Depósito</label>
+                                    <input type="file" class="form-control shadow-sm" name="comprobanteaporte" accept="image/*" required id="input-comprobante-aporte">
+                                    
+                                    <div id="preview-container-aporte" class="mt-3 text-center d-none p-3 border border-2 border-dashed border-warning rounded bg-body-tertiary">
+                                        <img id="img-preview-aporte" src="" class="img-fluid rounded shadow-sm" style="max-height: 200px; object-fit: contain;">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-warning w-100 fw-bold shadow-sm text-dark">
+                                    <i class="fas fa-paper-plane me-2"></i> Enviar a Revisión
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-body py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <h5 class="card-title mb-0 fw-bold"><i class="fas fa-history text-secondary me-2"></i> Mis Semanas Registradas</h5>
+                        </div>
+                        
+                        <div class="row g-2 m-2 bg-body-tertiary p-2 rounded border">
+                            <div class="col-md-7">
+                                <label class="small fw-bold text-muted mb-1"><i class="fas fa-bullhorn me-1"></i> Evento de Bingo</label>
+                                <input type="text" id="filtro-bingo-socio" class="form-control form-control-sm" placeholder="Nombre del evento..." onkeyup="filtrarHistorialAportes()">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="small fw-bold text-muted mb-1"><i class="fas fa-calendar-week me-1"></i> N° Semana</label>
+                                <input type="number" id="filtro-semana-socio" class="form-control form-control-sm" placeholder="Ej: 1" min="1" onkeyup="filtrarHistorialAportes()" onchange="filtrarHistorialAportes()">
+                            </div>
+                        </div>
+
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-hover align-middle mb-0" id="tabla-historial-aportes">
+                                    <thead class="table-secondary sticky-top">
+                                        <tr>
+                                            <th class="ps-4">Evento de Bingo</th>
+                                            <th>Semana</th>
+                                            <th>Monto</th>
+                                            <th>Cuenta</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for ap in historial_aportes %}
+                                        <tr data-bingo="{{ ap.idbingo.titulobingo|lower }}" data-semana="{{ ap.numerosemana }}">
+                                            <td class="ps-4 fw-bold text-indigo" title="{{ ap.idbingo.titulobingo }}">
+                                                {{ ap.idbingo.titulobingo|truncatechars:18 }}
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold">Nº {{ ap.numerosemana }}</span>
+                                                <span class="small text-muted d-block">{{ ap.fechaplanificadadada|date:"d/m/Y" }}</span>
+                                            </td>
+                                            <td class="text-success fw-bold">${{ ap.montoaporte }}</td>
+                                            <td class="small text-muted">{{ ap.idmetodopago.nombremetodopago|default:"Manual" }}</td>
+                                            <td>
+                                                {% if ap.estadoaporte == 'Al Dia' or ap.estadoaporte == 'Pagado' %}
+                                                    <span class="badge bg-success-subtle text-success border border-success"><i class="fas fa-check"></i> Al Día</span>
+                                                {% elif ap.estadoaporte == 'En Revision' %}
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning shadow-sm"><i class="fas fa-clock"></i> En Revisión</span>
+                                                {% elif ap.estadoaporte == 'Atrasado' %}
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger"><i class="fas fa-exclamation-circle"></i> Atrasado</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ ap.estadoaporte }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr class="no-data"><td colspan="5" class="text-center py-5 text-muted">Aún no has reportado pagos de semanas.</td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="pills-regalos" role="tabpanel" aria-labelledby="pills-regalos-tab">
+            <div class="animate__animated animate__fadeIn">
+                <div class="row mb-3">
+                    <div class="col-12 text-end">
+                        <button class="btn btn-indigo fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoRegalo">
+                            <i class="fas fa-plus me-1"></i> Registrar Nuevo Regalo
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    {% for regalo in mis_regalos %}
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm border-0 rounded-4 overflow-hidden">
+                            <div class="position-relative" style="height: 200px; background-color: #f8f9fa;">
+                                {% if regalo.urlimagen %}
+                                    <img src="{{ regalo.urlimagen.url }}" class="w-100 h-100 object-fit-cover" alt="{{ regalo.nombreregalo }}">
+                                {% else %}
+                                    <div class="w-100 h-100 d-flex justify-content-center align-items-center text-muted">
+                                        <i class="fas fa-image fa-3x"></i>
+                                    </div>
+                                {% endif %}
+                                <div class="position-absolute top-0 end-0 p-2">
+                                    {% if regalo.estadoregalo == 'Acumulado' %}
+                                        <span class="badge bg-warning text-dark shadow-sm"><i class="fas fa-box me-1"></i> En Bodega</span>
+                                    {% elif regalo.estadoregalo == 'Sorteado' %}
+                                        <span class="badge bg-info shadow-sm"><i class="fas fa-ticket-alt me-1"></i> En Ronda</span>
+                                    {% else %}
+                                        <span class="badge bg-success shadow-sm"><i class="fas fa-check-circle me-1"></i> Entregado</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <h5 class="fw-bold text-dark mb-1">{{ regalo.nombreregalo }}</h5>
+                                <p class="text-success fw-bold small mb-2">Valor Estimado: ${{ regalo.valorregalo }}</p>
+                                <p class="text-secondary small mb-0">{{ regalo.descripcionregalo|default:"Sin descripción." }}</p>
+                            </div>
+                            <div class="card-footer bg-body border-0 pt-0 pb-3">
+                                <small class="text-muted"><i class="far fa-clock me-1"></i> Registrado el: {{ regalo.fechaultimaactualizacion|date:"d M Y" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-center py-5">
+                        <div class="text-muted mb-3">
+                            <i class="fas fa-box-open fa-4x opacity-50"></i>
+                        </div>
+                        <h5 class="fw-bold">Aún no has registrado regalos</h5>
+                        <p class="text-secondary">Los premios donados son vitales para las rondas menores del Bingo. ¡Anímate a aportar!</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="modalNuevoRegalo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold text-primary"><i class="fas fa-plus-circle me-2"></i> Registrar Regalo Físico</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'aporte_y_regalos' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="registrar_regalo">
+                <div class="modal-body py-4">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Nombre del Regalo</label>
+                            <input type="text" name="nombreregalo" class="form-control" placeholder="Ej: Licuadora Oster" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Valor Estimado ($)</label>
+                            <input type="number" step="0.01" name="valorregalo" class="form-control" placeholder="Ej: 45.50" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Descripción (Opcional)</label>
+                            <textarea name="descripcionregalo" class="form-control" rows="2" placeholder="Marca, color, estado..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Fotografía del Regalo</label>
+                            <input type="file" name="urlimagen" class="form-control" accept="image/*" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn bg-body-tertiary border" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-indigo fw-bold px-4">Guardar en Bodega</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Script para el selector de cuentas bancarias (Sección Aportes)
+        const selectCuenta = document.getElementById('select-cuenta');
+        const detalleCuenta = document.getElementById('detalle-cuenta');
+        const infoBanco = document.getElementById('info-banco');
+        const infoNumero = document.getElementById('info-numero');
+
+        if (selectCuenta) {
+            selectCuenta.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                if (selectedOption.value) {
+                    infoBanco.textContent = selectedOption.getAttribute('data-banco');
+                    infoNumero.textContent = selectedOption.getAttribute('data-numero');
+                    detalleCuenta.classList.remove('d-none');
+                } else {
+                    detalleCuenta.classList.add('d-none');
+                }
+            });
+        }
+
+        // Script para previsualizar la imagen del comprobante de aporte
+        const inputComprobante = document.getElementById('input-comprobante-aporte');
+        const previewContainer = document.getElementById('preview-container-aporte');
+        const imgPreview = document.getElementById('img-preview-aporte');
+
+        if (inputComprobante) {
+            inputComprobante.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imgPreview.src = e.target.result;
+                        previewContainer.classList.remove('d-none');
+                    }
+                    reader.readAsDataURL(file);
+                } else {
+                    previewContainer.classList.add('d-none');
+                }
+            });
+        }
+    });
+
+    // NUEVO: Función para filtrar el historial de aportes del socio
+    function filtrarHistorialAportes() {
+        let bingo = document.getElementById("filtro-bingo-socio").value.toLowerCase();
+        let semana = document.getElementById("filtro-semana-socio").value.toString();
+        
+        let table = document.getElementById("tabla-historial-aportes");
+        let rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+        
+        for (let i = 0; i < rows.length; i++) {
+            // Ignoramos la fila de "Aún no has reportado..."
+            if (rows[i].classList.contains("no-data")) continue;
+            
+            let dataBingo = rows[i].getAttribute("data-bingo") || "";
+            let dataSemana = rows[i].getAttribute("data-semana") || "";
+            
+            let matchBingo = dataBingo.includes(bingo);
+            let matchSemana = semana === "" || dataSemana === semana;
+            
+            if (matchBingo && matchSemana) {
+                rows[i].style.display = "";
+            } else {
+                rows[i].style.display = "none";
+            }
+        }
+    }
+</script>
+{% endblock %}

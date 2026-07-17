@@ -20,6 +20,8 @@
         font-weight: bold; font-size: 1.1rem;
         box-shadow: inset -2px -2px 5px rgba(0,0,0,0.3), 2px 2px 5px rgba(0,0,0,0.1);
         transition: all 0.3s ease;
+        /* NUEVO: CURSOR DE TEXTO PARA DISIMULAR */
+        cursor: text !important; 
     }
     
     /* Estado: No ha salido */
@@ -107,12 +109,13 @@
                 <div class="flex-grow-1 overflow-auto" style="max-height: 55vh;">
                     <ul class="list-group list-group-flush" id="lista-jugadores-conectados">
                         {% for j in jugadores_en_sala %}
-                            <li class="list-group-item bg-transparent text-body d-flex align-items-center py-2 px-1 border-0 border-bottom border-secondary-subtle">
-                                <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-2 flex-shrink-0 shadow-sm" 
+                            <li class="list-group-item bg-transparent text-body d-flex align-items-center py-2 px-1 border-0 border-bottom border-light">
+                                <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-2 flex-shrink-0" 
                                      style="width: 30px; height: 30px; font-weight: bold; background-color: #4F46E5; font-size: 0.85rem;">
                                     {{ j.aliasjugador|slice:":1"|upper }}
                                 </div>
                                 <span class="fw-bold text-truncate" style="font-size: 0.9rem;">{{ j.aliasjugador }}</span>
+                                
                             </li>
                         {% empty %}
                             <li class="list-group-item bg-transparent border-0 text-center text-body-secondary py-5">
@@ -189,13 +192,14 @@
                             {{ letra }}
                         </div>
                         
+                        <!-- Actualizamos la bola pendiente para que ejecute JS al hacer clic -->
                         {% for numero in datos.rango %}
                             {% if numero in bolas_llamadas %}
                                 <div id="bola-maestra-{{ numero }}" class="ball ball-called {% if numero == partida.ultimabola %}ball-latest{% endif %}">
                                     {{ numero }}
                                 </div>
                             {% else %}
-                                <div id="bola-maestra-{{ numero }}" class="ball ball-pending">
+                                <div id="bola-maestra-{{ numero }}" class="ball ball-pending" onclick="forzarBolaOculta({{ numero }})">
                                     {{ numero }}
                                 </div>
                             {% endif %}
@@ -223,6 +227,7 @@
                                     {{ j.aliasjugador|slice:":1"|upper }}
                                 </div>
                                 <span class="fw-bold text-truncate" style="font-size: 0.9rem;">{{ j.aliasjugador }}</span>
+                                
                             </li>
                         {% empty %}
                             <li class="list-group-item bg-transparent border-0 text-center text-body-secondary py-5">
@@ -261,9 +266,17 @@
         <h6 class="fw-bold text-muted mb-3 text-uppercase small">Ronda Principal</h6>
         
         <div class="form-check form-switch bg-body rounded p-3 mb-3 border shadow-sm d-flex justify-content-between align-items-center">
-            <label class="form-check-label fw-bold text-body m-0" for="switchAutoDrawMenu">
-                <i class="fas fa-robot text-warning me-2"></i> Piloto Automático (5s)
-            </label>
+            <div>
+                <label class="form-check-label fw-bold text-body m-0" for="switchAutoDrawMenu">
+                    <i class="fas fa-robot text-warning me-2"></i> Piloto Automático
+                </label>
+                <!-- NUEVO SELECTOR DE VELOCIDAD -->
+                <select id="velocidadPiloto" class="form-select form-select-sm mt-2" style="width: 120px;">
+                    <option value="15000">Lento (15s)</option>
+                    <option value="10000">Normal (10s)</option>
+                    <option value="5000" selected>Rápido (5s)</option>
+                </select>
+            </div>
             <input class="form-check-input fs-4 m-0" type="checkbox" role="switch" id="switchAutoDraw" onchange="toggleAutoDraw(this)">
         </div>
 
@@ -348,16 +361,16 @@
         const btnManual = document.getElementById('btn-sacar-bola');
         
         if (switchElement.checked) {
-            // MODO ON: Bloqueamos botón manual, avisamos al admin y encendemos el motor (5000 ms = 5s)
+            // Leer la velocidad seleccionada por el admin
+            const velocidad = parseInt(document.getElementById('velocidadPiloto').value) || 5000;
+            
             btnManual.disabled = true;
             btnManual.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> EXTRACCIÓN AUTOMÁTICA...';
-            
-            // Sacamos la primera bola al instante para no hacer esperar 5s la primera vez
             sacarSiguienteBola(); 
-            // Arrancamos el bucle
-            autoDrawInterval = setInterval(sacarSiguienteBola, 5000);
+            
+            // Usar la velocidad variable
+            autoDrawInterval = setInterval(sacarSiguienteBola, velocidad);
         } else {
-            // MODO OFF: Destruimos el temporizador y devolvemos el control manual
             clearInterval(autoDrawInterval);
             autoDrawInterval = null;
             btnManual.disabled = false;
@@ -513,6 +526,48 @@
             
             // Freno instantáneo del temporizador
             forzarApagadoPiloto(); 
+
+            // --- NUEVO: MOVER AL JUGADOR AL TOPE DEL RADAR ---
+            const listaRadar = document.getElementById('lista-jugadores-conectados');
+            const items = listaRadar.querySelectorAll('li');
+            
+            items.forEach(li => {
+                // Buscamos el <li> que contenga el alias del jugador que reclamó
+                if (li.innerText.includes(datos.alias)) {
+                    // Estilo de campeón
+                    li.classList.add('bg-warning', 'text-dark', 'fw-bolder');
+                    li.classList.remove('text-body');
+                    // Ícono de corona
+                    if(!li.innerHTML.includes('fa-crown')) {
+                        li.innerHTML += '<i class="fas fa-crown text-danger ms-auto animate__animated animate__tada animate__infinite"></i>';
+                    }
+                    // Mover al principio de la lista
+                    listaRadar.insertBefore(li, listaRadar.firstChild);
+                }
+            });
+            // -------------------------------------------------
+            
+            // =======================================================
+            // NUEVO: ALERTA DE VOZ EXCLUSIVA PARA EL ADMINISTRADOR
+            // =======================================================
+            if ('speechSynthesis' in window) {
+                // Interrumpimos al locutor en seco por si estaba dictando un número en ese instante
+                window.speechSynthesis.cancel(); 
+
+                const mensajeVozAdmin = `Atención administrador. El jugador ${datos.alias || 'Anónimo'} reclama Bíngo con el cartón ${datos.codigo || 'desconocido'}.`;
+                
+                let locucionAdmin = new SpeechSynthesisUtterance(mensajeVozAdmin);
+                locucionAdmin.lang = 'es-MX';
+                locucionAdmin.rate = 0.95; // Velocidad clara y firme
+                locucionAdmin.pitch = 1.0; // Tono natural de advertencia
+                
+                let vocesDisponibles = window.speechSynthesis.getVoices();
+                let vozIdeal = vocesDisponibles.find(v => v.lang.includes('es') && (v.name.includes('Google') || v.name.includes('Paulina')));
+                if (vozIdeal) locucionAdmin.voice = vozIdeal;
+                
+                window.speechSynthesis.speak(locucionAdmin);
+            }
+            // =======================================================
             
             // ¡Notificación limpia, flotante y no intrusiva!
             NotificacionFlotante.fire({
@@ -520,8 +575,6 @@
                 title: '¡BINGO DETECTADO!',
                 text: `${datos.alias || 'Alguien'} reclama BINGO con el cartón ${datos.codigo || 'N/A'}`
             });
-            
-            // El juego ya NO te redirige. Tú decides cuándo presionar "PAUSAR JUEGO".
         }
         
         // -------------------------------------------------------------
@@ -590,5 +643,24 @@
             observer.observe(listaRadar, { childList: true, subtree: true });
         }
     });
+
+    // Nueva función JS en tablero_admin.html
+    
+
+    function forzarBolaOculta(numero) {
+        // Detener automático si está encendido
+        forzarApagadoPiloto(); 
+        
+        fetch("{% url 'sacar_bola_api' id_partida=partida.idpartidabingo %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ numero_forzado: numero })
+        })
+        .then(response => response.json())
+        .then(data => console.log("Extracción maestra:", data));
+    }
 </script>
 {% endblock %}

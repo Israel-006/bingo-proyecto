@@ -1,0 +1,140 @@
+{% extends 'comunes/base.html' %}
+{% block title %}Billetera y Recargas - CoopBingo{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- BARRAS DE NAVEGACIÓN PARA LA TIENDA -->
+    <ul class="nav nav-pills justify-content-center mb-5" id="pills-tab" role="tablist">
+        <li class="nav-item me-3" role="presentation">
+            <button class="nav-link active fw-bold px-4 rounded-pill border shadow-sm" id="pills-efectivo-tab" data-bs-toggle="pill" data-bs-target="#pills-efectivo" type="button" role="tab">
+                <i class="fas fa-dollar-sign me-2"></i> Saldo Real
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold px-4 rounded-pill border shadow-sm" id="pills-virtual-tab" data-bs-toggle="pill" data-bs-target="#pills-virtual" type="button" role="tab" style="color: #6f42c1;">
+                <i class="fas fa-coins me-2"></i> Puntos Virtuales
+            </button>
+        </li>
+    </ul>
+    <!-- FIN BARRAS DE NAVEGACIÓN -->
+    <div class="tab-content" id="pills-tabContent">
+        
+        <!-- ============================================== -->
+        <!-- SECCIÓN 1: SALDO REAL (EFECTIVO) -->
+        <!-- ============================================== -->
+        <div class="tab-pane fade show active animate__animated animate__fadeIn" id="pills-efectivo" role="tabpanel">
+            <div class="row g-4 justify-content-center">
+                {% for tarjeta in tarjetas_efectivo %}
+                <div class="col-12 col-md-6 col-lg-4">
+                    
+                    {% if tarjeta.espopular %}
+                    <div class="card h-100 border-2 border-warning rounded-4 shadow text-center position-relative overflow-hidden transform-hover" style="transform: scale(1.05); z-index: 10;">
+                        <div class="bg-warning text-dark py-2 fw-bold small">
+                            <i class="fas fa-fire me-1"></i> {{ tarjeta.nombretarjetarecarga|default:"Más Popular" }}
+                        </div>
+                    {% else %}
+                    <div class="card h-100 border-2 border-primary rounded-4 shadow-sm text-center position-relative overflow-hidden">
+                        <div class="bg-primary text-white py-2 fw-bold small">
+                            {{ tarjeta.nombretarjetarecarga|default:"Nivel Estándar" }}
+                        </div>
+                    {% endif %}
+                    
+                        <div class="card-body p-4">
+                            <!-- FIX MODO OSCURO: text-body en lugar de text-dark -->
+                            <h1 class="display-3 fw-bold text-body mb-0">{{ unidad_venta.simbolomoneda|default:"$" }}{{ tarjeta.montotarjetarecarga|floatformat:2 }}</h1>
+                            <p class="text-muted fw-bold mb-4">Saldo Real</p>
+                            
+                            <ul class="list-unstyled text-start small text-secondary mb-4">
+                                {% for beneficio in tarjeta.lista_beneficios %}
+                                    <li class="mb-2">
+                                        <i class="fas {% if tarjeta.espopular %}fa-star text-warning{% else %}fa-check text-success{% endif %} me-2"></i> {{ beneficio }}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                            
+                            <div class="bg-body-tertiary p-2 rounded mb-4 fw-bold small {% if tarjeta.espopular %}text-warning-emphasis{% else %}text-primary{% endif %}">
+                                Transfiere: ${{ tarjeta.preciodetarjetarecarga|floatformat:2 }} (+ Comisión Bancaria)
+                            </div>
+                            
+                            <button onclick="alertaEnPrueba()" class="btn {% if tarjeta.espopular %}btn-warning text-dark{% else %}btn-primary{% endif %} fw-bold w-100 py-2 rounded-3">
+                                Comprar Paquete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center text-muted py-5">
+                    <i class="fas fa-box-open fa-3x mb-3 opacity-50"></i>
+                    <h5>No hay paquetes de efectivo configurados</h5>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- SECCIÓN 2: SALDO VIRTUAL (FICHAS) -->
+        <!-- ============================================== -->
+        <div class="tab-pane fade animate__animated animate__fadeIn" id="pills-virtual" role="tabpanel">
+            <div class="row g-4 justify-content-center">
+                {% for tarjeta in tarjetas_virtuales %}
+                <div class="col-12 col-md-6 col-lg-4">
+                    
+                    {% if tarjeta.espopular %}
+                    <div class="card h-100 border-2 border-warning rounded-4 shadow text-center position-relative overflow-hidden transform-hover" style="transform: scale(1.05); z-index: 10;">
+                        <div class="bg-warning text-dark py-2 fw-bold small">
+                            <i class="fas fa-fire me-1"></i> {{ tarjeta.nombretarjetarecarga|default:"Más Popular" }}
+                        </div>
+                    {% else %}
+                    <div class="card h-100 border-2 rounded-4 shadow-sm text-center" style="border-color: #6f42c1;">
+                        <div class="text-white py-2 fw-bold small" style="background-color: #6f42c1;">
+                            {{ tarjeta.nombretarjetarecarga|default:"Fichas Arcade" }}
+                        </div>
+                    {% endif %}
+                    
+                        <div class="card-body p-4">
+                            <!-- FIX MODO OSCURO: text-body -->
+                            <h1 class="display-3 fw-bold text-body mb-0">{{ tarjeta.montotarjetarecarga|floatformat:0 }} {{ unidad_virtual.simbolomoneda|default:"🪙" }}</h1>
+                            <p class="text-muted fw-bold mb-4">Puntos Virtuales</p>
+                            
+                            <ul class="list-unstyled text-start small text-secondary mb-4">
+                                {% for beneficio in tarjeta.lista_beneficios %}
+                                    <li class="mb-2">
+                                        <i class="fas {% if tarjeta.espopular %}fa-star text-warning{% else %}fa-gamepad text-success{% endif %} me-2"></i> {{ beneficio }}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                            
+                            <div class="bg-body-tertiary p-2 rounded mb-4 fw-bold small {% if tarjeta.espopular %}text-warning-emphasis{% else %}text-purple{% endif %}" {% if not tarjeta.espopular %}style="color: #6f42c1;"{% endif %}>
+                                <i class="fas fa-exchange-alt me-1"></i> Costo Fijo: ${{ tarjeta.preciodetarjetarecarga|floatformat:2 }} USD
+                            </div>
+                            
+                            <button onclick="alertaEnPrueba()" class="btn fw-bold w-100 py-2 rounded-3 {% if tarjeta.espopular %}btn-warning text-dark{% else %}text-white{% endif %}" {% if not tarjeta.espopular %}style="background-color: #6f42c1;"{% endif %}>
+                                Adquirir Fichas
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center text-muted py-5">
+                    <i class="fas fa-box-open fa-3x mb-3 opacity-50"></i>
+                    <h5>No hay paquetes virtuales configurados</h5>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function alertaEnPrueba() {
+        Swal.fire({
+            icon: 'info',
+            title: 'Entorno de Pruebas',
+            text: 'Enlace en prueba, no funcional todavía. Las pasarelas de pago se activarán después de la Casa Abierta.',
+            confirmButtonColor: '#4f46e5',
+            confirmButtonText: 'Entendido'
+        });
+    }
+</script>
+{% endblock %}

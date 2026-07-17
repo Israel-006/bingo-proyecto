@@ -72,6 +72,7 @@ class Socio(models.Model):
     ]
     ESTADO_CHOICES = [
         ('Activo', 'Activo'),
+        ('Pendiente', 'Pendiente'),
         ('Inactivo', 'Inactivo'),
     ]
     idsocio = models.AutoField(primary_key=True)
@@ -370,6 +371,7 @@ class Pago(models.Model):
         verbose_name = 'Pago'
         verbose_name_plural = 'Pagos'
 
+
 class UnidadMonetaria(models.Model):
     # Definimos las opciones para la restricción CHECK
     TIPO_MONEDA_CHOICES = [
@@ -486,7 +488,11 @@ class Ahorro(models.Model):
         ('Obligatorio', 'Obligatorio'),
         ('Voluntario', 'Voluntario'),
     ]
+    # FIX: Se corrigieron los estados para coincidir con la lógica que manejamos en Python/HTML
     ESTADO_AHORRO_CHOICES = [
+        ('Acreditado', 'Acreditado'),
+        ('Pendiente', 'Pendiente'),
+        ('Rechazado', 'Rechazado'),
         ('Activo', 'Activo'),
         ('Inactivo', 'Inactivo'),
     ]
@@ -499,7 +505,9 @@ class Ahorro(models.Model):
     )
     idbingo = models.ForeignKey(
         'Bingo', 
-        on_delete=models.PROTECT, 
+        on_delete=models.SET_NULL,
+        null=True,  
+        blank=True, 
         db_column='idbingo',
         verbose_name="Bingo Asociado"
     )
@@ -511,7 +519,7 @@ class Ahorro(models.Model):
     montoahorro = models.DecimalField(
         max_digits=10, 
         decimal_places=2,
-        validators=[MinValueValidator(Decimal('0.01'))],
+        # Se quitó la validación estricta de mayor a 0 para permitir los RETIROS (números negativos)
         verbose_name="Monto Ahorrado"
     )
     fechaahorro = models.DateTimeField(
@@ -529,7 +537,28 @@ class Ahorro(models.Model):
         choices=ESTADO_AHORRO_CHOICES, 
         verbose_name="Estado del Ahorro"
     )
-
+    idmetodopago = models.ForeignKey(
+        'MetodoPago', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        db_column='idmetodopago',
+        verbose_name="Cuenta de Destino"
+    )
+    comprobanteahorro = models.FileField(
+        upload_to='media/ahorro/comprobantes/', 
+        null=True, 
+        blank=True, 
+        verbose_name="Comprobante de Ahorro"
+    )
+    # FIX: AQUÍ ES EL LUGAR CORRECTO PARA ESTA COLUMNA
+    origenahorro = models.CharField(
+        max_length=50, 
+        default='Directo', 
+        null=True, 
+        blank=True, 
+        verbose_name="Origen del Ahorro"
+    )
     def __str__(self):
         return f"Ahorro #{self.idahorro} - Socio {self.idsocio_id} (${self.montoahorro})"
 
@@ -567,11 +596,11 @@ class Jugador(models.Model):
     )
     nacionalidad = models.CharField(max_length=50, default='Ecuatoriana', verbose_name="Nacionalidad")
     cedulaidentidadjugador = models.CharField(
-        max_length=10, 
+        max_length=20, 
         unique=True, 
         null=True, 
         blank=True, 
-        validators=[validar_cedula_ecuatoriana], # VALIDADOR ACTIVO
+        #validators=[validar_cedula_ecuatoriana], # VALIDADOR ACTIVO
         verbose_name="Cédula de Identidad"
     )
     foto_cedula_frontal = models.ImageField(upload_to='media/jugador/cedula/frontal/', null=True, blank=True, verbose_name="Foto Cédula Frontal")
@@ -646,6 +675,87 @@ class Jugador(models.Model):
         verbose_name = 'Jugador'
         verbose_name_plural = 'Jugadores'
 
+class TarjetaRecarga(models.Model):
+    ESTADO_TARJETA_CHOICES = [
+        ('Activa', 'Activa'),
+        ('Inactiva', 'Inactiva'),
+    ]
+    TIPO_SALDO_CHOICES = [
+        ('Efectivo', 'Saldo Real ($)'),
+        ('Virtual', 'Fichas Virtuales'),
+    ]
+    
+    idtarjetarecarga = models.AutoField(primary_key=True)
+    nombretarjetarecarga = models.CharField(max_length=100, verbose_name="Nombre del Paquete")
+    tiposaldo = models.CharField(max_length=20, choices=TIPO_SALDO_CHOICES, verbose_name="Tipo de Saldo Destino")
+    montotarjetarecarga = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Cantidad de Saldo/Puntos que Otorga")
+    preciodetarjetarecarga = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Precio de Venta (Lo que paga el usuario)")
+    descripciontarjetarecarga = models.TextField(verbose_name="Beneficios (Separados por comas)")
+    estado = models.CharField(max_length=15, choices=ESTADO_TARJETA_CHOICES, default='Activa')
+    espopular = models.BooleanField(default=False, verbose_name="¿Es la tarjeta más popular?")
+
+    def __str__(self):
+        return f"{self.nombretarjetarecarga} - {self.tiposaldo} (${self.preciodetarjetarecarga})"
+
+    class Meta:
+        db_table = 'TarjetaRecarga'
+        verbose_name = 'Tarjeta de Recarga'
+        verbose_name_plural = 'Tarjetas de Recarga'
+
+class TransaccionRecarga(models.Model):
+    ESTADO_TRANSACCION_CHOICES = [
+        ('Pendiente', 'Pendiente de Pago/Aprobación'),
+        ('Completada', 'Completada y Saldo Acreditado'),
+        ('Rechazada', 'Rechazada/Cancelada'),
+    ]
+    
+    idtransaccion = models.AutoField(primary_key=True)
+    idjugador = models.ForeignKey(
+        'Jugador', 
+        on_delete=models.CASCADE, 
+        db_column='idjugador', 
+        verbose_name="Jugador Solicitante"
+    )
+    idtarjeta = models.ForeignKey(
+        'TarjetaRecarga', 
+        on_delete=models.PROTECT, # PROTECT evita que borres una tarjeta si alguien ya la compró (protege tu contabilidad)
+        db_column='idtarjeta', 
+        verbose_name="Paquete Comprado"
+    )
+    
+    # Guardamos una "foto" de los valores exactos en el momento de la compra
+    monto_pagado = models.DecimalField(
+        max_digits=10, decimal_places=2, 
+        verbose_name="Monto Total a Pagar"
+    )
+    saldo_acreditar = models.DecimalField(
+        max_digits=10, decimal_places=2, 
+        verbose_name="Saldo/Puntos a Acreditar"
+    )
+    
+    fechatransaccion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
+    fechaactualizacion = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
+    
+    # Datos técnicos de la pasarela de pago (PayPal, Transferencia, etc.)
+    metodopago = models.CharField(max_length=50, null=True, blank=True, verbose_name="Método de Pago")
+    referenciapago = models.CharField(max_length=100, null=True, blank=True, verbose_name="ID de Transacción (Pasarela)")
+    comprobante = models.ImageField(upload_to='media/jugador/Comprobante_recargas/', null=True, blank=True, verbose_name="Comprobante (Si es manual)")
+    
+    estado = models.CharField(
+        max_length=20, 
+        choices=ESTADO_TRANSACCION_CHOICES, 
+        default='Pendiente', 
+        verbose_name="Estado"
+    )
+
+    def __str__(self):
+        return f"TXN-{self.idtransaccion} | {self.idjugador.aliasjugador} | {self.idtarjeta.nombretarjetarecarga}"
+
+    class Meta:
+        db_table = 'TransaccionRecarga'
+        verbose_name = 'Transacción de Recarga'
+        verbose_name_plural = 'Historial de Transacciones'
+
 class Regalo(models.Model):
     ESTADO_REGALO_CHOICES = [
         ('Acumulado', 'Acumulado'),
@@ -655,6 +765,22 @@ class Regalo(models.Model):
     idregalo = models.AutoField(
         primary_key=True, 
         verbose_name="ID de Regalo"
+    )
+    idsocio = models.ForeignKey(
+        'Socio', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        db_column='idsocio',
+        verbose_name="Socio Donante"
+    )
+    idpartida = models.ForeignKey(
+        'PartidaBingo', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        db_column='idpartida',
+        verbose_name="Sorteado en Ronda"
     )
     nombreregalo = models.CharField(
         max_length=100, 
@@ -687,7 +813,7 @@ class Regalo(models.Model):
         verbose_name="Última Actualización"
     )
     urlimagen = models.ImageField(
-        upload_to='media/regalo/imagenes/', 
+        upload_to='media/socio/regalo/imagenes/', 
         verbose_name="Imagen del Regalo"
     )
 
@@ -707,6 +833,8 @@ class Regalo(models.Model):
 
 class AporteSemanal(models.Model):
     ESTADO_APORTE_CHOICES = [
+        ('Pendiente', 'Pendiente de Pago'),
+        ('En Revision', 'En Revisión'),
         ('Al Dia', 'Al Día'),
         ('Atrasado', 'Atrasado'),
     ]
@@ -729,7 +857,10 @@ class AporteSemanal(models.Model):
         'Regalo', 
         on_delete=models.CASCADE, 
         db_column='idregalo',
-        verbose_name="Regalo Asignado"
+        verbose_name="Regalo Asignado",
+        
+        null=True, 
+        blank=True,
     )
     idbingo = models.ForeignKey(
         'Bingo', 
@@ -755,6 +886,8 @@ class AporteSemanal(models.Model):
     metodoingreso = models.CharField(
         max_length=50, 
         choices=METODO_INGRESO_CHOICES,
+        null=True,  
+        blank=True,
         verbose_name="Método de Ingreso"
     )
     referenciaingreso = models.CharField(
@@ -770,7 +903,28 @@ class AporteSemanal(models.Model):
         blank=True,
         verbose_name="Estado del Aporte"
     )
-
+    montoaporte = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name="Monto del Aporte"
+    )
+    idmetodopago = models.ForeignKey(
+        'MetodoPago', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        db_column='idmetodopago',
+        verbose_name="Cuenta de Destino"
+    )
+    comprobanteaporte = models.FileField(
+        upload_to='media/aportes/comprobantes/', 
+        null=True, 
+        blank=True, 
+        verbose_name="Comprobante de Cuota Semanal"
+    )
+    # FIX: AQUÍ SE ELIMINÓ EL CAMPO "origenahorro" QUE ESTABA EN LA TABLA INCORRECTA
     def __str__(self):
         return f"Aporte {self.idaporte} - Socio: {self.idsocio_id} - Semana: {self.numerosemana}"
 
@@ -780,13 +934,14 @@ class AporteSemanal(models.Model):
         verbose_name_plural = 'Control de Aportes Semanales'
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(estadoaporte__in=['Al Dia', 'Atrasado']),
+                condition=models.Q(estadoaporte__in=['Pendiente', 'En Revision', 'Al Dia', 'Atrasado']),
                 name='chk_aportesemanal_estadoaporte'
             ),
             models.CheckConstraint(
-                condition=models.Q(metodoingreso__in=['Efectivo', 'Transferencia', 'Fisico']),
+                condition=models.Q(metodoingreso__in=['Efectivo', 'Transferencia', 'Fisico']) | models.Q(metodoingreso__isnull=True),
                 name='chk_aportesemanal_metodoingreso'
             )
+            
         ]
 
 class PartidaBingo(models.Model):
@@ -1027,7 +1182,7 @@ class PlataformaJuego(models.Model):
         verbose_name="Nombre de la Plataforma"
     )
     logoplataforma = models.ImageField(
-        upload_to='media/plataforma/logos/', 
+        upload_to='media/web/plataforma/logos/', 
         null=True, 
         blank=True, 
         verbose_name="Logo de la Plataforma"
@@ -1218,3 +1373,60 @@ class MensajeChat(models.Model):
 
     class Meta:
         db_table = 'mensaje_chat'
+
+class ValoracionSistema(models.Model):
+    idvaloracion = models.AutoField(primary_key=True)
+    usuario = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        verbose_name="Usuario"
+    )
+    puntuacion = models.DecimalField(
+        max_digits=2, decimal_places=1,
+        validators=[MinValueValidator(Decimal('0.0')), MaxValueValidator(Decimal('5.0'))],
+        verbose_name="Estrellas"
+    )
+    comentario = models.TextField(verbose_name="Comentario")
+    fecha = models.DateTimeField(auto_now=True, verbose_name="Fecha de Valoración")
+
+    def obtener_rol(self):
+        # Determinamos de forma dinámica el rol en la plataforma
+        from .models import Socio, Jugador
+        es_socio = Socio.objects.filter(cisocio=self.usuario.username).exists()
+        es_jugador = Jugador.objects.filter(cedulaidentidadjugador=self.usuario.username).exists()
+        
+        if es_socio and es_jugador:
+            return "Socio-Jugador"
+        elif es_socio:
+            return "Socio"
+        elif es_jugador:
+            return "Jugador"
+        return "Usuario Externo"
+
+    def get_nombre_mostrar(self):
+        from .models import Jugador, Socio
+        jugador = Jugador.objects.filter(cedulaidentidadjugador=self.usuario.username).first()
+        if jugador and jugador.aliasjugador:
+            return jugador.aliasjugador
+        socio = Socio.objects.filter(cisocio=self.usuario.username).first()
+        if socio:
+            return f"{socio.primernombresocio} {socio.primerapellidosocio}"
+        return self.usuario.first_name
+
+    def estrellas_html(self):
+        # Lógica para pintar estrellas enteras, medias o vacías
+        html = ""
+        puntuacion = float(self.puntuacion)
+        for i in range(1, 6):
+            if puntuacion >= i:
+                html += '<i class="fas fa-star text-warning"></i>'
+            elif puntuacion >= i - 0.5:
+                html += '<i class="fas fa-star-half-alt text-warning"></i>'
+            else:
+                html += '<i class="far fa-star text-warning"></i>'
+        return html
+
+    class Meta:
+        db_table = 'ValoracionSistema'
+        verbose_name = 'Valoración del Sistema'
+        verbose_name_plural = 'Valoraciones del Sistema'

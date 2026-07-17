@@ -48,14 +48,12 @@
                 Registrarse
             </a>
         </div>
-        
-        <div>
-            <a href="#info-sistema" class="text-decoration-none text-secondary fw-bold hover-primary" style="transition: all 0.3s ease;">
-                Saber más <i class="fas fa-arrow-down ms-1 bounce-anim"></i>
-            </a>
-        </div>
     {% endif %}
-
+    <div class="mt-4 w-100 text-center">
+        <a href="#seccion-contacto-resenas" class="text-decoration-none text-secondary fw-bold hover-primary" style="transition: all 0.3s ease;">
+            Saber más <i class="fas fa-arrow-down ms-1 bounce-anim"></i>
+        </a>
+    </div>
 </div>
 
 <!-- ==========================================
@@ -133,54 +131,155 @@
 {% endif %}
 
 <!-- ==========================================
-     SECCIÓN: SOBRE NOSOTROS Y REDES SOCIALES
+     NUEVA SECCIÓN: CONTACTOS Y RESEÑAS CON TABS (Estilo image_095c66.png)
      ========================================== -->
-<div id="info-sistema" class="container py-5 border-top mt-4">
-    <div class="row align-items-center py-5">
-        <div class="col-md-6 mb-4 mb-md-0">
-            <span class="badge bg-primary-subtle text-primary mb-2 border">Nuestra Cooperativa</span>
-            
-            <h2 class="fw-bold mb-4">{{ config_web.titulosobrenosotros|default:"¿Qué es CoopBingo?" }}</h2>
-            
-            <p class="text-secondary" style="line-height: 1.8;">
-                {% if config_web.descripcionsobrenosotros %}
-                    {{ config_web.descripcionsobrenosotros|linebreaksbr }}
-                {% else %}
-                    CoopBingo es una plataforma integral diseñada para gestionar eventos, préstamos y ahorros de manera transparente y segura para toda nuestra comunidad. Únete para disfrutar de un ecosistema financiero y de entretenimiento en un solo lugar.
-                {% endif %}
-            </p>
-
-            <!-- ICONOS DE CONTACTO Y REDES SOCIALES -->
-            <div class="d-flex gap-3 mt-4">
-                {% if config_web.numerowhatsapp %}
-                <a href="https://wa.me/{{ config_web.numerowhatsapp|cut:'+'|cut:' ' }}" target="_blank" class="btn btn-outline-success rounded-circle" style="width: 45px; height: 45px; display: inline-flex; align-items: center; justify-content: center;" data-bs-toggle="tooltip" title="Escríbenos por WhatsApp">
-                    <i class="fab fa-whatsapp fs-5"></i>
-                </a>
-                {% endif %}
-                
-                {% if config_web.enlaceinstagram %}
-                <a href="{{ config_web.enlaceinstagram }}" target="_blank" class="btn btn-outline-danger rounded-circle" style="width: 45px; height: 45px; display: inline-flex; align-items: center; justify-content: center;" data-bs-toggle="tooltip" title="Síguenos en Instagram">
-                    <i class="fab fa-instagram fs-5"></i>
-                </a>
-                {% endif %}
-                
-                {% if config_web.enlacefacebook %}
-                <a href="{{ config_web.enlacefacebook }}" target="_blank" class="btn btn-outline-primary rounded-circle" style="width: 45px; height: 45px; display: inline-flex; align-items: center; justify-content: center;" data-bs-toggle="tooltip" title="Visita nuestro Facebook">
-                    <i class="fab fa-facebook-f fs-5"></i>
-                </a>
-                {% endif %}
-            </div>
-        </div>
+<div id="seccion-contacto-resenas" class="container py-5 mt-4">
+    
+    <div class="bg-body-tertiary rounded-5 shadow-lg border border-secondary-subtle p-4 p-md-5 position-relative overflow-hidden">
         
-        <div class="col-md-6 text-center">
-            {% if config_web.imagenpromocional %}
-                <img src="{{ config_web.imagenpromocional.url }}" alt="CoopBingo Promocional" class="img-fluid rounded-4 shadow">
-            {% else %}
-                <div class="p-5 bg-body-tertiary rounded-4 border d-flex flex-column justify-content-center align-items-center h-100" style="min-height: 300px;">
-                    <i class="fas fa-image text-muted mb-3" style="font-size: 4rem;"></i>
-                    <p class="text-muted small fw-bold">Espacio para Imagen Promocional<br>(Configurable desde el Admin)</p>
+        <div class="position-absolute top-0 end-0 w-100 h-100" style="background: radial-gradient(circle at top right, rgba(79, 70, 229, 0.15), transparent 60%); pointer-events: none;"></div>
+
+        <div class="d-flex justify-content-center mb-5 position-relative z-1">
+            <ul class="nav nav-pills p-1 bg-body-secondary rounded-pill shadow-sm border border-secondary-subtle" id="pills-tab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active rounded-pill px-4 fw-bold" id="pills-contactos-tab" data-bs-toggle="pill" data-bs-target="#pills-contactos" type="button" role="tab">
+                        <i class="fas fa-address-book me-2"></i>CONTACTOS
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-pill px-4 fw-bold" id="pills-resenas-tab" data-bs-toggle="pill" data-bs-target="#pills-resenas" type="button" role="tab">
+                        <i class="fas fa-star me-2"></i>RESEÑAS
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="tab-content position-relative z-1" id="pills-tabContent">
+            
+            <div class="tab-pane fade show active" id="pills-contactos" role="tabpanel" aria-labelledby="pills-contactos-tab">
+                <div class="row align-items-center py-4">
+                    <div class="col-md-6 mb-4 mb-md-0">
+                        <span class="badge bg-primary-subtle text-primary mb-2 border border-primary-subtle">Nuestra Cooperativa</span>
+                        <h2 class="fw-bold mb-4 text-body-emphasis">{{ config_web.titulosobrenosotros|default:"¿Qué es CoopBingo?" }}</h2>
+                        <p class="text-body-secondary" style="line-height: 1.8;">
+                            {% if config_web.descripcionsobrenosotros %}
+                                {{ config_web.descripcionsobrenosotros|linebreaksbr }}
+                            {% else %}
+                                CoopBingo es una plataforma integral diseñada para gestionar eventos y ahorros.
+                            {% endif %}
+                        </p>
+                        <div class="d-flex gap-3 mt-4">
+                            {% if config_web.numerowhatsapp %}
+                            <a href="https://wa.me/{{ config_web.numerowhatsapp|cut:'+'|cut:' ' }}" target="_blank" class="btn border-secondary-subtle text-success bg-body hover-primary rounded-circle shadow-sm" style="width: 45px; height: 45px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                                <i class="fab fa-whatsapp fs-5"></i>
+                            </a>
+                            {% endif %}
+                            {% if config_web.enlaceinstagram %}
+                            <a href="{{ config_web.enlaceinstagram }}" target="_blank" class="btn border-secondary-subtle text-danger bg-body hover-primary rounded-circle shadow-sm" style="width: 45px; height: 45px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                                <i class="fab fa-instagram fs-5"></i>
+                            </a>
+                            {% endif %}
+                            {% if config_web.enlacefacebook %}
+                            <a href="{{ config_web.enlacefacebook }}" target="_blank" class="btn border-secondary-subtle text-primary bg-body hover-primary rounded-circle shadow-sm" style="width: 45px; height: 45px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                                <i class="fab fa-facebook-f fs-5"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 text-center">
+                        {% if config_web.imagenpromocional %}
+                            <img src="{{ config_web.imagenpromocional.url }}" alt="CoopBingo Promocional" class="img-fluid rounded-4 shadow-lg border border-secondary-subtle">
+                        {% else %}
+                            <div class="p-5 bg-body-secondary rounded-4 border border-secondary-subtle d-flex flex-column justify-content-center align-items-center h-100 shadow-sm" style="min-height: 300px;">
+                                <i class="fas fa-image text-secondary opacity-50 mb-3" style="font-size: 4rem;"></i>
+                                <p class="text-secondary small fw-bold">Sin imagen definida</p>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
-            {% endif %}
+            </div>
+
+            <div class="tab-pane fade" id="pills-resenas" role="tabpanel" aria-labelledby="pills-resenas-tab">
+                <div class="row pt-3">
+                    
+                    <div class="col-md-4 mb-4 text-center">
+                        <h1 class="fw-bold display-4 mb-0 text-body-emphasis">{{ promedio_valoracion|floatformat:1 }}</h1>
+                        <div class="mb-2 fs-5">
+                            <i class="fas fa-star text-warning"></i> 
+                            <span class="text-body-secondary small fw-bold ms-1">De 5 Puntos</span>
+                        </div>
+                        <span class="badge bg-body-secondary text-body-secondary border border-secondary-subtle shadow-sm">Total de {{ total_valoraciones }} opiniones</span>
+                        
+                        {% if user.is_authenticated %}
+                            <div class="card shadow-sm border border-secondary-subtle mt-4 text-start bg-body rounded-4">
+                                <div class="card-body p-4">
+                                    <h6 class="fw-bold mb-3 text-center text-body-emphasis"><i class="fas fa-edit text-primary me-2"></i> {% if mi_valoracion %}Edita tu reseña{% else %}Califica el sistema{% endif %}</h6>
+                                    
+                                    <form action="{% url 'agregar_valoracion' %}" method="POST">
+                                        {% csrf_token %}
+                                        
+                                        <div class="mb-3 text-center">
+                                            <label class="form-label small fw-bold text-body-secondary mb-1">Tu Puntuación</label>
+                                            <div id="star-rating" class="d-flex justify-content-center fs-2 text-warning mb-1 transition-hover" style="cursor: pointer; gap: 8px;">
+                                                <i class="far fa-star"></i>
+                                                <i class="far fa-star"></i>
+                                                <i class="far fa-star"></i>
+                                                <i class="far fa-star"></i>
+                                                <i class="far fa-star"></i>
+                                            </div>
+                                            <div id="estrellas-text" class="small fw-bold text-primary mb-2">5.0 Estrellas</div>
+                                            <input type="hidden" name="estrellas" id="estrellas-input" value="{{ mi_valoracion.puntuacion|stringformat:'s'|default:'5.0' }}" required>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-bold text-body-secondary">¿Por qué esa nota?</label>
+                                            <textarea name="comentario" class="form-control form-control-sm bg-body-tertiary text-body border-secondary-subtle shadow-none" rows="3" required placeholder="Escribe tu opinión aquí...">{{ mi_valoracion.comentario }}</textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill shadow-sm">Publicar</button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-secondary bg-body-secondary text-body-secondary mt-4 border border-secondary-subtle shadow-sm rounded-4 small">
+                                <i class="fas fa-lock opacity-50 mb-2 fs-4"></i><br>
+                                Los usuarios externos pueden ver las reseñas, pero debes <strong>iniciar sesión</strong> para poder valorar el sistema.
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-8 ps-md-4">
+                        {% for val in valoraciones %}
+                        <div class="card border border-secondary-subtle shadow-sm mb-3 rounded-4 bg-body" style="border-left: 4px solid #4f46e5 !important;">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex flex-column gap-1">
+                                        <h6 class="fw-bold mb-0 text-body-emphasis">{{ val.get_nombre_mostrar }}</h6>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="width: fit-content;">
+                                            <i class="fas fa-user-circle me-1"></i> {{ val.obtener_rol }}
+                                        </span>
+                                    </div>
+                                    <div class="text-warning text-nowrap fs-5">
+                                        {{ val.estrellas_html|safe }}
+                                    </div>
+                                </div>
+                                <p class="text-body-secondary mb-2 fst-italic">"{{ val.comentario }}"</p>
+                                <div class="text-end">
+                                    <small class="text-body-tertiary"><i class="far fa-clock me-1"></i> {{ val.fecha|date:"d M Y" }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center text-body-tertiary py-5 mt-4">
+                            <i class="far fa-star fs-1 mb-3 opacity-25"></i>
+                            <h5 class="fw-bold text-body-secondary">No hay reseñas disponibles</h5>
+                            <p class="small">Sé el primer miembro en dejar tu opinión sobre CoopBingo.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -261,6 +360,60 @@
     });
 </script>
 {% endif %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const starContainer = document.getElementById('star-rating');
+        if (!starContainer) return;
+
+        const stars = starContainer.querySelectorAll('i');
+        const hiddenInput = document.getElementById('estrellas-input');
+        const textDisplay = document.getElementById('estrellas-text');
+        
+        let currentRating = parseFloat(hiddenInput.value.replace(',', '.')) || 5.0;
+
+        function renderStars(rating) {
+            stars.forEach((star, index) => {
+                let starValue = index + 1;
+                star.className = ''; 
+                if (rating >= starValue) {
+                    star.classList.add('fas', 'fa-star', 'text-warning'); 
+                } else if (rating >= starValue - 0.5) {
+                    star.classList.add('fas', 'fa-star-half-alt', 'text-warning'); 
+                } else {
+                    star.classList.add('far', 'fa-star', 'text-warning'); 
+                }
+            });
+            textDisplay.innerText = rating.toFixed(1) + " Estrellas";
+        }
+
+        renderStars(currentRating); 
+
+        stars.forEach((star, index) => {
+            star.addEventListener('mousemove', function(e) {
+                const rect = star.getBoundingClientRect();
+                const isHalf = (e.clientX - rect.left) < (rect.width / 2);
+                const hoverValue = index + (isHalf ? 0.5 : 1.0);
+                renderStars(hoverValue);
+            });
+
+            star.addEventListener('click', function(e) {
+                const rect = star.getBoundingClientRect();
+                const isHalf = (e.clientX - rect.left) < (rect.width / 2);
+                currentRating = index + (isHalf ? 0.5 : 1.0);
+                hiddenInput.value = currentRating; 
+                renderStars(currentRating);
+                
+                star.classList.add('animate__animated', 'animate__heartBeat');
+                setTimeout(() => star.classList.remove('animate__animated', 'animate__heartBeat'), 1000);
+            });
+        });
+
+        starContainer.addEventListener('mouseleave', function() {
+            renderStars(currentRating);
+        });
+    });
+</script>
 
 <style>
     html {

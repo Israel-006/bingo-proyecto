@@ -65,6 +65,8 @@ class BingoConsumer(AsyncWebsocketConsumer):
         if tipo_evento == 'ping':
             await self.send(text_data=json.dumps({'canal': 'pong'}))
             return
+        
+        
 
         # =========================================================
         # NUEVO: BARRIDO INSTANTÁNEO (ADIÓS AL DELAY DEL NAVEGADOR)
@@ -126,6 +128,8 @@ class BingoConsumer(AsyncWebsocketConsumer):
                     'canal': 'partida',
                     'datos': {'evento': 'casilla_marcada_ok', 'carton': carton_codigo, 'numero': numero}
                 }))
+
+        
 
     async def evento_chat(self, event):
         await self.send(text_data=json.dumps({'canal': 'chat', 'usuario': event['usuario'], 'mensaje': event['mensaje']}))

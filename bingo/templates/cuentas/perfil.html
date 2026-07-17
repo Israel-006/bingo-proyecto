@@ -5,8 +5,6 @@
 {% block content %}
 <div class="container py-5">
     
-    
-
     <div class="row g-4">
         <div class="col-12 col-lg-4">
             <div class="card-minimalista text-center p-4 shadow-sm position-relative overflow-hidden">
@@ -25,7 +23,11 @@
                 
                 <div class="d-flex justify-content-center gap-2 mb-4">
                     {% if socio %}
-                        <span class="badge bg-success-subtle text-success border"><i class="fas fa-handshake me-1"></i> Socio Activo</span>
+                        {% if socio.estadosocio == 'Pendiente' %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning"><i class="fas fa-hourglass-half me-1"></i> Solicitud de Socio: Pendiente</span>
+                        {% else %}
+                            <span class="badge bg-success-subtle text-success border"><i class="fas fa-handshake me-1"></i> Socio Oficial</span>
+                        {% endif %}
                     {% endif %}
                     {% if jugador %}
                         <span class="badge bg-success-subtle text-success border"><i class="fas fa-gamepad me-1"></i> Jugador</span>
@@ -48,6 +50,10 @@
                         </div>
                         <i class="fas fa-coins text-warning opacity-50 fs-2"></i>
                     </div>
+                    
+                    <a href="{% url 'tienda_recargas' %}" class="btn btn-outline-warning text-dark fw-bold border-2 w-100 mt-2 shadow-sm bg-warning-subtle text-warning-emphasis cart-btn-hover">
+                        <i class="fas fa-plus-circle me-1"></i> Recargar Billetera
+                    </a>
                 </div>
                 {% endif %}
                 
@@ -79,8 +85,26 @@
             </div>
             {% endif %}
 
+            {% if socio and not jugador %}
+            <div class="card bg-indigo bg-opacity-10 border border-indigo rounded-4 mb-4 shadow-sm animate__animated animate__fadeIn">
+                <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <h5 class="fw-bold text-body mb-1"><i class="fas fa-gamepad text-indigo me-2"></i> ¡Eres Socio Oficial de la Cooperativa!</h5>
+                        <p class="text-secondary small mb-0">Habilita tu billetera digital y tu perfil de juego con un solo clic para empezar a adquirir tus cartones de Bingo inmediatamente.</p>
+                    </div>
+                    <a href="{% url 'activar_perfil_juego_socio' %}" class="btn btn-indigo fw-bold px-4 flex-shrink-0 shadow-sm">
+                        <i class="fas fa-bolt me-1"></i> Activar Perfil de Juego
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="card-minimalista p-4 shadow-sm h-100">
-                <ul class="nav nav-tabs mb-4" id="perfilTabs" role="tablist">
+                
+                <!-- ========================================== -->
+                <!-- PESTAÑAS DE NAVEGACIÓN MODIFICADAS         -->
+                <!-- ========================================== -->
+                <ul class="nav nav-tabs mb-4 align-items-center" id="perfilTabs" role="tablist">
                     <li class="nav-item">
                         <button class="nav-link active fw-medium" data-bs-toggle="tab" data-bs-target="#datos" type="button"><i class="fas fa-user-edit me-2"></i> Mis Datos</button>
                     </li>
@@ -90,6 +114,20 @@
                     <li class="nav-item">
                         <button class="nav-link fw-medium" data-bs-toggle="tab" data-bs-target="#historial" type="button"><i class="fas fa-file-invoice-dollar me-2"></i> Estado de Cuenta</button>
                     </li>
+                    
+                    <!-- Botones dinámicos de acceso rápido alineados a la derecha -->
+                    {% if socio and socio.estadosocio == 'Activo' or socio.estadosocio == 'Active' %}
+                    <li class="nav-item ms-auto pb-1">
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'ahorro' %}" class="btn btn-sm btn-outline-success fw-bold shadow-sm">
+                                <i class="fas fa-piggy-bank me-1"></i> Ahorros
+                            </a>
+                            <a href="{% url 'creditos' %}" class="btn btn-sm btn-outline-primary fw-bold shadow-sm">
+                                <i class="fas fa-hand-holding-usd me-1"></i> Créditos
+                            </a>
+                        </div>
+                    </li>
+                    {% endif %}
                 </ul>
 
                 <div class="tab-content" id="perfilTabsContent">
@@ -300,8 +338,7 @@
                                     </div>
                                 </div>
                             </div>
-                            {% endif %}
-                            
+                            {% endif %}                  
                         </div>
                     </div>
                 </div>
@@ -367,8 +404,36 @@
                             <input type="text" name="telefono" class="form-control bg-transparent" placeholder="Ej: 0987654321" required>
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label small fw-bold">Teléfono de Trabajo (opcional)</label>
+                            <input type="text" name="telefonofijo" class="form-control bg-transparent" placeholder="Ej: 0987654321">
+                        </div>
+                        <div class="col-12 mt-3 p-3 bg-body-tertiary rounded border border-secondary-subtle">
+                            <label class="form-label small fw-bold text-primary mb-2"><i class="fas fa-envelope me-1"></i> Configuración de Correo Electrónico</label>
+                            
+                            <div class="d-flex flex-column gap-2 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="tipo_correo" id="correo_jugador" value="jugador" checked onchange="toggleCorreoSocio('{{ user.email }}')">
+                                    <label class="form-check-label small fw-medium" for="correo_jugador">
+                                        ¿Utilizar correo registrado del jugador? <span class="text-muted">({{ user.email }})</span>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="tipo_correo" id="correo_personal" value="personal" onchange="toggleCorreoSocio('')">
+                                    <label class="form-check-label small fw-medium" for="correo_personal">
+                                        Usar un correo personal alternativo
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <input type="email" name="correo" id="input_correo_socio" class="form-control bg-transparent text-muted fw-bold" value="{{ user.email }}" required readonly placeholder="Escribe el nuevo correo aquí...">
+                        </div>
+                        <div class="col-12">
                             <label class="form-label small fw-bold">Dirección de Domicilio</label>
                             <input type="text" name="direccion" class="form-control bg-transparent" placeholder="Ej: Av. Principal y Calle Secundaria" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Dirección de Trabajo (opcional)</label>
+                            <input type="text" name="direcciontrabajo" class="form-control bg-transparent" placeholder="Ej: Av. Principal y Calle Secundaria">
                         </div>
                     </div>
                 </div>
@@ -381,4 +446,23 @@
     </div>
 </div>
 {% endif %}
+<script>
+    function toggleCorreoSocio(correoBase) {
+        const inputCorreo = document.getElementById('input_correo_socio');
+        const radioJugador = document.getElementById('correo_jugador');
+        
+        if (radioJugador.checked) {
+            // Si elige el del jugador, copiamos el original, bloqueamos y atenuamos el texto
+            inputCorreo.value = correoBase;
+            inputCorreo.setAttribute('readonly', 'readonly');
+            inputCorreo.classList.add('text-muted');
+        } else {
+            // Si elige personal, limpiamos, desbloqueamos y quitamos lo atenuado
+            inputCorreo.value = '';
+            inputCorreo.removeAttribute('readonly');
+            inputCorreo.classList.remove('text-muted');
+            inputCorreo.focus(); // Ponemos el cursor ahí automáticamente
+        }
+    }
+</script>
 {% endblock %}

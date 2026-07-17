@@ -53,7 +53,6 @@
         </div>
     </div>
 
-    <!-- PANTALLA 3: VICTORIA (Mantenemos tu diseño oscuro elegante) -->
     <div id="pantalla-ganador" class="card-minimalista p-5 shadow-lg border-0 bg-dark text-white text-center d-none mt-4">
         <i class="fas fa-crown text-warning display-3 animate__animated animate__bounceInDown mb-3"></i>
         <h2 class="fw-bold text-warning mb-1">¡TENEMOS UN CAMPEÓN!</h2>
@@ -88,17 +87,21 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
+    // Variables con mi_id para saber quién soy
     window.BINGO_CONFIG = {
         id_partida: "{{ partida.idpartidabingo }}",
         id_bingo: "{{ partida.idbingo.idbingo }}",
-        mi_alias: "{{ jugador.aliasjugador }}" 
+        mi_alias: "{{ jugador.aliasjugador }}",
+        mi_id: "{{ jugador.idjugador }}" 
     };
 </script>
 <script src="{% static 'js/bingo_socket.js' %}"></script>
 
 <script>
-    // Motor de Animación Visual
+    // Motor de Animación Visual de la Ruleta
     function animarExtraccion(idJugador, numeroFinal) {
         let bolaContenedor = document.getElementById(`bola-${idJugador}`);
         if (!bolaContenedor) return;
@@ -106,7 +109,6 @@
         bolaContenedor.classList.add('animando-ruleta');
         let counter = 0;
         
-        // Efecto Ruleta de 2 segundos (20 iteraciones de 100ms)
         let interval = setInterval(() => {
             bolaContenedor.innerText = Math.floor(Math.random() * 75) + 1;
             counter++;
@@ -115,7 +117,7 @@
                 clearInterval(interval);
                 bolaContenedor.classList.remove('animando-ruleta');
                 bolaContenedor.innerText = numeroFinal;
-                bolaContenedor.classList.add('ganador-highlight'); // Efecto Pop
+                bolaContenedor.classList.add('ganador-highlight'); 
             }
         }, 100);
     }
@@ -129,13 +131,11 @@
                 window.location.href = "{% url 'tablero_tiempo_real' id_partida=partida.idpartidabingo %}";
             }
             else if (datos.nuevo_estado === 'Desempate') {
-                // Activar la Arena
                 document.getElementById('pantalla-espera').classList.add('d-none');
                 document.getElementById('arena-desempate').classList.remove('d-none');
                 document.getElementById('arena-desempate').classList.add('animate__animated', 'animate__zoomIn');
             }
             else if (datos.nuevo_estado === 'Finalizada') {
-                // Mostrar Pantalla final
                 document.getElementById('pantalla-espera').classList.add('d-none');
                 document.getElementById('arena-desempate').classList.add('opacity-50');
                 
@@ -155,10 +155,13 @@
             }
         }
         
-        // EVENTO: Aparece un rival en el radar
+        // =======================================================
+        // EVENTO: APARECE UN RIVAL EN EL RADAR (100% TIEMPO REAL)
+        // =======================================================
         else if (datos.evento === 'invitacion_vip') {
             const grid = document.getElementById('grid-candidatos');
-            if(!document.getElementById(`podio-${datos.id_jugador}`)) {
+            // Verificamos que no exista ya para evitar duplicados
+            if (grid && !document.getElementById(`podio-${datos.id_jugador}`)) {
                 const podioHTML = `
                     <div class="col-6 col-md-3 animate__animated animate__zoomIn" id="podio-${datos.id_jugador}">
                         <div class="bg-body-tertiary rounded-4 p-3 border border-secondary border-opacity-25 shadow">
@@ -168,12 +171,57 @@
                         </div>
                     </div>`;
                 grid.insertAdjacentHTML('beforeend', podioHTML);
+
+                // Notificaciones Visuales
+                if (String(datos.id_jugador) === String(window.BINGO_CONFIG.mi_id)) {
+                    Swal.fire({
+                        title: '¡HAS SIDO ELEGIDO!',
+                        text: 'El administrador validó tu cartón. ¡Estás oficialmente en la arena de desempate!',
+                        icon: 'success',
+                        background: '#1E1B4B', color: '#ffffff',
+                        confirmButtonColor: '#ffc107',
+                        confirmButtonText: '¡A GANAR!'
+                    });
+                } else {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'info',
+                        title: 'Nuevo candidato',
+                        text: `${datos.alias} se unió a la arena.`,
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                }
             }
         }
 
         // EVENTO: Disparo la animación cuando el admin registra la bola
         else if (datos.evento === 'tiro_individual') {
             animarExtraccion(datos.id_jugador, datos.numero);
+        }
+        
+        // =======================================================
+        // RESULTADO EXACTO AL MISMO TIEMPO QUE AL ADMIN
+        // =======================================================
+        else if (datos.evento === 'desempate_completado') {
+            setTimeout(() => {
+                const podios = document.querySelectorAll('[id^="podio-"]');
+                podios.forEach(podio => {
+                    if (podio.id === `podio-${datos.ganador_id}`) {
+                        podio.classList.add('border-success', 'border-4', 'bg-success', 'bg-opacity-10', 'animate__pulse');
+                        const bola = podio.querySelector('.ruleta-bola');
+                        if (bola) {
+                            bola.classList.remove('bg-body-secondary', 'text-body', 'border-secondary-subtle');
+                            bola.classList.add('bg-success', 'border-success', 'text-white');
+                            bola.innerHTML = `<i class="fas fa-crown text-warning position-absolute translate-middle-x top-0 start-50 mt-n2 shadow-sm" style="font-size: 1.5rem; transform: translateY(-50%);"></i>${datos.ganador_numero}`;
+                        }
+                    } else {
+                        podio.style.opacity = '0.5';
+                        podio.classList.add('border-danger');
+                    }
+                });
+            }, 2200);
         }
     });
 </script> 

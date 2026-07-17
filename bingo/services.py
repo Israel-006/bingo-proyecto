@@ -150,103 +150,87 @@ def actualizar_avatar_perfil(request, socio, jugador, nueva_foto):
 
 def auditar_patron_bingo(matriz, bolas_llamadas, modalidad):
     """
-    Escáner matricial: Mapea el cartón en una matriz booleana de 5x5
-    y verifica matemáticamente si se cumple el patrón de victoria.
+    Escáner matricial: Mapea el cartón en un array y 
+    verifica todas las combinaciones (rotaciones e inversiones).
     """
-    columnas = ['B', 'I', 'N', 'G', 'O']
-    # Grid de 5x5 lleno de False
-    marcados = [[False for _ in range(5)] for _ in range(5)]
-    
+    # 1. Aplanar el carton a un array de 25 celdas
+    celdas = []
+    for i in range(5):
+        celdas.extend([matriz['B'][i], matriz['I'][i], matriz['N'][i], matriz['G'][i], matriz['O'][i]])
+        
     # Aseguramos que las bolas cantadas sean comparadas como strings
-    bolas_llamadas_str = [str(b).strip() for b in bolas_llamadas]
+    bolas_str = [str(b).strip() for b in bolas_llamadas]
 
-    # 1. PINTAR LA MATRIZ DE VERDADEROS (Aciertos)
-    for col_idx, col_nombre in enumerate(columnas):
-        for fila_idx in range(5):
-            numero = matriz[col_nombre][fila_idx]
-            if str(numero).upper() == 'FREE':
-                marcados[fila_idx][col_idx] = True # Centro libre siempre es válido
-            elif str(numero).strip() in bolas_llamadas_str:
-                marcados[fila_idx][col_idx] = True
-
-    # 2. VALIDACIÓN DEL PATRÓN
-    if modalidad == 'Tabla Llena':
-        return all(all(celda for celda in fila) for fila in marcados)
-        
-    elif modalidad == 'Las Cuatro Esquinas':
-        return marcados[0][0] and marcados[0][4] and marcados[4][0] and marcados[4][4]
-        
-    elif modalidad == 'Linea Vertical':
-        # Cualquiera de las 5 columnas llenas
-        return any(all(marcados[fila][col] for fila in range(5)) for col in range(5))
-        
-    elif modalidad == 'En Diagonal':
-        # Diagonal principal o inversa
-        diag1 = all(marcados[i][i] for i in range(5))
-        diag2 = all(marcados[i][4-i] for i in range(5))
-        return diag1 or diag2
-        
-    elif modalidad == 'Forma de X':
-        # Ambas diagonales a la vez
-        diag1 = all(marcados[i][i] for i in range(5))
-        diag2 = all(marcados[i][4-i] for i in range(5))
-        return diag1 and diag2
-        
-    elif modalidad == 'Forma de Cruz':
-        # Fila 3 y Columna N (Ambas cruzan en el FREE)
-        fila_central = all(marcados[2][c] for c in range(5))
-        col_central = all(marcados[f][2] for f in range(5))
-        return fila_central and col_central
-        
-    elif modalidad == 'Marco de Foto':
-        # Todo el borde exterior
-        b_sup = all(marcados[0][c] for c in range(5))
-        b_inf = all(marcados[4][c] for c in range(5))
-        b_izq = all(marcados[f][0] for f in range(5))
-        b_der = all(marcados[f][4] for f in range(5))
-        return b_sup and b_inf and b_izq and b_der
-        
-    elif modalidad == 'Forma de L':
-        col_izq = all(marcados[f][0] for f in range(5))
-        fila_inf = all(marcados[4][c] for c in range(5))
-        return col_izq and fila_inf
-        
-    elif modalidad == 'Forma de C':
-        col_izq = all(marcados[f][0] for f in range(5))
-        fila_sup = all(marcados[0][c] for c in range(5))
-        fila_inf = all(marcados[4][c] for c in range(5))
-        return col_izq and fila_sup and fila_inf
-        
-    elif modalidad == 'Forma de T':
-        fila_sup = all(marcados[0][c] for c in range(5))
-        col_central = all(marcados[f][2] for f in range(5))
-        return fila_sup and col_central
-        
-    elif modalidad == 'Forma de U':
-        col_izq = all(marcados[f][0] for f in range(5))
-        col_der = all(marcados[f][4] for f in range(5))
-        fila_inf = all(marcados[4][c] for c in range(5))
-        return col_izq and col_der and fila_inf
-        
-    elif modalidad == 'Forma de H':
-        col_izq = all(marcados[f][0] for f in range(5))
-        col_der = all(marcados[f][4] for f in range(5))
-        fila_central = all(marcados[2][c] for c in range(5))
-        return col_izq and col_der and fila_central
-        
-    elif modalidad == 'Forma de Z':
-        fila_sup = all(marcados[0][c] for c in range(5))
-        diag_inversa = all(marcados[i][4-i] for i in range(5))
-        fila_inf = all(marcados[4][c] for c in range(5))
-        return fila_sup and diag_inversa and fila_inf
-        
-    elif modalidad == 'Forma de Flecha':
-        # Punta apuntando arriba
-        punta = marcados[0][2]
-        alas = marcados[1][1] and marcados[1][3]
-        tallo = marcados[2][2] and marcados[3][2] and marcados[4][2]
-        return punta and alas and tallo
-        
+    # 2. Diccionario Maestro de Patrones (Incluye giros y espejos permitidos)
+    patrones = {
+        'Tabla Llena': [[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]],
+        'Las Cuatro Esquinas': [[0, 4, 20, 24]],
+        'En Diagonal': [[0, 6, 12, 18, 24], [4, 8, 12, 16, 20]],
+        'Forma de X': [[0, 4, 6, 8, 12, 16, 18, 20, 24]],
+        'Forma de Cruz': [[2, 7, 10, 11, 12, 13, 14, 17, 22]],
+        'Marco de Foto': [[0,1,2,3,4, 5,9, 10,14, 15,19, 20,21,22,23,24]],
+        'Linea Vertical': [
+            [0, 5, 10, 15, 20], [1, 6, 11, 16, 21], [2, 7, 12, 17, 22], [3, 8, 13, 18, 23], [4, 9, 14, 19, 24]
+        ],
+        'Forma de L': [
+            [0, 5, 10, 15, 20, 21, 22, 23, 24], 
+            [0, 1, 2, 3, 4, 5, 10, 15, 20],     
+            [0, 1, 2, 3, 4, 9, 14, 19, 24],     
+            [20, 21, 22, 23, 24, 19, 14, 9, 4]  
+        ],
+        'Forma de C': [
+            [0, 1, 2, 3, 4, 5, 10, 15, 20, 21, 22, 23, 24], # C normal
+            [0, 1, 2, 3, 4, 9, 14, 19, 24, 20, 21, 22, 23], # C invertida
+            [0, 5, 10, 15, 20, 21, 22, 23, 24, 4, 9, 14, 19], # U (C hacia arriba)
+            [20, 15, 10, 5, 0, 1, 2, 3, 4, 9, 14, 19, 24]  # n (C hacia abajo)
+        ],
+        'Forma de U': [
+            [0, 5, 10, 15, 20, 21, 22, 23, 24, 4, 9, 14, 19], # U normal
+            [20, 15, 10, 5, 0, 1, 2, 3, 4, 9, 14, 19, 24], # n (U invertida)
+            [0, 1, 2, 3, 4, 5, 10, 15, 20, 21, 22, 23, 24], # C (U acostada)
+            [0, 1, 2, 3, 4, 9, 14, 19, 24, 20, 21, 22, 23]  # C invertida
+        ],
+        'Forma de T': [
+            [0,1,2,3,4, 7, 12, 17, 22], 
+            [20,21,22,23,24, 17, 12, 7, 2], 
+            [4,9,14,19,24, 13, 12, 11, 10], 
+            [0,5,10,15,20, 11, 12, 13, 14]  
+        ],
+        'Forma de H': [
+            [0, 5, 10, 15, 20, 11, 12, 13, 4, 9, 14, 19, 24], 
+            [0, 1, 2, 3, 4, 7, 12, 17, 20, 21, 22, 23, 24]       
+        ],
+        'Forma de Z': [
+            [0,1,2,3,4, 8, 12, 16, 20,21,22,23,24], 
+            [0,1,2,3,4, 6, 12, 18, 20,21,22,23,24], 
+            [4,9,14,19,24, 18, 12, 6, 0,5,10,15,20], 
+            [0,5,10,15,20, 16, 12, 8, 4,9,14,19,24]  
+        ],
+        'Forma de Flecha': [
+            [2, 6, 8, 12, 17, 22],   
+            [22, 16, 18, 12, 7, 2],  
+            [10, 6, 16, 12, 13, 14], 
+            [14, 8, 18, 12, 11, 10]  
+        ]
+    }
+    
+    # FIX: Busqueda robusta e insensible a mayúsculas para evitar el fallback a "Tabla Llena"
+    modalidad_limpia = str(modalidad).strip().lower()
+    patrones_lower = {k.lower(): v for k, v in patrones.items()}
+    marcadas_requeridas = patrones_lower.get(modalidad_limpia, patrones_lower['tabla llena'])
+    
+    # 3. Validar si CUALQUIERA de las orientaciones válidas se cumple
+    for opcion in marcadas_requeridas:
+        es_ganador_opcion = True
+        for idx in opcion:
+            if idx == 12: 
+                continue # El centro (FREE) siempre es comodín válido
+            if str(celdas[idx]).strip() not in bolas_str:
+                es_ganador_opcion = False
+                break
+        if es_ganador_opcion:
+            return True # ¡Bingo! Encontró una orientación ganadora
+            
     return False
 
 def validar_carton_hibrido(codigo_carton, id_partida):
@@ -321,63 +305,62 @@ def validar_carton_hibrido(codigo_carton, id_partida):
 def marcar_casilla_manual(jugador_id, carton_codigo, numero, partida_id):
     """
     Guardia de Seguridad: Verifica que el clic del jugador sea legal en la ronda correcta.
+    BLINDADO: Usa select_for_update() para evitar condiciones de carrera masivas.
     """
+    from django.db import transaction
     try:
-        # 1. Buscar el cartón en juego (AHORA SÍ FILTRAMOS POR LA RONDA EXACTA)
-        asignacion = CartonPartidaBingo.objects.select_related('idcarton', 'idpartida').get(
-            idcarton__codigocarton=carton_codigo, 
-            idjugador_id=jugador_id,
-            idpartida_id=partida_id  # <--- ESTA ES LA LÍNEA SALVAVIDAS
-        )
-        partida = asignacion.idpartida
-        
-        # 2. Validar que la bola SÍ salió en la mesa del admin
-        if not partida.bolascantadas:
-            return False
+        # Iniciamos transacción atómica para que los clics del piloto automático hagan fila
+        with transaction.atomic():
+            # 1. Buscar el cartón en juego (BLOQUEAMOS LA FILA HASTA TERMINAR EL GUARDADO)
+            asignacion = CartonPartidaBingo.objects.select_for_update().select_related('idcarton', 'idpartida').get(
+                idcarton__codigocarton=carton_codigo, 
+                idjugador_id=jugador_id,
+                idpartida_id=partida_id  
+            )
+            partida = asignacion.idpartida
             
-        bolas_cantadas_str = partida.bolascantadas.replace('B','').replace('I','').replace('N','').replace('G','').replace('O','')
-        bolas_cantadas_lista = [b.strip() for b in bolas_cantadas_str.split(',') if b.strip()]
-        
-        if str(numero) not in bolas_cantadas_lista:
-            return False # Quiso marcar un número que no ha salido
-            
-        # 3. Validar que el número SÍ existe en ese cartón
-        if isinstance(asignacion.idcarton.matriznumeros, str):
-            try:
-                matriz = json.loads(asignacion.idcarton.matriznumeros)
-            except:
-                matriz = ast.literal_eval(asignacion.idcarton.matriznumeros)
-        else:
-            matriz = asignacion.idcarton.matriznumeros
-            
-        numero_existe = False
-        for letra in ['B', 'I', 'N', 'G', 'O']:
-            if numero in matriz[letra] or str(numero) in matriz[letra]:
-                numero_existe = True
-                break
+            # 2. Validar que la bola SÍ salió en la mesa del admin
+            if not partida.bolascantadas:
+                return False
                 
-        if not numero_existe:
-            return False # Quiso marcar un número que no está en su cartón
+            bolas_cantadas_str = partida.bolascantadas.replace('B','').replace('I','').replace('N','').replace('G','').replace('O','')
+            bolas_cantadas_lista = [b.strip() for b in bolas_cantadas_str.split(',') if b.strip()]
             
-        # 4. Guardar la marca en el nuevo campo de la BD
-        marcados = []
-        if getattr(asignacion, 'numerosmarcados', None):
-            try:
-                marcados = json.loads(asignacion.numerosmarcados)
-            except:
-                marcados = ast.literal_eval(asignacion.numerosmarcados)
+            if str(numero) not in bolas_cantadas_lista:
+                return False 
                 
-        if numero not in marcados and str(numero) not in marcados:
-            marcados.append(numero)
-            asignacion.numerosmarcados = json.dumps(marcados)
-            asignacion.cantidadaciertos += 1
-            asignacion.save()
-            return True
-        else:
-            # ¡EL SALVAVIDAS! Si el jugador dio doble clic rápido 
-            # o tiene dos pantallas abiertas, le decimos que todo está bien.
-            return True
-            
+            # 3. Validar que el número SÍ existe en ese cartón
+            import json, ast
+            if isinstance(asignacion.idcarton.matriznumeros, str):
+                try: matriz = json.loads(asignacion.idcarton.matriznumeros)
+                except: matriz = ast.literal_eval(asignacion.idcarton.matriznumeros)
+            else:
+                matriz = asignacion.idcarton.matriznumeros
+                
+            numero_existe = False
+            for letra in ['B', 'I', 'N', 'G', 'O']:
+                if numero in matriz[letra] or str(numero) in matriz[letra]:
+                    numero_existe = True
+                    break
+                    
+            if not numero_existe:
+                return False 
+                
+            # 4. Guardar la marca (Al estar bloqueado, no se sobreescriben los clics)
+            marcados = []
+            if getattr(asignacion, 'numerosmarcados', None):
+                try: marcados = json.loads(asignacion.numerosmarcados)
+                except: marcados = ast.literal_eval(asignacion.numerosmarcados)
+                    
+            if numero not in marcados and str(numero) not in marcados:
+                marcados.append(numero)
+                asignacion.numerosmarcados = json.dumps(marcados)
+                asignacion.cantidadaciertos += 1
+                asignacion.save()
+                return True
+            else:
+                return True
+                
     except Exception as e:
         print(f"Error en marcado manual: {e}")
         return False

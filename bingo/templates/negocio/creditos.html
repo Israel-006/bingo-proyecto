@@ -1,0 +1,200 @@
+{% extends 'comunes/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    {% include 'componentes/alertas.html' %}
+
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h2 class="mb-2">🏦 Mis Créditos</h2>
+                <p class="text-muted">Gestiona tus préstamos y solicita nuevo financiamiento.</p>
+            </div>
+            
+            <div class="text-end d-flex gap-2 align-items-center">
+                <a href="{% url 'perfil' %}" class="btn btn-outline-secondary shadow-sm">
+                    <i class="fas fa-arrow-left me-1"></i> Volver al Perfil
+                </a>
+                {% if socio and socio.estadosocio == 'Active' or socio.estadosocio == 'Activo' %}
+                    <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalSolicitarCredito">
+                        <i class="fas fa-plus-circle"></i> Solicitar Nuevo Crédito
+                    </button>
+                {% else %}
+                    <div class="alert alert-info mb-0 py-2 small">
+                        <i class="fas fa-info-circle"></i> Solo los socios activos pueden solicitar créditos.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="card-title mb-0">Historial de Financiamiento</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha Solicitud</th>
+                                    <th>Monto Solicitado</th>
+                                    <th>Cuotas / Tasa</th>
+                                    <th>Total a Pagar</th>
+                                    <th>Saldo Pendiente</th>
+                                    <th>Estado</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for prestamo in mis_prestamos %}
+                                <tr>
+                                    <td>{{ prestamo.fechasolicitud|date:"d M Y" }}</td>
+                                    <td class="fw-bold">${{ prestamo.montoprestamosolicitado|floatformat:2 }}</td>
+                                    <td>
+                                        {% if prestamo.numerocuotas %}{{ prestamo.numerocuotas }} cuotas{% else %}-{% endif %}<br>
+                                        <small class="text-muted">Interés: {{ prestamo.tasainteres }}%</small>
+                                    </td>
+                                    <td>
+                                        ${{ prestamo.montototalpagar|floatformat:2 }}
+                                    </td>
+                                    <td class="{% if prestamo.saldopendiente > 0 %}text-danger fw-bold{% else %}text-success{% endif %}">
+                                        ${{ prestamo.saldopendiente|floatformat:2 }}
+                                    </td>
+                                    <td>
+                                        {% if prestamo.estadoprestamo == 'Aprobado' %}
+                                            <span class="badge bg-success">Activo / Aprobado</span>
+                                        {% elif prestamo.estadoprestamo == 'Solicitado' %}
+                                            <span class="badge bg-warning text-dark">Solicitado (En Revisión)</span>
+                                        {% elif prestamo.estadoprestamo == 'En espera' %}
+                                            <span class="badge bg-info text-dark">En Espera</span>
+                                        {% elif prestamo.estadoprestamo == 'Liquidado' %}
+                                            <span class="badge bg-secondary">Pagado Completo</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">{{ prestamo.estadoprestamo }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if prestamo.estadoprestamo == 'Aprobado' and prestamo.saldopendiente > 0 %}
+                                            <a href="{% url 'pago' %}" class="btn btn-sm btn-outline-success">Abonar</a>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-light" disabled>Abonar</button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        <i class="fas fa-file-invoice-dollar fa-3x mb-3 text-light"></i><br>
+                                        No tienes historial de créditos con la cooperativa.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalSolicitarCredito" tabindex="-1" aria-labelledby="modalSolicitarCreditoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalSolicitarCreditoLabel"><i class="fas fa-hand-holding-usd"></i> Formulario de Solicitud de Crédito</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'creditos' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="solicitar_prestamo">
+                    
+                    <p class="text-muted small mb-4">Por favor, completa todos los campos requeridos para que tu solicitud sea ingresada a la base de datos correctamente.</p>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <input type="number" class="form-control" id="montoprestamosolicitado" name="montoprestamosolicitado" step="0.01" min="10" placeholder="Ej: 500.00" required>
+                                <label for="montoprestamosolicitado">Monto a Solicitar ($) *</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <!-- UX FIX: Lo forzamos a 10.00 y lo hacemos readonly para que coincida con el backend -->
+                                <input type="number" class="form-control bg-light" id="tasainteres" name="tasainteres" step="0.01" value="10.00" readonly required>
+                                <label for="tasainteres">Tasa de Interés (%) *</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <input type="number" class="form-control" id="numerocuotas" name="numerocuotas" step="1" min="1" max="60" placeholder="Cuotas" required>
+                                <label for="numerocuotas">Número de Cuotas *</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <input type="date" class="form-control" id="fechavencimiento" name="fechavencimiento" required>
+                                <label for="fechavencimiento">Fecha de Vencimiento *</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="mt-3 mb-2 text-primary border-bottom pb-2"><i class="fas fa-users"></i> Referencias de Garantes (Opcional)</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <select class="form-select" id="idgarante1" name="idgarante1">
+                                    <option value="">-- Sin Garante --</option>
+                                    {% for s in lista_socios %}
+                                        <option value="{{ s.idsocio }}">{{ s.primernombresocio }} {{ s.primerapellidosocio }} ({{ s.cisocio }})</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="idgarante1">Garante Principal</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <select class="form-select" id="idgarante2" name="idgarante2">
+                                    <option value="">-- Sin Garante --</option>
+                                    {% for s in lista_socios %}
+                                        <option value="{{ s.idsocio }}">{{ s.primernombresocio }} {{ s.primerapellidosocio }} ({{ s.cisocio }})</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="idgarante2">Garante Secundario</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning py-2 small mb-0 mt-2">
+                        <i class="fas fa-exclamation-triangle"></i> Verifica que todos los campos marcados con (*) estén llenos para evitar errores al guardar en el sistema.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Solicitud</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-calcular la fecha de vencimiento proyectada (1 cuota = 1 mes)
+    document.getElementById('numerocuotas').addEventListener('input', function() {
+        let cuotas = parseInt(this.value);
+        if(cuotas > 0) {
+            let fecha = new Date();
+            fecha.setMonth(fecha.getMonth() + cuotas);
+            document.getElementById('fechavencimiento').value = fecha.toISOString().split('T')[0];
+        }
+    });
+</script>
+{% endblock %}

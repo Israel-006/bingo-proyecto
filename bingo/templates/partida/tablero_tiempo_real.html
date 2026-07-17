@@ -93,6 +93,7 @@
 </div>
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
     /* Estilos para el Micro-Cartón Recordatorio */
     .micro-carton-grid {
@@ -116,24 +117,49 @@
     window.patrones = {
         'Tabla Llena': [[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]],
         'Las Cuatro Esquinas': [[0, 4, 20, 24]],
-        'En Diagonal': [[0, 6, 12, 18, 24], [4, 8, 12, 16, 20]], // Ahora soporta ambas diagonales
+        'En Diagonal': [[0, 6, 12, 18, 24], [4, 8, 12, 16, 20]], 
         'Forma de X': [[0, 4, 6, 8, 12, 16, 18, 20, 24]],
         'Forma de Cruz': [[2, 7, 10, 11, 12, 13, 14, 17, 22]],
         'Marco de Foto': [[0,1,2,3,4, 5,9, 10,14, 15,19, 20,21,22,23,24]],
         'Linea Vertical': [
-            [0, 5, 10, 15, 20], // Columna B
-            [1, 6, 11, 16, 21], // Columna I
-            [2, 7, 12, 17, 22], // Columna N
-            [3, 8, 13, 18, 23], // Columna G
-            [4, 9, 14, 19, 24]  // Columna O
+            [0, 5, 10, 15, 20], [1, 6, 11, 16, 21], [2, 7, 12, 17, 22], [3, 8, 13, 18, 23], [4, 9, 14, 19, 24]  
         ],
-        'Forma de L': [[0, 5, 10, 15, 20, 21, 22, 23, 24]],
-        'Forma de C': [[0,1,2,3,4, 5, 10, 15, 20,21,22,23,24]],
-        'Forma de T': [[0,1,2,3,4, 7, 12, 17, 22]],
-        'Forma de U': [[0,4, 5,9, 10,14, 15,19, 20,21,22,23,24]],
-        'Forma de H': [[0,4, 5,9, 10,11,12,13,14, 15,19, 20,24]],
-        'Forma de Z': [[0,1,2,3,4, 8, 12, 16, 20,21,22,23,24]],
-        'Forma de Flecha': [[2, 6, 8, 12, 17, 22]]
+        'Forma de L': [
+            [0, 5, 10, 15, 20, 21, 22, 23, 24], // Normal (Abajo-Izquierda)
+            [0, 1, 2, 3, 4, 5, 10, 15, 20],     // Arriba-Izquierda
+            [0, 1, 2, 3, 4, 9, 14, 19, 24],     // Arriba-Derecha
+            [20, 21, 22, 23, 24, 19, 14, 9, 4]  // Abajo-Derecha
+        ],
+        'Forma de C': [
+            [0,1,2,3,4, 5, 10, 15, 20, 21,22,23,24],   // Normal (Izquierda)
+            [0,1,2,3,4, 9, 14, 19, 24, 20,21,22,23,24] // Invertida (Derecha)
+        ],
+        'Forma de T': [
+            [0,1,2,3,4, 7, 12, 17, 22],     // Normal (Arriba)
+            [20,21,22,23,24, 17, 12, 7, 2], // Invertida (Abajo)
+            [4,9,14,19,24, 13, 12, 11, 10], // Girada (Derecha)
+            [0,5,10,15,20, 11, 12, 13, 14]  // Girada (Izquierda)
+        ],
+        'Forma de U': [
+            [0,5,10,15,20, 21,22,23,24, 4,9,14,19], // Normal (Abajo)
+            [20,15,10,5,0, 1,2,3,4, 9,14,19,24]     // Invertida (Arriba)
+        ],
+        'Forma de H': [
+            [0,5,10,15,20, 11,12,13,14, 4,9,14,19,24], // Normal (Vertical)
+            [0,1,2,3,4, 7,12,17, 20,21,22,23,24]       // Acostada (Tipo I)
+        ],
+        'Forma de Z': [
+            [0,1,2,3,4, 8, 12, 16, 20,21,22,23,24],  // Normal
+            [0,1,2,3,4, 6, 12, 18, 20,21,22,23,24],  // Invertida (Espejo)
+            [4,9,14,19,24, 18, 12, 6, 0,5,10,15,20], // Girada 90° (Tipo N)
+            [0,5,10,15,20, 16, 12, 8, 4,9,14,19,24]  // Tipo N (Espejo)
+        ],
+        'Forma de Flecha': [
+            [2, 6, 8, 12, 17, 22],   // Apunta Arriba
+            [22, 16, 18, 12, 7, 2],  // Apunta Abajo
+            [10, 6, 16, 12, 13, 14], // Apunta Izquierda
+            [14, 8, 18, 12, 11, 10]  // Apunta Derecha
+        ]
     };
 
     // ================================
@@ -180,6 +206,32 @@
             }, 200); // <-- ms de suspenso (puedes subirlo a 600 o bajarlo a 200)
         };
     }
+
+    // =======================================================
+    // MOTOR DE VOZ PARA VICTORIA (SIEMPRE ACTIVO)
+    // =======================================================
+    function anunciarBingoConVoz(aliasJugador) {
+        if (!('speechSynthesis' in window)) return;
+
+        let vocesDisponibles = window.speechSynthesis.getVoices();
+        let vozIdeal = vocesDisponibles.find(v => v.lang.includes('es') && (v.name.includes('Google') || v.name.includes('Paulina')));
+
+        // Callamos al locutor inmediatamente por si estaba cantando un número
+        window.speechSynthesis.cancel();
+
+        // Armamos el texto dramático. Usamos "Bíngo" con tilde para forzar la pronunciación correcta
+        const mensaje = aliasJugador 
+            ? `¡Atención! El jugador ${aliasJugador} ha cantado Bíngo. Cartón en revisión.` 
+            : `¡Atención! ¡Bíngo detectado!`;
+
+        let locucion = new SpeechSynthesisUtterance(mensaje);
+        locucion.lang = 'es-MX';
+        locucion.rate = 0.95;  // Velocidad un poco rápida
+        locucion.pitch = 1.2;  // Tono un poco más agudo para generar alerta
+        if (vozIdeal) locucion.voice = vozIdeal;
+
+        window.speechSynthesis.speak(locucion);
+    }
     
     // Despertar las voces (Truco para que carguen rápido)
     if ('speechSynthesis' in window) {
@@ -189,25 +241,59 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const microContenedores = document.querySelectorAll('.render-micro-carton');
-        if(microContenedores.length === 0) return;
+        const listaRadar = document.getElementById('lista-jugadores-conectados');
+        const contadorEl = document.getElementById('contador-conectados');
+        
+        if (listaRadar && contadorEl) {
+            const actualizarContador = () => {
+                const elementos = Array.from(listaRadar.querySelectorAll('li'));
+                // Filtramos los textos vacíos de ambas pantallas
+                const cantidad = elementos.filter(li => 
+                    !li.textContent.includes('Nadie en la sala') && 
+                    !li.textContent.includes('Sala de espera vacía')
+                ).length;
+                
+                if (contadorEl.innerText != cantidad) {
+                    contadorEl.innerText = cantidad;
+                    contadorEl.classList.remove('animate__animated', 'animate__headShake');
+                    void contadorEl.offsetWidth; 
+                    contadorEl.classList.add('animate__animated', 'animate__headShake');
+                }
 
-        microContenedores.forEach(cont => {
-            const modalidad = cont.getAttribute('data-modalidad') || 'Tabla Llena';
-            const combinaciones = window.patrones[modalidad] || window.patrones['Tabla Llena'];
+                // =======================================================
+                // NUEVO: RE-INYECTAR EL BOTÓN DE BANEO AUTOMÁTICAMENTE
+                // =======================================================
+                elementos.forEach(li => {
+                    if (!li.textContent.includes('Nadie en la sala') && !li.textContent.includes('Sala de espera vacía')) {
+                        // Verificamos si el li ya tiene el botón para no duplicarlo
+                        if (!li.querySelector('button[title="Expulsar"]')) {
+                            // Extraemos el nombre del jugador
+                            const spanAlias = li.querySelector('span.fw-bold.text-truncate');
+                            if (spanAlias) {
+                                const alias = spanAlias.innerText.trim();
+                                
+                                // Creamos el botón de expulsión
+                                const btnBan = document.createElement('button');
+                                btnBan.className = 'btn btn-sm text-danger ms-auto border-0';
+                                btnBan.title = 'Expulsar';
+                                btnBan.setAttribute('onclick', `banearJugador('${alias}')`);
+                                btnBan.innerHTML = '<i class="fas fa-ban"></i>';
+                                
+                                // Lo añadimos al final de la fila del jugador
+                                li.appendChild(btnBan);
+                            }
+                        }
+                    }
+                });
+                // =======================================================
+            };
+
+            actualizarContador(); // Ejecutar al cargar la página
             
-            // Para el dibujo pequeño recordatorio, usamos la primera combinación de la lista
-            const marcadasDibujo = combinaciones[0]; 
-            
-            let gridHTML = '<div class="micro-carton-grid">';
-            for (let i = 0; i < 25; i++) {
-                let claseExtra = marcadasDibujo.includes(i) ? 'micro-marcada' : '';
-                if(i === 12 && !marcadasDibujo.includes(i)) claseExtra += ' micro-free';
-                gridHTML += `<div class="micro-celda ${claseExtra}"></div>`;
-            }
-            gridHTML += '</div>';
-            cont.innerHTML = gridHTML;
-        });
+            // Vigilar la lista: Si bingo_socket.js mete o saca un jugador, esto lo cuenta y reinyecta botones
+            const observer = new MutationObserver(actualizarContador);
+            observer.observe(listaRadar, { childList: true, subtree: true });
+        }
     });
 </script>
 
@@ -223,41 +309,42 @@
 
 <script>
     // =======================================================
-    // NUEVO: MOTOR DEL ROBOT AUTO-MARCADOR (CONECTADO AL BACKEND)
+    // MOTOR DEL ROBOT AUTO-MARCADOR (CON ANTI-DDOS)
     // =======================================================
     function ejecutarAutoMarcado() {
-        // Busca en toda la pantalla los números que salieron pero no han sido presionados
         const celdasPista = document.querySelectorAll('.celda-pista');
         if (celdasPista.length === 0) return;
 
-        celdasPista.forEach(celda => {
-            // Extraer el número
-            let numeroStr = celda.innerText.trim();
-            if (!numeroStr) {
-                celda.classList.forEach(cls => {
-                    if (cls.startsWith('celda-numero-')) numeroStr = cls.replace('celda-numero-', '');
-                });
-            }
-            if (!numeroStr || isNaN(numeroStr)) return;
+        celdasPista.forEach((celda, index) => {
+            // Añadimos una pausa incremental (30ms) para no ahogar la conexión WebSocket
+            setTimeout(() => {
+                // Extraer el número
+                let numeroStr = celda.innerText.trim();
+                if (!numeroStr) {
+                    celda.classList.forEach(cls => {
+                        if (cls.startsWith('celda-numero-')) numeroStr = cls.replace('celda-numero-', '');
+                    });
+                }
+                if (!numeroStr || isNaN(numeroStr)) return;
 
-            // FIX: Extraer el código del cartón leyendo el texto naranja de la cabecera
-            const cartonDiv = celda.closest('.carton-dinamico');
-            const spanCodigo = cartonDiv.querySelector('.text-warning');
-            if (!spanCodigo) return; // Si no encuentra el texto, aborta
-            const codigoCarton = spanCodigo.innerText.trim();
+                const cartonDiv = celda.closest('.carton-dinamico');
+                const spanCodigo = cartonDiv.querySelector('.text-warning');
+                if (!spanCodigo) return; 
+                const codigoCarton = spanCodigo.innerText.trim();
 
-            // Bloquear visualmente para no saturar al servidor
-            celda.style.opacity = '0.5';
-            celda.style.pointerEvents = 'none';
+                // Bloquear visualmente
+                celda.style.opacity = '0.5';
+                celda.style.pointerEvents = 'none';
 
-            // El robot pide permiso al servidor vía WebSocket
-            if (window.bingoSocket && window.bingoSocket.readyState === WebSocket.OPEN) {
-                window.bingoSocket.send(JSON.stringify({
-                    'tipo': 'marcar_casilla',
-                    'carton_codigo': codigoCarton,
-                    'numero': parseInt(numeroStr)
-                }));
-            }
+                // Enviar la petición al servidor
+                if (window.bingoSocket && window.bingoSocket.readyState === WebSocket.OPEN) {
+                    window.bingoSocket.send(JSON.stringify({
+                        'tipo': 'marcar_casilla',
+                        'carton_codigo': codigoCarton,
+                        'numero': parseInt(numeroStr)
+                    }));
+                }
+            }, index * 30); // <- ¡Esta línea escalona los mensajes y soluciona la saturación!
         });
     }
 
@@ -274,10 +361,15 @@
         }
     }
 
+    // =======================================================
+    // MEMORIA DE ALERTAS (Para no repetir notificaciones del mismo cartón)
+    // =======================================================
+    window.historialAlertas = window.historialAlertas || {};
+
     function verificarCartones() {
         const modalidad = "{{ partida.modalidad_victoria }}";
         const combinacionesGanadoras = window.patrones[modalidad] || window.patrones['Tabla Llena'];
-        let menorDistancia = 999;
+        let menorDistanciaGlobal = 999;
         let codigoCartonGanador = "";
 
         const cartones = document.querySelectorAll('.carton-dinamico');
@@ -289,15 +381,13 @@
 
             let faltantesMinimos = 999;
             
-            // Evaluamos el cartón contra TODAS las formas válidas de ganar esa modalidad
-            // CÓDIGO NUEVO Y ESTRICTO
+            // Evaluamos el cartón contra TODAS las formas válidas de ganar
             combinacionesGanadoras.forEach(marcadasRequeridas => {
                 let faltantes = 0;
                 marcadasRequeridas.forEach(index => {
                     const celda = celdas[index];
-                    // Ahora solo consideramos como válido el centro FREE o una celda MARCADA MANUALMENTE
                     if (!celda.classList.contains('celda-free') && 
-                            !celda.classList.contains('celda-marcada')) { 
+                        !celda.classList.contains('celda-marcada')) { 
                             faltantes++;
                     }
                 });
@@ -307,22 +397,49 @@
                 }
             });
 
-            // Ordenamiento Visual (Cartones Calientes)
+            // Ordenamiento Visual (Cartones Calientes van primero)
             cartonCol.style.order = faltantesMinimos;
 
-            // Busca el que esté más cerca de ganar para la alerta global
-            if (faltantesMinimos < menorDistancia) {
-                menorDistancia = faltantesMinimos;
-                const spanCodigo = cartonCol.querySelector('.text-warning');
-                if(spanCodigo) codigoCartonGanador = spanCodigo.innerText.trim();
+            // Extraemos el código del cartón actual
+            const spanCodigo = cartonCol.querySelector('.text-warning');
+            const codigoCarton = spanCodigo ? spanCodigo.innerText.trim() : "Desconocido";
+
+            // =========================================================
+            // NUEVO: SISTEMA DE NOTIFICACIONES INDIVIDUALES TEMPORALES
+            // =========================================================
+            // Disparamos alertas solo cuando le falten 3, 2 o 1 números
+            if (faltantesMinimos > 0 && faltantesMinimos <= 3) {
+                
+                // Si es la primera vez que registramos este cartón, lo iniciamos en 999
+                if (!window.historialAlertas[codigoCarton]) {
+                    window.historialAlertas[codigoCarton] = 999;
+                }
+                
+                // ¿Logró bajar su récord de faltantes? (Ej: de 3 bajó a 2)
+                if (faltantesMinimos < window.historialAlertas[codigoCarton]) {
+                    // Mostrar Notificación Flotante
+                    mostrarToastAlerta(codigoCarton, faltantesMinimos);
+                    // Actualizar su récord para que no vuelva a sonar en este número
+                    window.historialAlertas[codigoCarton] = faltantesMinimos;
+                }
+            }
+
+            // =========================================================
+            // MONITOREO DEL BINGO (Para detectar la victoria absoluta)
+            // =========================================================
+            if (faltantesMinimos < menorDistanciaGlobal) {
+                menorDistanciaGlobal = faltantesMinimos;
+                if (faltantesMinimos === 0) {
+                    codigoCartonGanador = codigoCarton;
+                }
             }
         });
 
         const zonaAlertas = document.getElementById('zona-notificaciones-bingo');
         if(!zonaAlertas) return;
 
-        // INYECCIÓN DE DISEÑO FLOTANTE (NOTIFICACIÓN PUSH)
-        if (menorDistancia === 0) {
+        // INYECCIÓN DE LA VICTORIA (La única alerta que se queda fija)
+        if (menorDistanciaGlobal === 0) {
             zonaAlertas.innerHTML = `
                 <div class="card border-0 bg-dark text-white shadow-lg animate__animated animate__bounceInDown" style="border-radius: 20px; border: 3px solid #dc3545 !important; pointer-events: auto;">
                     <div class="card-body text-center p-3 p-md-4">
@@ -334,19 +451,43 @@
                     </div>
                 </div>
             `;
-        } else if (menorDistancia > 0 && menorDistancia <= 2) {
-            zonaAlertas.innerHTML = `
-                <div class="alert bg-dark text-white border-warning border-2 shadow-lg d-flex align-items-center p-3 animate__animated animate__fadeInDown" role="alert" style="border-radius: 15px; pointer-events: auto;">
-                    <i class="fas fa-fire fs-2 text-danger animate__animated animate__flash animate__infinite me-3"></i>
-                    <div class="flex-grow-1">
-                        <span class="fw-bold d-block text-warning" style="font-size: 1.1rem;">¡ESTÁS A ${menorDistancia} NÚMERO(S)!</span>
-                        <span class="small text-white-50 m-0">La victoria está muy cerca...</span>
-                    </div>
-                </div>
-            `;
-        } else {
-            zonaAlertas.innerHTML = '';
         }
+    }
+
+    // =======================================================
+    // NUEVA FUNCIÓN: RENDERIZADO DEL TOAST QUE DESAPARECE
+    // =======================================================
+    function mostrarToastAlerta(codigo, faltantes) {
+        const zonaAlertas = document.getElementById('zona-notificaciones-bingo');
+        if (!zonaAlertas) return;
+        
+        // Evitamos poner el aviso si el cartelote de BINGO acaba de saltar
+        if (zonaAlertas.innerHTML.includes('BINGO DETECTADO')) return;
+
+        const toastId = 'toast-' + Math.random().toString(36).substr(2, 9);
+        const html = `
+            <div id="${toastId}" class="alert bg-dark text-white border-warning border-2 shadow-lg d-flex align-items-center p-3 animate__animated animate__fadeInDown mb-2" role="alert" style="border-radius: 15px; pointer-events: auto;">
+                <i class="fas fa-fire fs-2 text-danger animate__animated animate__flash animate__infinite me-3"></i>
+                <div class="flex-grow-1 text-start">
+                    <span class="fw-bold d-block text-warning" style="font-size: 1.1rem;">¡A ${faltantes} NÚMERO(S)!</span>
+                    <span class="small text-white-50 m-0">Cartón ${codigo} a punto de ganar...</span>
+                </div>
+            </div>
+        `;
+        
+        // Agregar al contenedor (insertAdjacentHTML permite que salgan varias a la vez si hay empate de alertas)
+        zonaAlertas.insertAdjacentHTML('beforeend', html);
+        
+        // Auto-eliminar a los 3 segundos exactos
+        setTimeout(() => {
+            const toastEl = document.getElementById(toastId);
+            if (toastEl) {
+                // Animamos su salida hacia arriba
+                toastEl.classList.replace('animate__fadeInDown', 'animate__fadeOutUp');
+                // Lo borramos del HTML medio segundo después para dejar que termine la animación
+                setTimeout(() => toastEl.remove(), 500); 
+            }
+        }, 3000);
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -448,6 +589,73 @@
     // =======================================================
     document.addEventListener('evento_partida', function(e) {
         const datos = e.detail;
+        
+        // =======================================================
+        // INTERCEPTAR EXPULSIÓN
+        // =======================================================
+        if (datos.evento === 'expulsado') {
+            // 1. Verificamos si el nombre del expulsado coincide con MI nombre
+            if (datos.alias === window.BINGO_CONFIG.mi_alias) {
+                // Alerta inesquivable sin botones
+                Swal.fire({
+                    title: '¡EXPULSADO!',
+                    text: 'Has sido retirado de la sala por el administrador.',
+                    icon: 'error',
+                    background: '#1E1B4B', 
+                    color: '#ffffff',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    timer: 3000
+                }).then(() => {
+                    // LA PATADA: Lo mandamos al inicio a la fuerza
+                    window.location.replace('/'); 
+                });
+            } else {
+                // 2. Si no soy yo, quito al jugador expulsado del radar visualmente
+                const listaRadar = document.getElementById('lista-jugadores-conectados');
+                if (listaRadar) {
+                    const items = listaRadar.querySelectorAll('li');
+                    items.forEach(li => {
+                        if (li.innerText.includes(datos.alias)) {
+                            // Animación de salida para que se vea genial
+                            li.classList.add('animate__animated', 'animate__fadeOutRight');
+                            setTimeout(() => li.remove(), 500); // Lo borramos del HTML
+                        }
+                    });
+                }
+            }
+        }
+
+        // =======================================================
+        // NUEVO: INTERCEPTAR EL RECLAMO DE BINGO
+        // =======================================================
+        if (datos.evento === 'alerta_reclamo') {
+            // 1. El locutor anuncia la victoria usando la API del navegador (Siempre suena)
+            anunciarBingoConVoz(datos.alias);
+
+            // 2. Mostrar la notificación visual usando SweetAlert2
+            // Evitamos asustar con un popup al jugador que acaba de presionar el botón
+            if (datos.alias !== window.BINGO_CONFIG.mi_alias) {
+                Swal.fire({
+                    title: '¡ALGUIEN GRITÓ BINGO!',
+                    html: `
+                        <div class="mt-3">
+                            <i class="fas fa-bullhorn fa-3x text-warning mb-3 animate__animated animate__tada animate__infinite"></i>
+                            <p class="fs-5">El jugador <strong class="text-success">${datos.alias || 'Desconocido'}</strong> ha reclamado BINGO con el cartón <strong>${datos.codigo || 'N/A'}</strong>.</p>
+                            <p class="text-muted small">El administrador está verificando el cartón. ¡No cierres la pestaña!</p>
+                        </div>
+                    `,
+                    icon: 'warning',
+                    background: '#1E1B4B', 
+                    color: '#ffffff',
+                    confirmButtonColor: '#ffc107',
+                    confirmButtonText: '<i class="fas fa-check text-dark"></i> Entendido',
+                    allowOutsideClick: false,
+                    backdrop: `rgba(0,0,0,0.8)`
+                });
+            }
+        }
         
         if (datos.evento === 'nueva_bola') {
             const numero = datos.numero;
