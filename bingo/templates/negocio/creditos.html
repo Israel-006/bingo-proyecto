@@ -13,6 +13,10 @@
             </div>
             
             <div class="text-end d-flex gap-2 align-items-center">
+                <!-- NUEVO: Botón de contacto -->
+                <a href="{% url 'inicio' %}#contactos" class="btn btn-outline-info shadow-sm">
+                    <i class="fas fa-headset me-1"></i> Contáctate con nosotros
+                </a>
                 <a href="{% url 'perfil' %}" class="btn btn-outline-secondary shadow-sm">
                     <i class="fas fa-arrow-left me-1"></i> Volver al Perfil
                 </a>
@@ -149,6 +153,18 @@
 
                     <h6 class="mt-3 mb-2 text-primary border-bottom pb-2"><i class="fas fa-users"></i> Referencias de Garantes (Opcional)</h6>
                     <div class="row">
+                        <div class="col-12">
+                            <div class="form-floating mb-3">
+                                <select class="form-select" id="idcuentadestino" name="idcuentadestino" required>
+                                    <option value="EFECTIVO">💵 En Efectivo (Retirar en oficina)</option>
+                                    <option disabled>──────── Mis Cuentas Bancarias ────────</option>
+                                    {% for c in mis_cuentas %}
+                                        <option value="{{ c.idcuentabancaria }}">🏦 {{ c.nombrebanco }} - Cta: {{ c.numerocuenta }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="idcuentadestino">¿Cómo deseas recibir el dinero? *</label>
+                            </div>
+                        </div>
                         <div class="col-md-6">
                             <div class="form-floating mb-3">
                                 <select class="form-select" id="idgarante1" name="idgarante1">

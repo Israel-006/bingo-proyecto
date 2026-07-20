@@ -264,6 +264,14 @@ class Prestamo(models.Model):
         related_name='garantias_secundarias',
         verbose_name="Garante Auxiliar 2 si socio no paga"
     )
+    idcuentadestino = models.ForeignKey(
+        'CuentaBancaria', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        db_column='idcuentadestino',
+        verbose_name="Cuenta para desembolso"
+    )
     montoprestamosolicitado = models.DecimalField(
         max_digits=12, 
         decimal_places=2,

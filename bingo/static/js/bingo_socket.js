@@ -118,14 +118,15 @@ if (BINGO_VAR) {
                     const colorNombre = esMiMensaje ? 'text-primary' : 'text-secondary';
                     const nombreAlias = esMiMensaje ? 'Tú' : payload.usuario;
                     
+                    // 1. Creas la estructura base y le pones una clase (ej. 'mensaje-texto') al div vacío
                     nuevoMensaje.innerHTML = `
                         <span class="small fw-bold ${colorNombre} mb-1 px-1" style="font-size: 0.70rem; letter-spacing: 0.5px;">${nombreAlias}</span>
-                        <div class="px-3 py-2 rounded-4 ${colorFondo}" style="max-width: 90%; word-break: break-word; font-size: 0.9rem; line-height: 1.4;">
-                            ${payload.mensaje}
+                        <div class="px-3 py-2 rounded-4 ${colorFondo} mensaje-texto" style="max-width: 90%; word-break: break-word; font-size: 0.9rem; line-height: 1.4;">
                         </div>
                     `;
-                    cajaChat.appendChild(nuevoMensaje);
-                    cajaChat.scrollTop = cajaChat.scrollHeight;
+
+                    // 2. Inyectas el contenido de forma 100% segura
+                    nuevoMensaje.querySelector('.mensaje-texto').textContent = payload.mensaje;
                 }
             }
             else if (payload.canal === 'presencia') {
@@ -201,10 +202,10 @@ if (BINGO_VAR) {
                 window.bingoSocket.send(JSON.stringify({ 'tipo': 'salida_inmediata' }));
                 window.bingoSocket.close();
             }
-            // Retomamos la navegación luego de 50ms imperceptibles
+            // Retomamos la navegación luego de 200ms imperceptibles
             setTimeout(() => {
                 window.location.href = link.href;
-            }, 50); 
+            }, 200); 
         }
     });
 

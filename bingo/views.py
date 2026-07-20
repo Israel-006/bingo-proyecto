@@ -394,6 +394,52 @@ def dashboard(request):
                 
                 messages.success(request, f"¡Excelente! El premio físico '{partida.premiomaterial}' ha sido marcado como ENTREGADO y sincronizado en bodega.")
                 
+            elif action == 'editar_partida':
+                partida = PartidaBingo.objects.get(idpartidabingo=request.POST.get('id_partida'))
+                partida.nombreronda = request.POST.get('nombreronda')
+                partida.modalidad_victoria = request.POST.get('modalidad_victoria')
+                
+                es_pozo_mayor = request.POST.get('es_pozo_mayor') == 'on'
+                tipo_premio = request.POST.get('tipo_premio') 
+                
+                if es_pozo_mayor:
+                    partida.valorpremio = 0
+                    partida.premiomaterial = '[POZO_MAYOR]'
+                else:
+                    if tipo_premio == 'dinero':
+                        partida.valorpremio = request.POST.get('valorpremio', 0)
+                        partida.premiomaterial = 'Ninguno'
+                    elif tipo_premio == 'fisico':
+                        partida.valorpremio = request.POST.get('valorpremio_fisico', 0)
+                        partida.premiomaterial = request.POST.get('premiomaterial', 'Ninguno')
+                    elif tipo_premio == 'regalos':
+                        regalos_ids = request.POST.getlist('regalos_ids')
+                        regalos_seleccionados = Regalo.objects.filter(idregalo__in=regalos_ids)
+                        
+                        partida.valorpremio = sum(r.valorregalo for r in regalos_seleccionados) if regalos_seleccionados else 0
+                        nombres_regalos = [r.nombreregalo for r in regalos_seleccionados]
+                        partida.premiomaterial = " + ".join(nombres_regalos) if nombres_regalos else 'Regalos Sorpresa'
+                        
+                        # Liberamos los regalos viejos que tenía esta ronda
+                        Regalo.objects.filter(idpartida=partida).update(estadoregalo='Acumulado', idpartida=None, fechaultimaactualizacion=timezone.now())
+                        # Enlazamos los nuevos
+                        for r_id in regalos_ids:
+                            regalo = Regalo.objects.filter(idregalo=r_id).first()
+                            if regalo:
+                                regalo.estadoregalo = 'Sorteado'
+                                regalo.fechaultimaactualizacion = timezone.now()
+                                regalo.idpartida = partida
+                                regalo.save()
+                    else:
+                        partida.valorpremio = request.POST.get('valorpremio', 0)
+                        partida.premiomaterial = request.POST.get('premiomaterial', 'Ninguno')
+                        
+                    if not partida.valorpremio or str(partida.valorpremio).strip() == '': partida.valorpremio = 0
+                    if not partida.premiomaterial or str(partida.premiomaterial).strip() == '': partida.premiomaterial = 'Ninguno'
+                
+                partida.save()
+                messages.success(request, f"¡Ronda '{partida.nombreronda}' actualizada correctamente!")
+
             elif action == 'eliminar_partida':
                 PartidaBingo.objects.get(idpartidabingo=request.POST.get('id_partida')).delete()
                 messages.success(request, "Ronda eliminada de forma segura.")
@@ -884,35 +930,31 @@ def ahorro(request):
         # ==============================================================
         if action == 'registrar_ahorro':
             monto_ahorro = request.POST.get('monto_ahorro')
-            cuenta_destino_texto = request.POST.get('cuenta_destino') # Leemos el input de texto libre
+            id_metodo_pago = request.POST.get('idmetodopago')
             imagen_comprobante = request.FILES.get('comprobanteahorro')
             
             try:
                 monto = float(monto_ahorro)
-                
                 bingo_vinculado = Bingo.objects.exclude(estadobingo__in=['Finalizado', 'Cancelado']).first()
                 
-                if cuenta_destino_texto and monto > 0 and imagen_comprobante:
-                    
-                    # MAGIA: Convertimos el texto del input en un Metodo de Pago dinámico
-                    metodo_obj, _ = MetodoPago.objects.get_or_create(
-                        nombremetodopago=cuenta_destino_texto.strip().title(),
-                        defaults={'descripcionmetodopago': 'Registrado por el socio', 'estadometodopago': 'Activo'}
-                    )
-                    
+                # Ya no creamos cuentas fantasma, buscamos el método oficial de la cooperativa
+                metodo_obj = MetodoPago.objects.filter(idmetodopago=id_metodo_pago).first()
+                
+                if metodo_obj and monto > 0 and imagen_comprobante:
                     Ahorro.objects.create(
                         idsocio=socio,
                         idbingo=bingo_vinculado, 
-                        idmetodopago=metodo_obj, # Guardamos el objeto generado dinámicamente
+                        idmetodopago=metodo_obj, # <-- Vinculamos la llave foránea
                         tipoahorro='Voluntario',
                         montoahorro=monto,
                         comprobanteahorro=imagen_comprobante,
                         fechaahorro=timezone.now(),
-                        estadoahorro='Pendiente' 
+                        estadoahorro='Pendiente',
+                        origenahorro='Directo'
                     )
                     messages.success(request, "¡Tu depósito ha sido reportado exitosamente! Espera la confirmación del administrador.")
                 else:
-                    messages.error(request, "Faltan datos en el formulario. Asegúrate de adjuntar el comprobante y escribir la cuenta destino.")
+                    messages.error(request, "Faltan datos en el formulario. Asegúrate de adjuntar el comprobante y seleccionar la cuenta destino.")
             except ValueError:
                 messages.error(request, "El formato del monto ingresado es incorrecto.")
                 
@@ -948,6 +990,7 @@ def ahorro(request):
         'socio': socio,
         'historial_ahorros': historial_ahorros,
         'total_ahorrado': total_ahorrado,
+        'metodos_pago': MetodoPago.objects.filter(estadometodopago='Activo')
     }
     return render(request, 'cuentas/ahorro.html', contexto)
 
@@ -969,17 +1012,12 @@ def aporte_y_regalos(request):
             id_bingo = request.POST.get('id_bingo')
             numero_semana = request.POST.get('numero_semana')
             monto_pagado = request.POST.get('monto_pagado')
-            cuenta_destino_texto = request.POST.get('cuenta_destino') # Ahora recibimos texto libre
+            id_metodo_pago = request.POST.get('idmetodopago')
             comprobante = request.FILES.get('comprobanteaporte')
 
-            if id_bingo and numero_semana and monto_pagado and cuenta_destino_texto and comprobante:
+            if id_bingo and numero_semana and monto_pagado and id_metodo_pago and comprobante:
                 bingo_obj = get_object_or_404(Bingo, pk=id_bingo)
-                
-                # MAGIA: Convertimos el texto del socio en un Metodo de Pago dinámico
-                metodo_obj, _ = MetodoPago.objects.get_or_create(
-                    nombremetodopago=cuenta_destino_texto.strip().title(),
-                    defaults={'descripcionmetodopago': 'Registrado por el socio', 'estadometodopago': 'Activo'}
-                )
+                metodo_obj = get_object_or_404(MetodoPago, pk=id_metodo_pago) # <-- Validamos el objeto
                 
                 aporte_obj, creado = AporteSemanal.objects.get_or_create(
                     idsocio=socio_obj,
@@ -987,7 +1025,7 @@ def aporte_y_regalos(request):
                     numerosemana=numero_semana,
                     defaults={
                         'montoaporte': Decimal(str(monto_pagado)),
-                        'idmetodopago': metodo_obj,
+                        'idmetodopago': metodo_obj, # <-- Inyectamos la relación real
                         'comprobanteaporte': comprobante,
                         'estadoaporte': 'En Revision',
                         'fechaplanificadadada': timezone.now()
@@ -1049,6 +1087,7 @@ def aporte_y_regalos(request):
         'historial_aportes': historial_aportes,
         'mis_regalos': mis_regalos,
         'bingos_activos': bingos_activos,
+        'metodos_pago': MetodoPago.objects.filter(estadometodopago='Activo')
     }
     return render(request, 'cuentas/aporte_y_regalos.html', context)
 
@@ -1098,10 +1137,18 @@ def creditos(request):
                     
                     garante1_obj = Socio.objects.filter(idsocio=idgarante1).first() if idgarante1 else None
                     garante2_obj = Socio.objects.filter(idsocio=idgarante2).first() if idgarante2 else None
+
+                    # === MAGIA NUEVA: Leer método de desembolso ===
+                    id_cuenta_destino = request.POST.get('idcuentadestino')
+                    cuenta_obj = None
+                    if id_cuenta_destino and id_cuenta_destino != 'EFECTIVO':
+                        cuenta_obj = CuentaBancaria.objects.filter(idcuentabancaria=id_cuenta_destino).first()
+                    # ==============================================
                     
                     # ⚠️ IMPORTANTE: Ajusta estos nombres si tu modelo usa 'montoprestamo' o 'saldovivoprestamo'
                     Prestamo.objects.create(
                         idsocio=socio,
+                        idcuentadestino=cuenta_obj,
                         idgarante1=garante1_obj,
                         idgarante2=garante2_obj,
                         montoprestamosolicitado=monto, # Revisa si es montoprestamo
@@ -1124,15 +1171,119 @@ def creditos(request):
             # Es mejor redirigir a la misma página de créditos para ver el cambio reflejado inmediatamente
             return redirect('creditos')
 
+    mis_cuentas = CuentaBancaria.objects.filter(idsocio=socio, estadocuenta='Activo')
+
     contexto = {
         'socio': socio,
         'mis_prestamos': mis_prestamos,
-        'lista_socios': lista_socios
+        'lista_socios': lista_socios,
+        'mis_cuentas': mis_cuentas
     }
     return render(request, 'negocio/creditos.html', contexto)
 
-def metodos_pago(request): return render(request, 'negocio/metodos_pago.html')
-def pago(request): return render(request, 'negocio/pago.html')
+@login_required
+def metodos_pago(request):
+    """
+    Endpoint de procesamiento para los métodos de pago.
+    Recibe las peticiones del dashboard, ejecuta la acción en la BD y redirige.
+    """
+    # Barrera de seguridad: Solo administradores pueden gestionar esto
+    if not request.user.is_staff:
+        messages.error(request, "Acceso denegado.")
+        return redirect('inicio')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'crear_metodo':
+            nombre = request.POST.get('nombremetodopago')
+            descripcion = request.POST.get('descripcionmetodopago')
+            numero_cuenta = request.POST.get('urlmetodopago')
+            
+            if nombre and numero_cuenta:
+                MetodoPago.objects.create(
+                    nombremetodopago=nombre,
+                    descripcionmetodopago=descripcion,
+                    urlmetodopago=numero_cuenta,
+                    estadometodopago='Activo' # Guardado como texto según tu BD
+                )
+                messages.success(request, "¡Nuevo método de pago agregado exitosamente a la cooperativa!")
+            else:
+                messages.error(request, "Faltan datos obligatorios para registrar el método.")
+        
+        elif action == 'eliminar_metodo':
+            id_metodo = request.POST.get('id_metodo')
+            metodo = MetodoPago.objects.filter(idmetodopago=id_metodo).first()
+            if metodo:
+                metodo.delete()
+                messages.success(request, "El método de pago fue eliminado de forma segura.")
+        
+    # Siempre redirigimos de vuelta a la central de mando
+    return redirect('dashboard')
+
+@login_required
+def pago(request):
+    """
+    Vista para que el Socio reporte o registre un pago realizado a sus préstamos.
+    """
+    socio = Socio.objects.filter(cisocio=request.user.username).first()
+    
+    # 1. Validación de seguridad (Adaptado a tu lógica): Solo socios activos
+    if not socio or socio.estadosocio not in ['Activo', 'Active']:
+        messages.warning(request, "Debes ser un Socio activo para registrar pagos de préstamos.")
+        return redirect('inicio')
+
+    # Préstamos que aún tienen saldo pendiente
+    prestamos_activos = Prestamo.objects.filter(idsocio=socio).exclude(estadoprestamo='Liquidado')
+    metodos_activos = MetodoPago.objects.filter(estadometodopago='Activo')
+    historial_pagos = Pago.objects.filter(idprestamo__idsocio=socio).order_by('-fechapago')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'registrar_pago':
+            # Nombres exactos de los campos del formulario HTML
+            id_prestamo = request.POST.get('id_prestamo')
+            id_metodo = request.POST.get('id_metodo_pago') 
+            monto_pagado = request.POST.get('monto_pagado')
+            
+            # Capturamos la imagen del comprobante
+            imagen_comprobante = request.FILES.get('imagencomprobante')
+
+            try:
+                monto = float(monto_pagado)
+                # Validar que el préstamo pertenece al socio y existe
+                prestamo = prestamos_activos.filter(idprestamo=id_prestamo).first()
+                metodo = metodos_activos.filter(idmetodopago=id_metodo).first()
+
+                # Validamos que exista la imagen y que los montos sean mayores a 0
+                if prestamo and metodo and monto > 0:
+                    if imagen_comprobante:
+                        Pago.objects.create(
+                            idprestamo=prestamo,
+                            idmetodopago=metodo,
+                            montopagado=monto, 
+                            comprobantepago=imagen_comprobante, 
+                            fechapago=timezone.now(),
+                            estadopago='Pendiente' # Queda pendiente de verificación
+                        )
+                        messages.success(request, "Tu comprobante de pago ha sido registrado. Un administrador verificará la transacción pronto.")
+                    else:
+                        messages.error(request, "Es obligatorio subir una foto o captura del comprobante de pago.")
+                else:
+                    messages.error(request, "Datos inválidos. Por favor, verifica el préstamo y el método de pago seleccionado.")
+            except (ValueError, TypeError):
+                messages.error(request, "El monto ingresado no es válido.")
+        
+        return redirect('pago')
+
+    contexto = {
+        'socio': socio,
+        'prestamos_activos': prestamos_activos,
+        'metodos_activos': metodos_activos,
+        'historial_pagos': historial_pagos
+    }
+    return render(request, 'negocio/pago.html', contexto)
 
 # IMPORTANTE: Eliminamos el @login_required de aquí arriba
 def sala_espera(request, id_partida):

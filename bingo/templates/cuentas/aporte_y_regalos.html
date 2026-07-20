@@ -103,7 +103,14 @@
 
                                 <div class="mb-3">
                                     <label class="form-label fw-bold small text-muted">3. ¿A qué cuenta o método depositaste?</label>
-                                    <input type="text" class="form-control shadow-sm" name="cuenta_destino" placeholder="Ej: Banco Pichincha, Efectivo entregado a Geovanny..." required>
+                                    <select class="form-select shadow-sm" name="idmetodopago" required>
+                                        <option value="" disabled selected>-- Selecciona la cuenta de destino --</option>
+                                        {% for m in metodos_pago %}
+                                            {% if m.estadometodopago == 'Activo' %}
+                                                <option value="{{ m.idmetodopago }}">🏦 {{ m.nombremetodopago }} - {{ m.urlmetodopago }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
                                 </div>
 
                                 <div class="mb-4">
