@@ -1113,7 +1113,7 @@
                         <div class="col-12 mb-4">
                             <div class="card-minimalista p-4 h-100 border-start border-success border-4">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="fw-bold text-success mb-0"><i class="fas fa-play-circle me-2"></i>Rondas de Juego Activas (Partidas de Bingo)</h6>
+                                    <h5 class="fw-bold text-success mb-0"><i class="fas fa-play-circle me-2"></i>Rondas de Juego Activas (Partidas de Bingo)</h5>
                                     <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaPartida">
                                         <i class="fas fa-plus"></i> Nueva Ronda
                                     </button>
@@ -1245,7 +1245,7 @@
                         <!-- ========================================== -->
                         <div class="col-12">
                             <div class="card-minimalista p-4 h-100 border-start border-warning border-4">
-                                <h6 class="fw-bold mb-3 text-warning"><i class="fas fa-gift me-2"></i>Catálogo de Premios Físicos de Socios (Bodega)</h6>
+                                <h5 class="fw-bold mb-3 text-warning"><i class="fas fa-gift me-2"></i>Catálogo de Premios Físicos de Socios (Bodega)</h5>
                                 
                                 <div class="input-group input-group-sm mb-3">
                                     <span class="input-group-text bg-body border-end-0"><i class="fas fa-search text-muted"></i></span>
@@ -1293,6 +1293,9 @@
                                                     <div class="text-end">
                                                         <div class="fw-bold text-success fs-6">${{ r.valorregalo }}</div>
                                                         <span class="badge bg-secondary mt-1">Acumulado / En Bodega</span>
+                                                        <button type="button" class="btn btn-sm btn-outline-info mt-2 d-block w-100" data-bs-toggle="modal" data-bs-target="#modalInfoRegalo{{ r.idregalo }}">
+                                                            <i class="fas fa-eye"></i> Info
+                                                        </button>
                                                     </div>
                                                 </div>
                                                 {% endif %}
@@ -1322,6 +1325,9 @@
                                                     <div class="text-end">
                                                         <div class="fw-bold text-success fs-6">${{ r.valorregalo }}</div>
                                                         <span class="badge bg-warning text-body mt-1 border shadow-sm">Sorteado (En Ronda)</span>
+                                                        <button type="button" class="btn btn-sm btn-outline-info mt-2 d-block w-100" data-bs-toggle="modal" data-bs-target="#modalInfoRegalo{{ r.idregalo }}">
+                                                            <i class="fas fa-eye"></i> Info
+                                                        </button>
                                                     </div>
                                                 </div>
                                                 {% endif %}
@@ -2131,11 +2137,11 @@
                             </div>
                             <span class="small text-muted mt-2 d-block">Sin foto de perfil</span>
                         {% endif %}
-                        
+                                                                                        
                         <div class="mt-3">
                             <span class="badge bg-primary text-white w-100 fw-bold fs-6">{{ s.cisocio }}</span>
                         </div>
-                    </div>
+                    </div>                                                                      
 
                     <!-- Columna Derecha: Datos Declarados -->
                     <div class="col-md-8">
@@ -2184,6 +2190,26 @@
                                 <label class="form-label small fw-bold">Dirección Domicilio</label>
                                 <input type="text" class="form-control bg-body-tertiary text-muted border-0 form-control-sm" value="{{ s.direcciondomiciliosocio }}" readonly>
                             </div>
+                        </div>
+                        <!-- 📌 AÑADE ESTO AQUÍ PARA MOSTRAR LAS FOTOS DE LA CÉDULA -->
+                        <div class="text-start mt-3 pt-2 border-top">
+                            <span class="small fw-bold text-muted d-block mb-1">Cédula Frontal:</span>
+                            {% if s.foto_cedula_frontal %}
+                                <a href="{{ s.foto_cedula_frontal.url }}" target="_blank" title="Ver imagen completa">
+                                    <img src="{{ s.foto_cedula_frontal.url }}" class="img-fluid rounded shadow-sm border mb-2" style="max-height: 100px; width: 100%; object-fit: cover;">
+                                </a>
+                            {% else %}
+                                <span class="small text-muted fst-italic d-block mb-2">No adjunta</span>
+                            {% endif %}
+
+                            <span class="small fw-bold text-muted d-block mb-1">Cédula Trasera:</span>
+                            {% if s.foto_cedula_trasera %}
+                                <a href="{{ s.foto_cedula_trasera.url }}" target="_blank" title="Ver imagen completa">
+                                    <img src="{{ s.foto_cedula_trasera.url }}" class="img-fluid rounded shadow-sm border" style="max-height: 100px; width: 100%; object-fit: cover;">
+                                </a>
+                            {% else %}
+                                <span class="small text-muted fst-italic d-block">No adjunta</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

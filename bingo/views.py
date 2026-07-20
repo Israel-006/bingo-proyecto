@@ -255,6 +255,23 @@ def dashboard(request):
                     aporte.save()
                     messages.warning(request, f"Pago rechazado. La semana {aporte.numerosemana} de {aporte.idsocio.primernombresocio} vuelve a estar en estado ATRASADO.")
 
+            # =======================================================
+            # NUEVO: GESTIÓN DE CRÉDITOS (APROBAR / RECHAZAR DESDE EL DASHBOARD)
+            # =======================================================
+            elif action == 'gestionar_credito':
+                prestamo = get_object_or_404(Prestamo, pk=request.POST.get('id_prestamo'))
+                decision = request.POST.get('decision')
+                
+                if decision == 'Aprobar':
+                    prestamo.estadoprestamo = 'Aprobado'
+                    prestamo.save()
+                    messages.success(request, f"¡Crédito #{prestamo.idprestamo} aprobado correctamente para {prestamo.idsocio.primernombresocio}!")
+                
+                elif decision == 'Rechazar':
+                    prestamo.estadoprestamo = 'Rechazado'
+                    prestamo.save()
+                    messages.warning(request, f"El crédito #{prestamo.idprestamo} ha sido rechazado.")
+
             elif action == 'editar_bingo':
                 bingo = Bingo.objects.get(idbingo=request.POST.get('id_bingo'))
                 bingo.idunidad_venta = get_object_or_404(UnidadMonetaria, idunidadmonetaria=request.POST.get('idunidad_venta'))
