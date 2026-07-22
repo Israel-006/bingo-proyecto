@@ -10,7 +10,7 @@ from .models import (
 from .services import  generar_lote_cartones, actualizar_avatar_perfil, validar_carton_hibrido
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.db.models import Sum, Q, Avg
+from django.db.models import Sum, Q, Avg, F
 from django.db.models.deletion import ProtectedError
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, date, timedelta
@@ -844,7 +844,16 @@ def mis_cartones(request):
 
 @login_required
 def descargar_cartones_pdf(request, id_bingo):
+    """
+    Vista protegida que procesa una solicitud POST para generar y previsualizar 
+    en formato PDF los cartones de bingo seleccionados por el jugador.
+    Parsea las matrices numéricas de cada cartón, renderiza una plantilla HTML 
+    especial y utiliza xhtml2pdf para la conversión a documento PDF de forma 'inline'.
+    """
     if request.method == 'POST':
+        # ==========================================================================================
+        # 1. IDENTIFICACIÓN Y VALIDACIÓN DEL JUGADOR
+        # ==========================================================================================
         jugador = Jugador.objects.filter(cedulaidentidadjugador=request.user.username).first()
         if not jugador:
             messages.error(request, "Perfil no encontrado.")
@@ -1493,6 +1502,7 @@ def dashboard(request):
                     messages.success(request, f"⚡ Inyección Masiva: Se añadieron {monto} Puntos (Saldo Virtual) a {len(ids_lista)} jugadores.")
                 else:
                     messages.error(request, "Parámetro de saldo no reconocido.")
+
             elif action == 'crear_plataforma':
                 estado_plat = True if request.POST.get('estadoplataforma') == 'on' else False
                 PlataformaJuego.objects.create(nombreplataforma=request.POST.get('nombreplataforma'), urlplataforma=request.POST.get('urlplataforma'), descripcionplataforma=request.POST.get('descripcionplataforma'), contactoplataforma=request.POST.get('contactoplataforma'), estadoplataforma=estado_plat, fechaadquisicionlicencia=request.POST.get('fechaadquisicionlicencia') or None, fechavencimientolicencia=request.POST.get('fechavencimientolicencia') or None, logoplataforma=request.FILES.get('logoplataforma'))
