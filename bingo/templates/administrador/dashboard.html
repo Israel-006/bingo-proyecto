@@ -336,11 +336,14 @@
 
                                 <div class="tab-content" id="pills-tabContent">
                                     <div class="tab-pane fade show active" id="pills-prestamos" role="tabpanel">
-                                        <div class="mb-3">
-                                            <div class="input-group input-group-sm">
+                                        <div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
+                                            <div class="input-group input-group-sm w-auto flex-grow-1">
                                                 <span class="input-group-text bg-body-tertiary border"><i class="fas fa-search text-muted"></i></span>
                                                 <input type="text" id="search-prestamo" class="form-control bg-body border" placeholder="Buscar por socio o garante..." onkeyup="filtrarPrestamos()">
                                             </div>
+                                            <button class="btn btn-sm btn-outline-primary shadow-sm fw-bold" data-active="false" onclick="toggleEstadoFiltro('table-prestamos', 'En Curso', this)">En Curso</button>
+                                            <button class="btn btn-sm btn-outline-secondary shadow-sm fw-bold" data-active="false" onclick="toggleEstadoFiltro('table-prestamos', 'Liquidado', this)">Liquidado</button>
+                                            <button class="btn btn-sm btn-outline-info shadow-sm fw-bold" data-active="false" onclick="toggleEstadoFiltro('table-prestamos', 'Solicitado', this)">Solicitado</button>
                                         </div>
                                         <div class="table-responsive animate__animated animate__fadeInDown">
                                             <table class="table align-middle table-sm" id="table-prestamos" style="font-size: 0.85rem;">
@@ -356,7 +359,7 @@
                                                 </thead>
                                                 <tbody>
                                                     {% for p in prestamos %}
-                                                    <tr data-busqueda="{{ p.idsocio.primernombresocio|lower }} {{ p.idsocio.primerapellidosocio|lower }}">
+                                                    <tr data-busqueda="{{ p.idsocio.primernombresocio|lower }} {{ p.idsocio.primerapellidosocio|lower }}" data-estado="{{ p.estadoprestamo }}">
                                                         <td>
                                                             <div class="fw-bold text-body"><i class="fas fa-user text-primary me-1"></i> {{ p.idsocio.primernombresocio }} {{ p.idsocio.primerapellidosocio }}</div>
                                                             <div class="small text-muted font-monospace mt-1">Sol: {{ p.fechasolicitud|date:"d/m/y" }} | Venc: {{ p.fechavencimiento|date:"d/m/y" }}</div>
@@ -422,6 +425,22 @@
                                             <div class="input-group input-group-sm">
                                                 <span class="input-group-text bg-body-tertiary border"><i class="fas fa-search text-muted"></i></span>
                                                 <input type="text" id="search-pago" class="form-control bg-body border" placeholder="Buscar por referencia, socio o banco..." onkeyup="filtrarPagos()">
+                                                <div id="btn-masivo-pago-checkbox" class="mb-3 d-none animate__animated animate__fadeIn">
+                                                    <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Aprobar TODAS las amortizaciones seleccionadas?');">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="action" value="gestionar_transaccion">
+                                                        <input type="hidden" name="decision" value="Aprobar">
+                                                        <input type="hidden" name="id_pago" id="hidden-ids-pago-checkbox">
+                                                        <button type="submit" class="btn btn-sm btn-success fw-bold shadow-sm"><i class="fas fa-check-double me-1"></i> Aprobar Seleccionados</button>
+                                                    </form>
+                                                    <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Rechazar TODAS las amortizaciones seleccionadas?');">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="action" value="gestionar_transaccion">
+                                                        <input type="hidden" name="decision" value="Rechazar">
+                                                        <input type="hidden" name="id_pago" id="hidden-ids-pago-checkbox-rechazo">
+                                                        <button type="submit" class="btn btn-sm btn-danger fw-bold shadow-sm"><i class="fas fa-times me-1"></i> Rechazar Seleccionados</button>
+                                                    </form>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="table-responsive animate__animated animate__fadeInDown">
@@ -433,6 +452,7 @@
                                                         <th>Monto / Canal Receptivo</th>
                                                         <th>Estado</th>
                                                         <th class="text-end">Acciones</th>
+                                                        <th style="width: 40px;"><input type="checkbox" onclick="toggleSelectAllGeneric(this, 'pago-checkbox')"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -477,6 +497,7 @@
                                                                 <button type="submit" class="btn btn-sm btn-danger border-0 p-1 px-2" title="Rechazar"><i class="fas fa-times"></i></button>
                                                             </form>
                                                         </td>
+                                                        <td><input type="checkbox" class="pago-checkbox" value="{{ pago.idpago }}" onclick="actualizarBotonMasivoGeneric('pago-checkbox')"></td>
                                                     </tr>
                                                     {% empty %}
                                                     <tr class="no-data"><td colspan="5" class="text-center py-4 text-muted">No hay amortizaciones en cola.</td></tr>
@@ -497,12 +518,45 @@
                                     <h5 class="fw-bold mb-0 text-info">
                                         <i class="fas fa-piggy-bank me-2"></i>Fondos de Ahorro
                                     </h5>
-                                    <a href="{% url 'reporte_liquidacion_excel' %}" class="btn btn-sm btn-info text-white shadow-sm fw-bold">
-                                        <i class="fas fa-file-csv me-1"></i> Liquidación Fin de Año (Excel)
-                                    </a>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-warning shadow-sm fw-bold me-2" data-active="false" onclick="toggleEstadoFiltro('table-ahorros', 'Pendiente', this)">
+                                            <i class="fas fa-filter me-1"></i> Por Validar
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger shadow-sm fw-bold me-2" data-active="false" onclick="toggleEstadoFiltro('table-ahorros', 'Retirar', this)">
+                                            <i class="fas fa-hand-holding-usd me-1"></i> Retiros
+                                        </button>
+                                        <a href="{% url 'reporte_liquidacion_excel' %}" class="btn btn-sm btn-info text-white shadow-sm fw-bold">
+                                            <i class="fas fa-file-csv me-1"></i> Liquidación Fin de Año (Excel)
+                                        </a>
+                                    </div>
                                 </div>
+                                
+                                <!-- NUEVO: Buscador por cédula o nombre -->
+                                <div class="input-group input-group-sm mb-3">
+                                    <span class="input-group-text bg-body border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                    <input type="text" id="search-ahorros-cedula" class="form-control bg-body border-start-0" placeholder="Buscar por número de cédula o nombre del socio..." onkeyup="filtrarAhorrosCedula()">
+                                </div>
+
+                                <div id="btn-masivo-ahorro-checkbox" class="mb-3 d-none animate__animated animate__fadeIn">
+                                    <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Aprobar TODOS los depósitos seleccionados?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="gestionar_ahorro">
+                                        <input type="hidden" name="decision" value="Aprobar">
+                                        <input type="hidden" name="id_ahorro" id="hidden-ids-ahorro-checkbox">
+                                        <button type="submit" class="btn btn-sm btn-success fw-bold shadow-sm"><i class="fas fa-check-double me-1"></i> Acreditar Seleccionados</button>
+                                    </form>
+                                    
+                                    <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Rechazar TODOS los depósitos seleccionados?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="gestionar_ahorro">
+                                        <input type="hidden" name="decision" value="Rechazar">
+                                        <input type="hidden" name="id_ahorro" id="hidden-ids-ahorro-checkbox-rechazo">
+                                        <button type="submit" class="btn btn-sm btn-danger fw-bold shadow-sm"><i class="fas fa-times me-1"></i> Rechazar Seleccionados</button>
+                                    </form>
+                                </div>
+
                                 <div class="table-responsive animate__animated animate__fadeInDown">
-                                    <table class="table align-middle table-sm" style="font-size: 0.85rem;">
+                                    <table class="table align-middle table-sm" id="table-ahorros" style="font-size: 0.85rem;">
                                         <thead class="bg-body-tertiary border-bottom">
                                             <tr class="text-secondary small text-uppercase">
                                                 <th>Fecha / Origen</th>
@@ -511,11 +565,14 @@
                                                 <th>Monto / Cuenta Destino</th>
                                                 <th>Estado</th>
                                                 <th class="text-end">Acciones</th>
+                                                <th style="width: 40px;"><input type="checkbox" onclick="toggleSelectAllGeneric(this, 'ahorro-checkbox')"></th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {% for a in ahorros %}
-                                            <tr>
+                                            <tr data-estado="{% if a.estadoahorro == 'Pendiente' and a.montoahorro < 0 %}Retirar{% else %}{{ a.estadoahorro }}{% endif %}" 
+                                                data-cedula="{{ a.idsocio.cisocio }}" 
+                                                data-nombre="{{ a.idsocio.primernombresocio|lower }} {{ a.idsocio.primerapellidosocio|lower }}">
                                                 <td>
                                                     <div class="small text-muted fw-bold">{{ a.fechaahorro|date:"d/m/y H:i" }}</div>
                                                     <div class="text-primary small mt-1"><i class="fas fa-sitemap"></i> {{ a.origenahorro|default:"Directo" }}</div>
@@ -527,9 +584,15 @@
                                                     <div class="small text-muted mt-1"><i class="fas fa-university me-1"></i> {{ a.idmetodopago.nombremetodopago|default:"Efectivo" }}</div>
                                                 </td>
                                                 <td>
-                                                    <span class="badge {% if a.estadoahorro == 'Acreditado' %}bg-success{% elif a.estadoahorro == 'Pendiente' %}bg-warning{% else %}bg-danger{% endif %}">
-                                                        {{ a.estadoahorro }}
-                                                    </span>
+                                                    {% if a.estadoahorro == 'Retirar' or a.estadoahorro == 'Pendiente' and a.montoahorro < 0 %}
+                                                        <span class="badge bg-warning text-dark shadow-sm">Pendiente</span>
+                                                    {% elif a.estadoahorro == 'Pendiente' %}
+                                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                                    {% elif a.estadoahorro == 'Acreditado' %}
+                                                        <span class="badge bg-success">Acreditado</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">{{ a.estadoahorro }}</span>
+                                                    {% endif %}
                                                 </td>
                                                 <td class="text-end text-nowrap">
                                                     {% if a.comprobanteahorro %}
@@ -538,7 +601,21 @@
                                                         </button>
                                                     {% endif %}
 
-                                                    {% if a.estadoahorro == 'Pendiente' %}
+                                                    <!-- Lógica blindada: Muestra botones SOLO si está pendiente de retirar -->
+                                                    {% if a.estadoahorro == 'Retirar' or a.estadoahorro == 'Pendiente' and a.montoahorro < 0 %}
+                                                        <button class="btn btn-sm btn-success border-0 p-1 px-2 me-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRetiro{{ a.idahorro }}" title="Procesar Retiro">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                        <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Rechazar esta solicitud de retiro?');">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="action" value="procesar_retiro">
+                                                            <input type="hidden" name="id_ahorro" value="{{ a.idahorro }}">
+                                                            <input type="hidden" name="decision" value="Rechazar">
+                                                            <button type="submit" class="btn btn-sm btn-danger border-0 p-1 px-2 shadow-sm" title="Rechazar"><i class="fas fa-times"></i></button>
+                                                        </form>
+                                                    
+                                                    <!-- Si es un depósito a favor pendiente normal -->
+                                                    {% elif a.estadoahorro == 'Pendiente' and a.montoahorro > 0 %}
                                                         <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Aprobar esta transacción en la libreta?');">
                                                             {% csrf_token %}
                                                             <input type="hidden" name="action" value="gestionar_ahorro">
@@ -555,9 +632,15 @@
                                                         </form>
                                                     {% endif %}
                                                 </td>
+                                                <td>
+                                                    <!-- Solo muestra el checkbox masivo si es un depósito positivo pendiente -->
+                                                    {% if a.estadoahorro == 'Pendiente' and a.montoahorro > 0 %}
+                                                    <input type="checkbox" class="ahorro-checkbox" value="{{ a.idahorro }}" onclick="actualizarBotonMasivoGeneric('ahorro-checkbox')">
+                                                    {% endif %}
+                                                </td>
                                             </tr>
                                             {% empty %}
-                                            <tr><td colspan="6" class="text-center py-4 text-muted">Aún no hay fondos de ahorro registrados.</td></tr>
+                                            <tr><td colspan="7" class="text-center py-4 text-muted">Aún no hay fondos de ahorro registrados.</td></tr>
                                             {% endfor %}
                                         </tbody>
                                     </table>
@@ -570,6 +653,15 @@
                         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 border-bottom pb-3">
                             <h5 class="fw-bold mb-0 text-warning"><i class="fas fa-vault me-2 text-dark"></i>Auditoría de Aportes (Control de Caja)</h5>
                             <div>
+                                <button class="btn btn-sm btn-outline-primary shadow-sm fw-bold me-2" data-bs-toggle="modal" data-bs-target="#modalAperturarAporte">
+                                    <i class="fas fa-folder-open me-1"></i> Aperturar
+                                </button>
+                                <button class="btn btn-sm btn-outline-success shadow-sm fw-bold me-2" data-active="false" onclick="toggleEstadoFiltro('table-aportes-dashboard', 'Al Dia', this)">
+                                    <i class="fas fa-check-circle me-1"></i> Al Día
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger shadow-sm fw-bold me-2" data-active="false" onclick="toggleEstadoFiltro('table-aportes-dashboard', 'Atrasado', this)">
+                                    <i class="fas fa-times-circle me-1"></i> Atrasados
+                                </button>
                                 <button class="btn btn-sm btn-outline-warning shadow-sm fw-bold me-2" data-active="false" onclick="toggleEstadoFiltro('table-aportes-dashboard', 'En Revision', this)">
                                     <i class="fas fa-filter me-1"></i> Por Validar
                                 </button>
@@ -583,17 +675,46 @@
                         </div>
 
                         <div class="row g-2 mb-3 bg-body-tertiary p-2 rounded border">
-                            <div class="col-md-5">
-                                <label class="small fw-bold text-muted mb-1"><i class="fas fa-user me-1"></i> Socio o Cédula</label>
+                            <div class="col-md-3">
+                                <label class="small fw-bold text-muted mb-1"><i class="fas fa-user me-1"></i> Socio / Cédula</label>
                                 <input type="text" id="filtro-socio-aporte" class="form-control form-control-sm border" placeholder="Buscar..." onkeyup="filtrarAportesDashboard()">
                             </div>
-                            <div class="col-md-5">
-                                <label class="small fw-bold text-muted mb-1"><i class="fas fa-bullhorn me-1"></i> Evento de Bingo</label>
-                                <input type="text" id="filtro-bingo-aporte" class="form-control form-control-sm border" placeholder="Título del bingo..." onkeyup="filtrarAportesDashboard()">
+                            <div class="col-md-3">
+                                <label class="small fw-bold text-muted mb-1"><i class="fas fa-bullhorn me-1"></i> Bingo</label>
+                                <input type="text" id="filtro-bingo-aporte" class="form-control form-control-sm border" placeholder="Título..." onkeyup="filtrarAportesDashboard()">
                             </div>
                             <div class="col-md-2">
                                 <label class="small fw-bold text-muted mb-1"><i class="fas fa-calendar-week me-1"></i> Semana</label>
                                 <input type="number" id="filtro-semana-aporte" class="form-control form-control-sm border" placeholder="Nº" min="1" onkeyup="filtrarAportesDashboard()" onchange="filtrarAportesDashboard()">
+                            </div>
+                            <!-- FILTRO DE AÑO (Dinámico desde la BD) -->
+                            <div class="col-md-2">
+                                <label class="small fw-bold text-muted mb-1"><i class="fas fa-calendar me-1"></i> Año</label>
+                                <select id="filtro-anio-aporte" class="form-select form-select-sm border" onchange="filtrarAportesDashboard()">
+                                    <option value="">Todos</option>
+                                    {% for anio in anios_aportes %}
+                                        <option value="{{ anio }}">{{ anio }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <!-- FILTRO DE MES (12 Meses fijos) -->
+                            <div class="col-md-2">
+                                <label class="small fw-bold text-muted mb-1"><i class="fas fa-calendar-alt me-1"></i> Mes</label>
+                                <select id="filtro-mes-aporte" class="form-select form-select-sm border" onchange="filtrarAportesDashboard()">
+                                    <option value="">Todos</option>
+                                    <option value="01">Enero</option>
+                                    <option value="02">Febrero</option>
+                                    <option value="03">Marzo</option>
+                                    <option value="04">Abril</option>
+                                    <option value="05">Mayo</option>
+                                    <option value="06">Junio</option>
+                                    <option value="07">Julio</option>
+                                    <option value="08">Agosto</option>
+                                    <option value="09">Septiembre</option>
+                                    <option value="10">Octubre</option>
+                                    <option value="11">Noviembre</option>
+                                    <option value="12">Diciembre</option>
+                                </select>
                             </div>
                         </div>
 
@@ -607,6 +728,7 @@
                                         <th>Monto / Método</th>
                                         <th>Estado</th>
                                         <th class="text-end">Acciones</th>
+                                        <th style="width: 40px;"><input type="checkbox" onclick="toggleSelectAllGeneric(this, 'aporte-checkbox')"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -614,6 +736,8 @@
                                     <tr data-socio="{{ ap.idsocio.primernombresocio|lower }} {{ ap.idsocio.primerapellidosocio|lower }} {{ ap.idsocio.cisocio }}" 
                                         data-bingo="{{ ap.idbingo.titulobingo|lower }}" 
                                         data-semana="{{ ap.numerosemana }}"
+                                        data-anio="{{ ap.fechaplanificadadada|date:'Y' }}"
+                                        data-mes="{{ ap.fechaplanificadadada|date:'m' }}"
                                         data-estado="{{ ap.estadoaporte }}">
                                         
                                         <td class="small text-muted fw-bold">{{ ap.fechaplanificadadada|date:"d/m/y" }}</td>
@@ -659,6 +783,11 @@
                                                     <input type="hidden" name="id_aporte" value="{{ ap.pk }}">
                                                     <button type="submit" class="btn btn-sm btn-danger border-0 p-1 px-2" title="Rechazar Pago"><i class="fas fa-times"></i></button>
                                                 </form>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if ap.estadoaporte == 'En Revision' %}
+                                            <input type="checkbox" class="aporte-checkbox" value="{{ ap.pk }}" onclick="actualizarBotonMasivoGeneric('aporte-checkbox')">
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -714,7 +843,10 @@
                                                 </td>
                                                 <td class="fw-bold text-success">${{ t.preciodetarjetarecarga }}</td>
                                                 <td><span class="badge {% if t.estado == 'Activa' %}bg-success-subtle text-success-emphasis{% else %}bg-danger-subtle text-danger{% endif %}">{{ t.estado }}</span></td>
-                                                <td class="text-end">
+                                                <td class="text-end text-nowrap">
+                                                    <button class="btn btn-sm btn-outline-primary border-0 p-1 px-2 me-1" data-bs-toggle="modal" data-bs-target="#modalEditarTarjetaRecarga{{ t.idtarjetarecarga }}" title="Editar Paquete">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
                                                     <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar esta tarjeta?');">
                                                         {% csrf_token %}
                                                         <input type="hidden" name="action" value="eliminar_tarjeta_recarga">
@@ -799,6 +931,15 @@
                                     <button class="btn btn-sm btn-outline-warning shadow-sm fw-bold" data-active="false" onclick="toggleEstadoFiltro('table-recargas', 'Pendiente', this)">
                                         <i class="fas fa-filter me-1"></i> Ver Pendientes
                                     </button>
+                                    <div id="btn-masivo-recarga-checkbox" class="mb-3 d-none animate__animated animate__fadeIn">
+                                        <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Aprobar y pagar TODAS las solicitudes seleccionadas?');">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="gestionar_transaccion">
+                                            <input type="hidden" name="decision" value="Aprobar">
+                                            <input type="hidden" name="id_transaccion" id="hidden-ids-recarga-checkbox">
+                                            <button type="submit" class="btn btn-sm btn-success fw-bold shadow-sm"><i class="fas fa-check-double me-1"></i> Inyectar Saldo Seleccionados</button>
+                                        </form>
+                                    </div>
                                 </div>
                                 <div class="table-responsive animate__animated animate__fadeInDown">
                                     <table class="table align-middle table-sm" id="table-recargas" style="font-size: 0.85rem;">
@@ -810,6 +951,7 @@
                                                 <th>Por Pagar</th>
                                                 <th>Estado</th>
                                                 <th class="text-end">Veredicto</th>
+                                                <th style="width: 40px;"><input type="checkbox" onclick="toggleSelectAllGeneric(this, 'recarga-checkbox')"></th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -842,6 +984,11 @@
                                                         </form>
                                                     {% else %}
                                                         <button class="btn btn-sm btn-outline-secondary border-0 p-1 px-2 opacity-50" disabled><i class="fas fa-lock"></i></button>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if txn.estado == 'Pendiente' %}
+                                                    <input type="checkbox" class="recarga-checkbox" value="{{ txn.idtransaccion }}" onclick="actualizarBotonMasivoGeneric('recarga-checkbox')">
                                                     {% endif %}
                                                 </td>
                                             </tr>
@@ -942,6 +1089,7 @@
                                     <div class="col-md-6">
                                         <label class="form-label small fw-bold">Estado Operativo</label>
                                         <select name="estadobingo" id="in-estado" class="form-select bg-body">
+                                            <option value="Programado (Oculto)">Programado (Oculto)</option>
                                             <option value="Programado">Programado</option>
                                             <option value="En Curso">En Curso</option>
                                             <option value="Finalizado">Finalizado</option>
@@ -1087,8 +1235,22 @@
                                         <td class="text-success fw-bold">
                                             {{ b.idunidad_premio.simbolomoneda|default:"$" }}{{ b.pozo_dinamico_actual|floatformat:2 }}
                                         </td>
-                                        <td><span class="badge bg-body-secondary text-body border">{{ b.estadobingo }}</span></td>
+                                        <td>
+                                            <span class="badge {% if b.estadobingo == 'Programado (Oculto)' %}bg-warning-subtle text-warning-emphasis border border-warning{% else %}bg-body-secondary text-body border{% endif %}">
+                                                {{ b.estadobingo }}
+                                            </span>
+                                        </td>
                                         <td class="text-end">
+                                            {% if b.estadobingo == 'Programado (Oculto)' %}
+                                            <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Deseas publicar este bingo para que sea visible a todos los usuarios?');">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="revelar_bingo">
+                                                <input type="hidden" name="id_bingo" value="{{ b.idbingo }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-warning border-0 p-1 px-2 me-1" title="Publicar / Hacer Visible">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </form>
+                                            {% endif %}
                                             <a href="{% url 'reporte_liquidacion_bingo' b.idbingo %}" class="btn btn-sm btn-outline-success border-0 p-1 px-2" data-bs-toggle="tooltip" title="Exportar Liquidación Contable">
                                                 <i class="fas fa-file-excel"></i>
                                             </a>
@@ -1957,6 +2119,7 @@
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Estado</label>
                             <select name="estadobingo" class="form-select bg-body">
+                                <option value="Programado (Oculto)" {% if b.estadobingo == 'Programado (Oculto)' %}selected{% endif %}>Programado (Oculto)</option>
                                 <option value="Programado" {% if b.estadobingo == 'Programado' %}selected{% endif %}>Programado</option>
                                 <option value="En Curso" {% if b.estadobingo == 'En Curso' %}selected{% endif %}>En Curso</option>
                                 <option value="Finalizado" {% if b.estadobingo == 'Finalizado' %}selected{% endif %}>Finalizado</option>
@@ -3053,12 +3216,215 @@
 </div>
 {% endfor %}
 
+<!-- ========================================== -->
+<!-- MODAL: PROCESAR RETIROS DE AHORRO          -->
+<!-- ========================================== -->
+{% for a in ahorros %}
+    {% if a.estadoahorro == 'Retirar' or a.estadoahorro == 'Pendiente' and a.montoahorro < 0 %}
+    <div class="modal fade text-start" id="modalRetiro{{ a.idahorro }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header bg-dark text-white border-bottom-0 py-3">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-hand-holding-usd text-warning me-2"></i> Procesar Retiro de Socio</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <!-- IMPORTANTE: El form soporta envío de archivos -->
+                <form method="post" action="{% url 'dashboard' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="procesar_retiro">
+                    <input type="hidden" name="id_ahorro" value="{{ a.idahorro }}">
+                    
+                    <div class="modal-body p-4 bg-body-tertiary">
+                        <div class="row g-4">
+                            <!-- Columna Izquierda: Datos del Socio y Transacción -->
+                            <div class="col-md-6">
+                                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user me-1"></i> Datos del Socio</h6>
+                                <p class="mb-1 small"><strong class="text-body">Socio:</strong> {{ a.idsocio.primernombresocio }} {{ a.idsocio.primerapellidosocio }}</p>
+                                <p class="mb-1 small"><strong class="text-body">Cédula:</strong> {{ a.idsocio.cisocio }}</p>
+                                <p class="mb-3 small"><strong class="text-body">Teléfono:</strong> {{ a.idsocio.telefonopersonalsocio }}</p>
+                                
+                                <h6 class="fw-bold text-primary mb-3 mt-4"><i class="fas fa-exchange-alt me-1"></i> Detalle de Transacción</h6>
+                                <!-- Slice:"1:" borra el signo negativo para mostrar el valor a transferir en positivo -->
+                                {% if a.montoahorro < 0 %}
+                                    <p class="mb-3 small fw-bold text-body">Monto a Transferir: <span class="text-danger fs-5">${{ a.montoahorro|stringformat:"s"|slice:"1:" }}</span></p>
+                                {% else %}
+                                    <p class="mb-3 small fw-bold text-body">Monto a Transferir: <span class="text-danger fs-5">${{ a.montoahorro }}</span></p>
+                                {% endif %}
+                                
+                                <div class="bg-white p-3 rounded border border-warning border-opacity-50 shadow-sm mt-3">
+                                    <h6 class="small fw-bold text-muted mb-2"><i class="fas fa-university me-1"></i> Cuentas Destino del Socio</h6>
+                                    {% with a.idsocio.cuentabancaria_set.all as cuentas_socio %}
+                                        {% for c in cuentas_socio %}
+                                            <div class="mb-2">
+                                                <span class="fw-bold text-body">{{ c.nombrebanco }}</span> 
+                                                <span class="badge bg-secondary ms-1">{{ c.tipocuenta }}</span> 
+                                                {% if c.esprincipal %}<span class="badge bg-success ms-1">Principal</span>{% endif %}
+                                                <br><span class="text-primary font-monospace small">{{ c.numerocuenta }}</span>
+                                            </div>
+                                        {% empty %}
+                                            <span class="small text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> El socio no tiene cuentas bancarias registradas. Transferir a un método alternativo o en efectivo.</span>
+                                        {% endfor %}
+                                    {% endwith %}
+                                </div>
+                            </div>
+                            
+                            <!-- Columna Derecha: Evidencia / File Upload -->
+                            <div class="col-md-6 border-start border-2">
+                                <h6 class="fw-bold text-warning mb-3 text-center"><i class="fas fa-upload me-1"></i> Evidencia de Transferencia</h6>
+                                <p class="small text-muted text-center mb-4 px-3">Una vez que le transfieras el dinero al socio, sube aquí la foto del comprobante para que él pueda verla en su libreta.</p>
+                                
+                                <div class="border rounded p-4 text-center bg-white shadow-sm border-warning border-opacity-50">
+                                    <input type="file" name="comprobante_retiro" class="form-control" accept="image/*,application/pdf" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-white border-top py-3 d-flex justify-content-between">
+                        <!-- El botón Rechazar usa formnovalidate para ignorar el 'required' de la imagen -->
+                        <button type="submit" name="decision" value="Rechazar" class="btn btn-outline-danger fw-bold px-4" formnovalidate>
+                            <i class="fas fa-times me-1"></i> Rechazar
+                        </button>
+                        <button type="submit" name="decision" value="Aprobar" class="btn btn-success fw-bold px-4">
+                            <i class="fas fa-check me-1"></i> Validar Transacción
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
+<!-- Modales: Editar Tarjeta Recarga -->
+{% for t in tarjetas_recarga %}
+<div class="modal fade" id="modalEditarTarjetaRecarga{{ t.idtarjetarecarga }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-minimalista border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold text-primary"><i class="fas fa-edit me-2"></i>Editar Paquete de Recarga</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'dashboard' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="editar_tarjeta_recarga">
+                <input type="hidden" name="id_tarjeta" value="{{ t.idtarjetarecarga }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label class="form-label small fw-bold">Nombre del Paquete</label>
+                            <input type="text" name="nombre" class="form-control bg-body" value="{{ t.nombretarjetarecarga }}" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold">Tipo de Saldo</label>
+                            <select name="tiposaldo" class="form-select bg-body">
+                                <option value="Efectivo" {% if t.tiposaldo == 'Efectivo' %}selected{% endif %}>Efectivo ($)</option>
+                                <option value="Virtual" {% if t.tiposaldo == 'Virtual' %}selected{% endif %}>Virtual (Puntos)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-success">Precio a Pagar ($)</label>
+                            <input type="number" step="0.01" min="0" name="precio" class="form-control bg-body fw-bold" value="{{ t.preciodetarjetarecarga }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-primary">Saldo/Puntos a Otorgar</label>
+                            <input type="number" step="0.01" min="0" name="monto" class="form-control bg-body fw-bold" value="{{ t.montotarjetarecarga }}" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Beneficios (Separar con comas)</label>
+                            <textarea name="descripcion" class="form-control bg-body" rows="2" required>{{ t.descripciontarjetarecarga }}</textarea>
+                        </div>
+                        <div class="col-md-6 mt-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="espopular" id="estadoPopEdit{{ t.idtarjetarecarga }}" {% if t.espopular %}checked{% endif %}>
+                                <label class="form-check-label small fw-bold text-warning" for="estadoPopEdit{{ t.idtarjetarecarga }}"><i class="fas fa-fire"></i> ¿Es Popular?</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mt-3">
+                            <label class="form-label small fw-bold">Estado</label>
+                            <select name="estado" class="form-select bg-body form-select-sm">
+                                <option value="Activa" {% if t.estado == 'Activa' %}selected{% endif %}>Activa</option>
+                                <option value="Inactiva" {% if t.estado == 'Inactiva' %}selected{% endif %}>Inactiva</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0 mt-3">
+                    <button type="button" class="btn bg-body-tertiary text-body border" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Modal: Aperturar Mes de Cobros -->
+<div class="modal fade" id="modalAperturarAporte" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 12px;">
+            <!-- Cabecera Azul -->
+            <div class="modal-header bg-primary text-white border-bottom-0" style="border-radius: 12px 12px 0 0; padding: 1rem 1.5rem;">
+                <h5 class="modal-title fw-bold m-0" style="font-size: 1.1rem;"><i class="fas fa-calendar-alt me-2"></i>Aperturar Mes de Cobros</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'dashboard' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="aperturar_mes_cobros">
+                
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label small text-muted mb-1">Mes a Generar</label>
+                            <select name="mes_generar" class="form-select bg-body border rounded-3" required>
+                                <option value="1">Enero</option>
+                                <option value="2">Febrero</option>
+                                <option value="3">Marzo</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Mayo</option>
+                                <option value="6">Junio</option>
+                                <option value="7">Julio</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Septiembre</option>
+                                <option value="10">Octubre</option>
+                                <option value="11">Noviembre</option>
+                                <option value="12">Diciembre</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted mb-1">Año</label>
+                            <input type="number" name="anio_generar" class="form-control bg-body border rounded-3" value="{% now 'Y' %}" min="2024" max="2100" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted mb-1">Día de Corte / Máximo de Pago</label>
+                        <select name="dia_corte" class="form-select bg-body border rounded-3" required>
+                            <option value="0">Lunes</option>
+                            <option value="1">Martes</option>
+                            <option value="2">Miércoles</option>
+                            <option value="3">Jueves</option>
+                            <option value="4">Viernes</option>
+                            <option value="5" selected>Sábado</option>
+                            <option value="6">Domingo</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-top-0 pt-0 pb-4 px-4 d-flex justify-content-center gap-3">
+                    <button type="button" class="btn btn-light border fw-bold text-secondary px-4 shadow-sm" style="border-radius: 8px;" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm" style="border-radius: 8px;">Generar Semanas</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
-    // MAGIA 5: FILTRO COMBINADO PARA APORTES DE CAJA
     function filtrarAportesDashboard() {
         let socio = document.getElementById("filtro-socio-aporte").value.toLowerCase();
         let bingo = document.getElementById("filtro-bingo-aporte").value.toLowerCase();
         let semana = document.getElementById("filtro-semana-aporte").value.toString();
+        let anio = document.getElementById("filtro-anio-aporte").value;
+        let mes = document.getElementById("filtro-mes-aporte").value;
         
         let table = document.getElementById("table-aportes-dashboard");
         let rows = table.getElementsByTagName("tr");
@@ -3067,13 +3433,17 @@
             let dataSocio = rows[i].getAttribute("data-socio") || "";
             let dataBingo = rows[i].getAttribute("data-bingo") || "";
             let dataSemana = rows[i].getAttribute("data-semana") || "";
+            let dataAnio = rows[i].getAttribute("data-anio") || "";
+            let dataMes = rows[i].getAttribute("data-mes") || "";
             
-            // Evaluamos si las 3 condiciones se cumplen simultáneamente
+            // Evaluamos si todas las condiciones se cumplen
             let matchSocio = dataSocio.includes(socio);
             let matchBingo = dataBingo.includes(bingo);
             let matchSemana = semana === "" || dataSemana === semana;
+            let matchAnio = anio === "" || dataAnio === anio;
+            let matchMes = mes === "" || dataMes === mes;
             
-            if (matchSocio && matchBingo && matchSemana) {
+            if (matchSocio && matchBingo && matchSemana && matchAnio && matchMes) {
                 rows[i].style.display = "";
             } else {
                 rows[i].style.display = "none";
@@ -3741,5 +4111,52 @@
             }
         }
     }
+
+function toggleSelectAllGeneric(masterCheck, checkboxClass) {
+    const checkboxes = document.querySelectorAll('.' + checkboxClass);
+    checkboxes.forEach(cb => cb.checked = masterCheck.checked);
+    actualizarBotonMasivoGeneric(checkboxClass);
+}
+
+function actualizarBotonMasivoGeneric(checkboxClass) {
+    const checkboxes = document.querySelectorAll(`.${checkboxClass}:checked`);
+    const btnContainer = document.getElementById(`btn-masivo-${checkboxClass}`);
+    const inputHidden = document.getElementById(`hidden-ids-${checkboxClass}`);
+    const inputHiddenRechazo = document.getElementById(`hidden-ids-${checkboxClass}-rechazo`);
+
+    if (checkboxes.length > 0) {
+        btnContainer.classList.remove('d-none');
+        const ids = Array.from(checkboxes).map(cb => cb.value).join(',');
+        if(inputHidden) inputHidden.value = ids;
+        if(inputHiddenRechazo) inputHiddenRechazo.value = ids;
+    } else {
+        btnContainer.classList.add('d-none');
+        if(inputHidden) inputHidden.value = '';
+        if(inputHiddenRechazo) inputHiddenRechazo.value = '';
+    }
+}
+
+function filtrarAhorrosCedula() {
+        let input = document.getElementById("search-ahorros-cedula").value.toLowerCase().trim();
+        let table = document.getElementById("table-ahorros");
+        if (!table) return;
+        let rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+        for (let i = 0; i < rows.length; i++) {
+            if (rows[i].classList.contains("no-data") || rows[i].cells.length === 1) continue;
+            
+            let cedula = rows[i].getAttribute("data-cedula") || "";
+            let nombre = rows[i].getAttribute("data-nombre") || "";
+            
+            // Filtra exclusivamente por cédula o nombre del socio
+            if (cedula.includes(input) || nombre.includes(input)) {
+                rows[i].style.display = "";
+            } else {
+                rows[i].style.display = "none";
+            }
+        }
+    }
+
+
 </script>
 {% endblock %}

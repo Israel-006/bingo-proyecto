@@ -409,6 +409,7 @@ class Bingo(models.Model):
         ('Presencial', 'Presencial'),
     ]
     ESTADO_BINGO_CHOICES = [
+        ('Programado (Oculto)', 'Programado (Oculto)'),
         ('Programado', 'Programado'),
         ('En Curso', 'En Curso'),
         ('Finalizado', 'Finalizado'),
@@ -501,6 +502,7 @@ class Ahorro(models.Model):
         ('Acreditado', 'Acreditado'),
         ('Pendiente', 'Pendiente'),
         ('Rechazado', 'Rechazado'),
+        ('Retirar', 'Retirar'),
         ('Activo', 'Activo'),
         ('Inactivo', 'Inactivo'),
     ]

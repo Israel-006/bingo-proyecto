@@ -28,7 +28,7 @@ from django.urls import reverse
 
 # ===============================================================================================================================================
 #                                                                   NOTA:
-#                                               Seccion "COMUNES" empieza desde la linea 34
+#                                               Seccion "COMUNES" empieza desde la linea 39
 #                                               Seccion "CUENTAS" empieza desde la linea 
 #                                               Seccion "LOGICA FINANCIERA" empieza desde la linea 
 #                                               Seccion "ADMINISTRADOR" empieza desde la linea 
@@ -229,8 +229,8 @@ def bingo_publico(request):
 def agregar_valoracion(request):    
     """
     Vista protegida para que un usuario autenticado pueda registrar 
-    o actualizar su valoración y comentario sobre la plataforma[cite: 9].
-    Valida que la puntuación se encuentre en el rango permitido (0.0 a 5.0 estrellas)[cite: 9].
+    o actualizar su valoración y comentario sobre la plataforma.
+    Valida que la puntuación se encuentre en el rango permitido (0.0 a 5.0 estrellas).
     """
     # ==========================================================================================
     # 1. PROCESAMIENTO DE LA RESEÑA VÍA POST
@@ -769,57 +769,78 @@ def activar_perfil_juego_socio(request):
 
 @login_required
 def mis_cartones(request):
-    # CORRECCIÓN: Buscamos al jugador por su cédula (username) igual que en el resto del sistema
+    """
+    Vista protegida para que el jugador consulte todos los cartones 
+    que ha adquirido agrupados por su respectivo evento de Bingo.
+    Evalúa de forma inteligente si los cartones pueden ser cambiados 
+    según el estado actual de las rondas de juego.
+    """
+    ## ==========================================================================================
+    # 1. IDENTIFICACIÓN Y VALIDACIÓN DEL JUGADOR
+    # ==========================================================================================
+    # Buscamos al jugador utilizando la cédula almacenada en el username del usuario autenticado
     jugador = Jugador.objects.filter(cedulaidentidadjugador=request.user.username).first()
     
     if not jugador:
         messages.warning(request, "Debes activar tu perfil de juego para ver tus cartones.")
         return redirect('inicio')
-        
+    # ==========================================================================================
+
+    # ==========================================================================================
+    # 2. CONSULTA OPTIMIZADA DE CARTONES ASIGNADOS
+    # ==========================================================================================
+    # Traemos las relaciones de cartones ordenadas del evento más reciente al más antiguo        
     cartones_jugador = CartonPartidaBingo.objects.filter(idjugador=jugador).select_related(
         'idcarton', 'idpartida', 'idpartida__idbingo'
     ).order_by('-idpartida__idbingo__fechaprogramadabingo')
+    # ==========================================================================================
     
-    # ==============================================================
-    # FIX: DEDUPLICADOR DE CARTONES (1 solo cartón visual por Bingo)
-    # ==============================================================
+    # ==========================================================================================
+    # 3. DEDUPLICACIÓN DE CARTONES POR BINGO
+    # ==========================================================================================
+    # Creamos un diccionario organizador para evitar mostrar cartones repetidos por cada ronda
     bingos_dict = {}
     for c in cartones_jugador:
         b_id = c.idpartida.idbingo.idbingo
         if b_id not in bingos_dict:
             bingos_dict[b_id] = {
                 'bingo': c.idpartida.idbingo,
-                'cartones_unicos': {} # Usamos un diccionario para evitar repetidos
+                'cartones_unicos': {} # Diccionario interno para filtrar IDs de cartones duplicados
             }
-        
-        # Guardamos el cartón usando su ID como llave. Si ya existe, se ignora.
+        # Almacenamos el cartón usando su ID como llave única
         carton_id = c.idcarton.idcarton
         if carton_id not in bingos_dict[b_id]['cartones_unicos']:
             bingos_dict[b_id]['cartones_unicos'][carton_id] = c
+    # ==========================================================================================
 
-    # Convertimos de nuevo a lista para la plantilla HTML
+    # ==========================================================================================
+    # 4. EVALUACIÓN DE REGLAS PARA CAMBIO DE CARTÓN
+    # ==========================================================================================
     bingos_agrupados = []
     for b_id, data in bingos_dict.items():
-        # NUEVO: Verificamos si hay alguna ronda en pleno juego/verificación
+        # Verificamos si existe alguna ronda en curso o en proceso de verificación para este bingo
         rondas_en_juego = PartidaBingo.objects.filter(
             idbingo=data['bingo'],
             estadopartida__in=['En Juego', 'Verificando', 'Desempate']
         ).exists()
-        
-        # Se puede cambiar si NO hay rondas en juego y el bingo NO ha terminado
+        # El cambio de cartón solo se permite si NO hay rondas activas y el bingo no ha concluido
         puede_cambiar = not rondas_en_juego and data['bingo'].estadobingo not in ['Finalizado', 'Cancelado']
-
         bingos_agrupados.append({
             'bingo': data['bingo'],
             'cartones': list(data['cartones_unicos'].values()),
             'puede_cambiar': puede_cambiar
         })
+    # ==========================================================================================
         
-    context = {
+    # ==========================================================================================
+    # 5. EMPAQUETADO DE CONTEXTO Y RENDERIZADO
+    # ========================================================================================== 
+    contexto = {
         'bingos_agrupados': bingos_agrupados,
         'jugador': jugador
     }
-    return render(request, 'cuentas/mis_cartones.html', context)
+    return render(request, 'cuentas/mis_cartones.html', contexto)
+    # ==========================================================================================
 
 @login_required
 def descargar_cartones_pdf(request, id_bingo):
@@ -841,7 +862,7 @@ def descargar_cartones_pdf(request, id_bingo):
             idcarton__in=cartones_ids
         ).select_related('idcarton')
 
-        # 1. DEDUPLICACIÓN: Evitamos que el mismo cartón salga varias veces si hay varias rondas
+
         cartones_unicos = {}
         for asig in cartones_asignados:
             if asig.idcarton.idcarton not in cartones_unicos:
@@ -864,13 +885,12 @@ def descargar_cartones_pdf(request, id_bingo):
 
         cartones_procesados = list(cartones_unicos.values())
 
-        # 2. Renderizar y generar PDF
         template = get_template('cuentas/cartones_pdf.html')
         context = {'bingo': bingo, 'jugador': jugador, 'cartones': cartones_procesados}
         html = template.render(context)
 
         response = HttpResponse(content_type='application/pdf')
-        # MAGIA: Cambiamos 'attachment' por 'inline' para que el navegador lo PREVISUALICE
+
         response['Content-Disposition'] = f'inline; filename="Mis_Cartones_{bingo.idbingo}_{jugador.aliasjugador}.pdf"'
         
         pisa_status = pisa.CreatePDF(html, dest=response)
@@ -1115,7 +1135,7 @@ def ahorro(request):
                         idbingo=None,
                         tipoahorro='Voluntario',
                         montoahorro=-monto,
-                        estadoahorro='Pendiente',
+                        estadoahorro='Retirar', # <--- CAMBIO: Nuevo estado exclusivo para retiros
                         fechaahorro=timezone.now(),
                         origenahorro='Retiro Solicitado'
                     )
@@ -1126,7 +1146,6 @@ def ahorro(request):
                 messages.error(request, "Monto de retiro inválido.")
                 
             return redirect('ahorro')
-
     contexto = {
         'socio': socio,
         'historial_ahorros': historial_ahorros,
@@ -1320,7 +1339,7 @@ def pago(request):
             id_prestamo = request.POST.get('id_prestamo')
             id_metodo = request.POST.get('id_metodo_pago') 
             monto_pagado = request.POST.get('monto_pagado')
-            
+            referencia_pago = request.POST.get('numeroreferencia')
             # Capturamos la imagen del comprobante
             imagen_comprobante = request.FILES.get('imagencomprobante')
 
@@ -1337,6 +1356,7 @@ def pago(request):
                             idprestamo=prestamo,
                             idmetodopago=metodo,
                             montopagado=monto, 
+                            numeroreferencia=referencia_pago,
                             comprobantepago=imagen_comprobante, 
                             fechapago=timezone.now(),
                             estadopago='Pendiente' # Queda pendiente de verificación
@@ -1511,22 +1531,33 @@ def dashboard(request):
                     urlvideopromocional=request.FILES.get('urlvideopromocional')
                 )
                 messages.success(request, "¡Jornada de Bingo creada exitosamente!")
+
+            elif action == 'revelar_bingo':
+                bingo_id = request.POST.get('id_bingo')
+                bingo = get_object_or_404(Bingo, idbingo=bingo_id)
+                bingo.estadobingo = 'Programado'
+                bingo.save()
+                messages.success(request, f"¡El bingo '{bingo.titulobingo}' ahora está público y visible para los usuarios!")
             
             elif action == 'gestionar_aporte':
-                # Usamos pk para que Django identifique automáticamente la clave primaria
-                aporte = get_object_or_404(AporteSemanal, pk=request.POST.get('id_aporte'))
+                ids_str = request.POST.get('id_aporte', '')
+                ids_aportes = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
                 decision = request.POST.get('decision')
                 
+                for id_aporte in ids_aportes:
+                    aporte = get_object_or_404(AporteSemanal, pk=id_aporte)
+                    if decision == 'Aprobar':
+                        aporte.estadoaporte = 'Al Dia'
+                        aporte.fechaplanificadadada = timezone.now()
+                        aporte.save()
+                    elif decision == 'Rechazar':
+                        aporte.estadoaporte = 'Atrasado'
+                        aporte.save()
+                        
                 if decision == 'Aprobar':
-                    aporte.estadoaporte = 'Al Dia'
-                    aporte.fechaplanificadadada = timezone.now() # Actualizamos la fecha de validación real
-                    aporte.save()
-                    messages.success(request, f"¡Pago validado! El socio {aporte.idsocio.primernombresocio} ahora está AL DÍA en la Semana {aporte.numerosemana}.")
-                
-                elif decision == 'Rechazar':
-                    aporte.estadoaporte = 'Atrasado' # Lo devolvemos a deuda para que tenga que volver a subirlo
-                    aporte.save()
-                    messages.warning(request, f"Pago rechazado. La semana {aporte.numerosemana} de {aporte.idsocio.primernombresocio} vuelve a estar en estado ATRASADO.")
+                    messages.success(request, f"¡{len(ids_aportes)} aportes validados exitosamente!")
+                else:
+                    messages.warning(request, f"{len(ids_aportes)} aportes marcados como atrasados.")
 
             # =======================================================
             # 1. GESTIÓN DE CRÉDITOS (APROBAR / RECHAZAR)
@@ -1550,37 +1581,106 @@ def dashboard(request):
             # 2. GESTIÓN DE AMORTIZACIONES Y PAGOS POR CUOTAS
             # =======================================================
             elif action == 'gestionar_transaccion':
-                id_pago = request.POST.get('id_pago')
-                id_transaccion = request.POST.get('id_transaccion')
+                id_pago_str = request.POST.get('id_pago', '')
+                id_transaccion_str = request.POST.get('id_transaccion', '')
                 decision = request.POST.get('decision')
 
-                if id_pago:
-                    pago = get_object_or_404(Pago, pk=id_pago)
-                    prestamo = pago.idprestamo
-                    
-                    if decision == 'Aprobar' and pago.estadopago == 'Pendiente':
-                        pago.estadopago = 'Validado'
-                        pago.fechaconfirmacionadmin = timezone.now()
-                        pago.save()
-
-                        # Descontar automáticamente del saldo pendiente
-                        prestamo.saldopendiente -= pago.montopagado
+                if id_pago_str:
+                    ids_pagos = [int(x) for x in id_pago_str.split(',') if x.strip().isdigit()]
+                    for id_pago in ids_pagos:
+                        pago = get_object_or_404(Pago, pk=id_pago)
+                        prestamo = pago.idprestamo
                         
-                        # Lógica de estados por cuotas
-                        if prestamo.saldopendiente <= 0:
-                            prestamo.saldopendiente = Decimal('0.00')
-                            prestamo.estadoprestamo = 'Liquidado'
-                        else:
-                            prestamo.estadoprestamo = 'En Curso'  # Se mantiene pagando en cuotas
+                        if decision == 'Aprobar' and pago.estadopago == 'Pendiente':
+                            pago.estadopago = 'Validado'
+                            pago.fechaconfirmacionadmin = timezone.now()
+                            pago.save()
+                            prestamo.saldopendiente -= pago.montopagado
                             
-                        prestamo.save()
-                        messages.success(request, f"¡Cuota aprobada! Se descontaron ${pago.montopagado} al préstamo #{prestamo.idprestamo}.")
+                            if prestamo.saldopendiente <= 0:
+                                prestamo.saldopendiente = Decimal('0.00')
+                                prestamo.estadoprestamo = 'Liquidado'
+                            else:
+                                prestamo.estadoprestamo = 'En Curso'
+                            prestamo.save()
+                            
+                        elif decision == 'Rechazar' and pago.estadopago == 'Pendiente':
+                            pago.estadopago = 'Rechazado'
+                            pago.fechaconfirmacionadmin = timezone.now()
+                            pago.save()
+                    messages.success(request, f"¡Operación masiva procesada para {len(ids_pagos)} amortizaciones!")
+
+                elif id_transaccion_str:
+                    ids_transacciones = [int(x) for x in id_transaccion_str.split(',') if x.strip().isdigit()]
+                    for id_transaccion in ids_transacciones:
+                        txn = get_object_or_404(TransaccionRecarga, pk=id_transaccion)
+                        if decision == 'Aprobar' and txn.estado == 'Pendiente':
+                            txn.estado = 'Completada'
+                            txn.fechaactualizacion = timezone.now()
+                            jugador_txn = txn.idjugador
+                            if txn.idtarjeta.tiposaldo == 'Efectivo':
+                                jugador_txn.saldocreditojugador += txn.saldo_acreditar
+                            else:
+                                jugador_txn.saldovirtualjugador += txn.saldo_acreditar
+                            jugador_txn.save()
+                            txn.save()
+                        elif decision == 'Rechazar' and txn.estado == 'Pendiente':
+                            txn.estado = 'Rechazada'
+                            txn.fechaactualizacion = timezone.now()
+                            txn.save()
+                    messages.success(request, f"¡Operación masiva procesada para {len(ids_transacciones)} recargas de billetera!")
+
+            elif action == 'aperturar_mes_cobros':
+                mes = int(request.POST.get('mes_generar'))
+                anio = int(request.POST.get('anio_generar'))
+                dia_corte_esperado = int(request.POST.get('dia_corte')) # 0=Lunes, 6=Domingo
+                
+                try:
+                    # Traemos a todos los socios activos de la cooperativa
+                    socios_activos = Socio.objects.filter(estadosocio='Activo')
+                    aportes_a_crear = []
                     
-                    elif decision == 'Rechazar' and pago.estadopago == 'Pendiente':
-                        pago.estadopago = 'Rechazado'
-                        pago.fechaconfirmacionadmin = timezone.now()
-                        pago.save()
-                        messages.warning(request, "La amortización ha sido rechazada.")
+                    # Generamos automáticamente 4 semanas de aportes
+                    for semana_num in range(1, 5):
+                        # Calculamos una fecha base estimada para cada semana del mes
+                        dia_estimado = 1 + (semana_num - 1) * 7
+                        try:
+                            fecha_base = timezone.make_aware(datetime(anio, mes, dia_estimado))
+                        except ValueError:
+                            # Fallback si el día se pasa del fin de mes
+                            fecha_base = timezone.make_aware(datetime(anio, mes, 28))
+                            
+                        # Ajustamos la fecha al "Día de Corte" seleccionado
+                        dias_diferencia = dia_corte_esperado - fecha_base.weekday()
+                        fecha_corte = fecha_base + timedelta(days=dias_diferencia)
+                        
+                        # Generamos los registros de la deuda (Pendiente) para todos los socios
+                        for socio in socios_activos:
+                            # Verificamos que no exista previamente para no duplicar deudas
+                            if not AporteSemanal.objects.filter(
+                                idsocio=socio, 
+                                numerosemana=semana_num, 
+                                fechaplanificadadada__year=anio, 
+                                fechaplanificadadada__month=mes
+                            ).exists():
+                                
+                                aportes_a_crear.append(AporteSemanal(
+                                    idsocio=socio,
+                                    numerosemana=semana_num,
+                                    montoaporte=Decimal('0.00'), # Monto base de deuda
+                                    estadoaporte='Pendiente',
+                                    fechaplanificadadada=fecha_corte
+                                ))
+                    
+                    if aportes_a_crear:
+                        # bulk_create inyecta todo de golpe a la base de datos (más rápido)
+                        AporteSemanal.objects.bulk_create(aportes_a_crear)
+                        messages.success(request, f"¡Éxito! Se generaron las obligaciones de cobro para {mes}/{anio} a todos los socios activos.")
+                    else:
+                        messages.warning(request, f"Las semanas para {mes}/{anio} ya estaban generadas o no hay socios activos en el sistema.")
+                        
+                except Exception as e:
+                    messages.error(request, f"Error al generar el mes de cobros: {str(e)}")
 
             elif action == 'editar_bingo':
                 bingo = Bingo.objects.get(idbingo=request.POST.get('id_bingo'))
@@ -1929,46 +2029,60 @@ def dashboard(request):
                 messages.success(request, "Tarjeta de recarga eliminada del sistema.")
 
             elif action == 'gestionar_ahorro':
-                ahorro = get_object_or_404(Ahorro, pk=request.POST.get('id_ahorro'))
+                ids_str = request.POST.get('id_ahorro', '')
+                ids_ahorros = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
                 decision = request.POST.get('decision')
                 
+                for id_ahorro in ids_ahorros:
+                    ahorro = get_object_or_404(Ahorro, pk=id_ahorro)
+                    if decision == 'Aprobar':
+                        ahorro.estadoahorro = 'Acreditado'
+                        ahorro.fechaultimaactualizacion = timezone.now()
+                        ahorro.save()
+                    elif decision == 'Rechazar':
+                        ahorro.estadoahorro = 'Rechazado'
+                        ahorro.save()
+                        
+                messages.success(request, f"¡Operación masiva procesada para {len(ids_ahorros)} transacciones de ahorro!")
+
+            elif action == 'procesar_retiro':
+                id_ahorro = request.POST.get('id_ahorro')
+                decision = request.POST.get('decision')
+                ahorro = get_object_or_404(Ahorro, pk=id_ahorro)
+                
                 if decision == 'Aprobar':
+                    comprobante = request.FILES.get('comprobante_retiro')
                     ahorro.estadoahorro = 'Acreditado'
                     ahorro.fechaultimaactualizacion = timezone.now()
+                    if comprobante:
+                        ahorro.comprobanteahorro = comprobante
                     ahorro.save()
-                    messages.success(request, f"Depósito de {ahorro.idsocio.primernombresocio} aprobado.")
-                
+                    messages.success(request, f"¡Retiro de {ahorro.idsocio.primernombresocio} procesado y comprobante guardado!")
+                    
                 elif decision == 'Rechazar':
                     ahorro.estadoahorro = 'Rechazado'
                     ahorro.save()
-                    messages.warning(request, "Depósito rechazado.")
-
-
-                elif id_transaccion:
-                    # ==========================================
-                    # 2. GESTIONAR RECARGA DE BILLETERA (JUEGO)
-                    # ==========================================
-                    txn = get_object_or_404(TransaccionRecarga, pk=id_transaccion)
+                    messages.warning(request, "La solicitud de retiro ha sido denegada.")
+            elif action == 'procesar_retiro':
+                id_ahorro = request.POST.get('id_ahorro')
+                decision = request.POST.get('decision')
+                ahorro = get_object_or_404(Ahorro, pk=id_ahorro)
+                
+                if decision == 'Aprobar':
+                    comprobante = request.FILES.get('comprobante_retiro')
+                    ahorro.estadoahorro = 'Acreditado'
+                    ahorro.fechaultimaactualizacion = timezone.now()
+                    if comprobante:
+                        ahorro.comprobanteahorro = comprobante
+                    ahorro.save()
+                    messages.success(request, f"¡Retiro de {ahorro.idsocio.primernombresocio} procesado y comprobante guardado!")
                     
-                    if decision == 'Aprobar' and txn.estado == 'Pendiente':
-                        txn.estado = 'Completada'
-                        txn.fechaactualizacion = timezone.now()
+                elif decision == 'Rechazar':
+                    ahorro.estadoahorro = 'Rechazado'
+                    ahorro.save()
+                    messages.warning(request, "La solicitud de retiro ha sido denegada.")
                         
-                        jugador_txn = txn.idjugador
-                        if txn.idtarjeta.tiposaldo == 'Efectivo':
-                            jugador_txn.saldocreditojugador += txn.saldo_acreditar
-                        else:
-                            jugador_txn.saldovirtualjugador += txn.saldo_acreditar
-                        
-                        jugador_txn.save()
-                        txn.save()
-                        messages.success(request, f"Transacción Aprobada. Se inyectó el saldo a {jugador_txn.aliasjugador} exitosamente.")
-                        
-                    elif decision == 'Rechazar' and txn.estado == 'Pendiente':
-                        txn.estado = 'Rechazada'
-                        txn.fechaactualizacion = timezone.now()
-                        txn.save()
-                        messages.warning(request, "Transacción rechazada y cancelada de forma segura.")
+                messages.success(request, f"¡Operación masiva procesada para {len(ids_ahorros)} transacciones de ahorro!")
         except ProtectedError:
             messages.error(request, "⚠️ ERROR: No puedes eliminar este registro porque hay usuarios o datos vinculados a él.")
         except Exception as e:
@@ -2076,8 +2190,14 @@ def dashboard(request):
         fondo = float(vendidos * pt.idbingo.preciocarton) * 0.75
         pt.idbingo.pozo_dinamico_actual = fondo if fondo > float(pt.idbingo.premiomayor) else float(pt.idbingo.premiomayor)
 
+    anios_disponibles = AporteSemanal.objects.dates('fechaplanificadadada', 'year')
+    anios_lista = sorted([d.year for d in anios_disponibles])
+    if not anios_lista: 
+        anios_lista = [timezone.now().year]
+
     contexto = {
         'total_socios': Socio.objects.count(), 'total_jugadores': Jugador.objects.count(), 'deuda_calle': Prestamo.objects.exclude(estadoprestamo='Liquidado').aggregate(total=Sum('saldopendiente'))['total'] or 0.00,
+        'anios_aportes': anios_lista,
         'bingos_activos': Bingo.objects.exclude(estadobingo__in=['Finalizado', 'Cancelado']).count(), 'tipos_socio': TipoSocio.objects.all(),
         'socios': Socio.objects.all().order_by('-idsocio')[:50], 'accounts': CuentaBancaria.objects.all().select_related('idsocio'),
         'jugadores': Jugador.objects.all().order_by('-idjugador')[:50], 'prestamos': Prestamo.objects.all().order_by('-fechasolicitud')[:30],
@@ -2807,7 +2927,7 @@ def api_catalogo_disponible(request, id_bingo):
         
         data = []
         for c in catalogo:
-            # Reutilizamos tu lógica de parseo seguro[cite: 2]
+            # Reutilizamos tu lógica de parseo seguro
             matriz = c.matriznumeros
             if isinstance(matriz, str):
                 try: matriz = json.loads(matriz.replace("'", '"'))

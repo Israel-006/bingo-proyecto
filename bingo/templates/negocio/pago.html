@@ -81,7 +81,18 @@
                             </div>
 
                             <div class="mb-4">
-                                <label class="form-label fw-bold small text-muted">4. Comprobante de Pago</label>
+                                <label class="form-label fw-bold small text-muted">4. Número de Referencia / Transacción</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white text-secondary"><i class="fas fa-hashtag"></i></span>
+                                    <input type="text" class="form-control fw-bold" name="numeroreferencia" placeholder="Ej: 0012345678" required>
+                                </div>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle text-primary"></i> Ingresa el número de comprobante o código de referencia de la transferencia.
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold small text-muted">5. Comprobante de Pago</label>
                                 <input type="file" class="form-control shadow-sm" name="imagencomprobante" accept="image/*" id="input-comprobante-pago" required>
                                 <div class="form-text mt-2">
                                     <i class="fas fa-camera text-info"></i> Sube una foto o captura de pantalla de la transferencia. El administrador verificará este depósito.
