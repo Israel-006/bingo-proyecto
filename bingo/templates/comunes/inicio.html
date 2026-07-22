@@ -80,7 +80,27 @@
                     <div class="my-4">
                         <div class="small text-white-50 mb-1"><i class="far fa-calendar-alt me-1"></i> {{ b.fechaprogramadabingo|date:"d M Y - H:i" }}</div>
                         <h4 class="fw-bold text-white mb-2" style="word-break: break-word;">{{ b.titulobingo }}</h4>
-                        <p class="small text-white-50 mb-3" style="word-break: break-word;">{{ b.descripcionpremiomayor }}</p>
+                        
+                        <!-- NUEVO: DESGLOSE DE PREMIOS -->
+                        <div class="text-white-50 small mb-3">
+                            <div class="mb-1" style="word-break: break-word;">
+                                <i class="fas fa-trophy text-warning me-1"></i> <strong>Premio Mayor:</strong> {{ b.descripcionpremiomayor }}
+                            </div>
+                            
+                            {% if b.descripcionpremios %}
+                                <div class="collapse mt-2" id="collapsePremios{{ b.idbingo }}">
+                                    <div class="p-2 bg-dark bg-opacity-25 rounded border border-white border-opacity-25" style="word-break: break-word;">
+                                        <i class="fas fa-gifts text-info me-1"></i> <strong>Rondas y Otros Premios:</strong><br>
+                                        {{ b.descripcionpremios|linebreaksbr }}
+                                    </div>
+                                </div>
+                                <!-- BOTÓN ACTUALIZADO CON CLASE btn-toggle-info -->
+                                <a class="text-info text-decoration-none fw-bold mt-1 d-inline-block shadow-sm btn-toggle-info" data-bs-toggle="collapse" href="#collapsePremios{{ b.idbingo }}" role="button" aria-expanded="false" aria-controls="collapsePremios{{ b.idbingo }}">
+                                    <span class="info-more"><i class="fas fa-plus-circle me-1"></i> Ver más información</span>
+                                    <span class="info-less"><i class="fas fa-minus-circle me-1"></i> Ver menos información</span>
+                                </a>
+                            {% endif %}
+                        </div>
                         
                         <div class="bg-dark bg-opacity-25 rounded p-2 mb-2 border border-white border-opacity-25">
                             <span class="small fw-medium text-white" style="word-break: break-word;">
@@ -419,6 +439,12 @@
     html {
         scroll-behavior: smooth;
     }
+    
+    /* AÑADE ESTO: Magia para el botón Ver más / Ver menos */
+    .btn-toggle-info .info-less { display: none; }
+    .btn-toggle-info[aria-expanded="true"] .info-less { display: inline; }
+    .btn-toggle-info[aria-expanded="true"] .info-more { display: none; }
+
     .bounce-anim {
         display: inline-block;
         animation: bounce 2s infinite;

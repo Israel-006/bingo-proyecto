@@ -235,7 +235,7 @@ class Prestamo(models.Model):
     ESTADO_PRESTAMO_CHOICES = [
         ('Solicitado', 'Solicitado'),
         ('Aprobado', 'Aprobado'),
-        ('En espera', 'En espera'),
+        ('En Curso', 'En Curso (Pagando)'),
         ('Liquidado', 'Liquidado'),
     ]
     idprestamo = models.AutoField(primary_key=True)    

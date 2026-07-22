@@ -54,6 +54,10 @@
                     </div>
                     <p class="text-body-secondary small mb-4 line-clamp-2">{{ bingo.descripcionpremiomayor }}</p>
                     
+                    <button class="btn btn-sm btn-outline-primary w-100 mb-4 fw-bold" data-bs-toggle="modal" data-bs-target="#modalDetallesBingo{{ bingo.idbingo }}">
+                        <i class="fas fa-info-circle me-1"></i> Ver todos los detalles
+                    </button>
+
                     <div class="d-flex flex-column gap-2">
                         {% if bingo.sala_abierta %}
                             <a href="{% url 'sala_espera' bingo.id_partida_a_entrar %}" class="btn btn-warning w-100 fw-bold py-2 shadow-sm animate__animated animate__pulse animate__infinite" style="animation-duration: 2s;">
@@ -92,6 +96,11 @@
                 <div class="flex-grow-1">
                     <h6 class="fw-bold text-body mb-1">{{ bingo.titulobingo }}</h6>
                     <span class="text-success small fw-bold">Premio Entregado: <span class="text-body fw-normal">{{ bingo.idunidad_premio.simbolomoneda }}</span>{{ bingo.pozo_dinamico_actual|floatformat:2 }}</span>
+                    <br>
+                    <!-- NUEVO BOTÓN HISTORIAL -->
+                    <button class="btn btn-sm btn-link text-primary p-0 mt-1 fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalDetallesBingoPasado{{ bingo.idbingo }}">
+                        <i class="fas fa-search me-1"></i> Ver info del evento
+                    </button>
                 </div>
                 <div>
                     {% if bingo.estadobingo == 'Cancelado' %}
@@ -124,8 +133,116 @@
             </a>
         </div>
     </div>
-
 </div>
+
+<!-- ==========================================
+         MODALES DE DETALLES DE BINGOS ACTIVOS 
+         ========================================== -->
+    {% for bingo in bingos_activos %}
+    <div class="modal fade" id="modalDetallesBingo{{ bingo.idbingo }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content card-minimalista border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-primary"><i class="fas fa-bullhorn me-2"></i> Información Completa del Evento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-start">
+                    <h3 class="fw-bold mb-3 text-body">{{ bingo.titulobingo }}</h3>
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="bg-body-tertiary p-3 rounded border h-100">
+                                <h6 class="fw-bold text-warning mb-2"><i class="fas fa-trophy me-2"></i> Premio Mayor</h6>
+                                <p class="small text-body-secondary mb-0">{{ bingo.descripcionpremiomayor }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="bg-body-tertiary p-3 rounded border h-100">
+                                <h6 class="fw-bold text-info mb-2"><i class="fas fa-gifts me-2"></i> Otros Premios</h6>
+                                <p class="small text-body-secondary mb-0">{{ bingo.descripcionpremios|default:"No se han especificado premios menores para este evento."|linebreaksbr }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        {% if bingo.rutaimagenpremiomayor %}
+                        <div class="col-md-{% if bingo.urlvideopromocional %}6{% else %}12{% endif %} text-center">
+                            <h6 class="fw-bold text-secondary mb-2"><i class="fas fa-image me-1"></i> Imagen Promocional</h6>
+                            <img src="{{ bingo.rutaimagenpremiomayor.url }}" class="img-fluid rounded shadow-sm border w-100" style="max-height: 300px; object-fit: contain; background-color: var(--bs-tertiary-bg);">
+                        </div>
+                        {% endif %}
+                        
+                        {% if bingo.urlvideopromocional %}
+                        <div class="col-md-{% if bingo.rutaimagenpremiomayor %}6{% else %}12{% endif %} text-center">
+                            <h6 class="fw-bold text-secondary mb-2"><i class="fas fa-video me-1"></i> Video Promocional</h6>
+                            <video controls class="w-100 rounded shadow-sm border" style="max-height: 300px; background-color: #000;">
+                                <source src="{{ bingo.urlvideopromocional.url }}" type="video/mp4">
+                                Tu navegador no soporta la reproducción de video.
+                            </video>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0 mt-3">
+                    <button type="button" class="btn btn-secondary w-100 fw-bold" data-bs-dismiss="modal">Cerrar Detalles</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- ==========================================
+         MODALES DE DETALLES DE BINGOS PASADOS 
+         ========================================== -->
+    {% for bingo in bingos_pasados %}
+    <div class="modal fade" id="modalDetallesBingoPasado{{ bingo.idbingo }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content card-minimalista border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-secondary"><i class="fas fa-history me-2"></i> Archivo del Evento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-start">
+                    <h3 class="fw-bold mb-3 text-body">{{ bingo.titulobingo }}</h3>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="bg-body-tertiary p-3 rounded border h-100">
+                                <h6 class="fw-bold text-warning mb-2"><i class="fas fa-trophy me-2"></i> Premio Mayor Entregado</h6>
+                                <p class="small text-body-secondary mb-0">{{ bingo.descripcionpremiomayor }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="bg-body-tertiary p-3 rounded border h-100">
+                                <h6 class="fw-bold text-info mb-2"><i class="fas fa-gifts me-2"></i> Otros Premios</h6>
+                                <p class="small text-body-secondary mb-0">{{ bingo.descripcionpremios|default:"No se registraron otros premios."|linebreaksbr }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        {% if bingo.rutaimagenpremiomayor %}
+                        <div class="col-md-{% if bingo.urlvideopromocional %}6{% else %}12{% endif %} text-center">
+                            <h6 class="fw-bold text-secondary mb-2"><i class="fas fa-image me-1"></i> Imagen Promocional</h6>
+                            <img src="{{ bingo.rutaimagenpremiomayor.url }}" class="img-fluid rounded shadow-sm border w-100 opacity-75" style="max-height: 300px; object-fit: contain; background-color: var(--bs-tertiary-bg);">
+                        </div>
+                        {% endif %}
+                        {% if bingo.urlvideopromocional %}
+                        <div class="col-md-{% if bingo.rutaimagenpremiomayor %}6{% else %}12{% endif %} text-center">
+                            <h6 class="fw-bold text-secondary mb-2"><i class="fas fa-video me-1"></i> Video Promocional</h6>
+                            <video controls class="w-100 rounded shadow-sm border opacity-75" style="max-height: 300px; background-color: #000;">
+                                <source src="{{ bingo.urlvideopromocional.url }}" type="video/mp4">
+                            </video>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0 mt-3">
+                    <button type="button" class="btn btn-secondary w-100 fw-bold" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 
 <style>
     /* Habilita el viaje suave en toda la página */

@@ -383,6 +383,10 @@
                                                             <button type="button" class="btn btn-sm btn-outline-info border-0 p-1 px-2 me-1" data-bs-toggle="modal" data-bs-target="#modalVerificarSocio{{ p.idsocio.idsocio }}" title="Inspeccionar Perfil del Socio">
                                                                 <i class="fas fa-user-check fs-6"></i>
                                                             </button>
+                                                            <!-- BOTÓN PARA VER HISTORIAL DE PAGOS DE ESTE PRÉSTAMO -->
+                                                            <button type="button" class="btn btn-sm btn-outline-warning border-0 p-1 px-2 me-1" data-bs-toggle="modal" data-bs-target="#modalHistorialPagosPrestamo{{ p.idprestamo }}" title="Ver Historial de Abonos / Cuotas">
+                                                                <i class="fas fa-receipt fs-6"></i>
+                                                            </button>
                                                             {% if p.estadoprestamo == 'Solicitado' or p.estadoprestamo == 'Pendiente' %}
                                                                 <!-- Botón Aprobar (Podría abrir un modal para elegir si es en Efectivo o Banco) -->
                                                                 <button class="btn btn-sm btn-success border-0 p-1 px-2 me-1" data-bs-toggle="modal" data-bs-target="#modalAprobarCredito{{ p.idprestamo }}" title="Aprobar y Desembolsar">
@@ -2958,6 +2962,95 @@
         </div>
     </div>
     {% endif %}
+{% endfor %}
+
+{% for p in prestamos %}
+<div class="modal fade text-start" id="modalHistorialPagosPrestamo{{ p.idprestamo }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content card-minimalista border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold text-warning">
+                    <i class="fas fa-file-invoice-dollar me-2"></i> Historial de Abonos - Crédito #{{ p.idprestamo }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-4">
+                <div class="row g-2 mb-3 bg-body-tertiary p-3 rounded border">
+                    <div class="col-md-6">
+                        <span class="small text-muted d-block">Socio Titular:</span>
+                        <strong class="text-body">{{ p.idsocio.primernombresocio }} {{ p.idsocio.primerapellidosocio }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="small text-muted d-block">Deuda Total:</span>
+                        <strong class="text-success">${{ p.montototalpagar }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="small text-muted d-block">Estado Actual:</span>
+                        {% if p.estadoprestamo == 'En Curso' %}
+                            <span class="badge bg-primary-subtle text-primary-emphasis"><i class="fas fa-spinner fa-spin me-1"></i> En Curso</span>
+                        {% elif p.estadoprestamo == 'Liquidado' %}
+                            <span class="badge bg-secondary">Liquidado</span>
+                        {% else %}
+                            <span class="badge bg-success-subtle text-success-emphasis">{{ p.estadoprestamo }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-secondary small text-uppercase mb-2">Desglose de Cuotas y Pagos Validados</h6>
+                <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                    <table class="table table-sm align-middle mb-0" style="font-size: 0.85rem;">
+                        <thead class="bg-body-tertiary">
+                            <tr>
+                                <th>Fecha de Pago</th>
+                                <th>Referencia</th>
+                                <th>Método / Banco</th>
+                                <th>Monto Abonado</th>
+                                <th>Estado</th>
+                                <th class="text-center">Comprobante</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Buscamos los pagos asociados a este préstamo específico -->
+                            {% for pago in pagos %}
+                                {% if pago.idprestamo.idprestamo == p.idprestamo %}
+                                <tr>
+                                    <td>{{ pago.fechapago|date:"d/m/Y H:i" }}</td>
+                                    <td class="font-monospace text-primary">{{ pago.numeroreferencia|default:"S/Ref" }}</td>
+                                    <td>{{ pago.idmetodopago.nombremetodopago|default:"Efectivo" }}</td>
+                                    <td class="fw-bold text-success">${{ pago.montopagado }}</td>
+                                    <td>
+                                        <span class="badge {% if pago.estadopago == 'Validado' or pago.estadopago == 'Aprobado' %}bg-success-subtle text-success-emphasis{% else %}bg-warning-subtle text-warning{% endif %}">
+                                            {{ pago.estadopregunta|default:pago.estadopago }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if pago.comprobantepago %}
+                                            <a href="{{ pago.comprobantepago.url }}" target="_blank" class="btn btn-sm btn-outline-info border-0 p-1 px-2 shadow-sm" title="Ver Comprobante Original">
+                                                <i class="fas fa-image fs-6"></i> Ver
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted small fst-italic">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted fst-italic">
+                                        No hay pagos registrados o validados para este crédito todavía.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0">
+                <button type="button" class="btn bg-body-tertiary text-body border fw-bold w-100 shadow-sm" data-bs-dismiss="modal">Cerrar Historial</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endfor %}
 
 <script>
