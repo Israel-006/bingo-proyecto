@@ -63,19 +63,31 @@
                                     {% endfor %}
                                 </select>
 
-                                <!-- Contenedor dinámico de detalles de cuenta (Inicia oculto con d-none) -->
-                                <div id="detalle-cuenta" class="mt-3 p-3 bg-body-tertiary rounded border border-success border-start border-4 shadow-sm d-none animate__animated animate__fadeIn">
-                                    <h6 class="fw-bold text-success mb-2"><i class="fas fa-university me-1"></i> Detalles para el depósito</h6>
-                                    <p class="mb-1 small"><strong>Banco/Billetera:</strong> <span id="info-banco" class="text-dark fw-bold"></span></p>
-                                    <p class="mb-1 small"><strong>Tipo:</strong> <span id="info-tipo" class="badge bg-secondary bg-opacity-10 text-secondary border"></span></p>
-                                    <p class="mb-0 small"><strong>Número/Teléfono:</strong> <span id="info-numero" class="font-monospace fw-bold text-primary fs-6 user-select-all"></span></p>
+                                <div id="detalle-cuenta" class="mt-3 p-3 bg-body-tertiary rounded-3 border border-primary border-start border-4 shadow-sm d-none animate__animated animate__fadeIn">
+                                    <h6 class="fw-bold text-primary mb-3 border-bottom pb-2">
+                                        <i class="fas fa-university me-1"></i> Detalles de la Cuenta Destino
+                                    </h6>
+                                    <div class="d-flex flex-column gap-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="small text-muted fw-bold">Banco/Billetera:</span>
+                                            <span id="info-banco" class="text-body fw-bold text-end"></span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="small text-muted fw-bold">Tipo de Cuenta:</span>
+                                            <span id="info-tipo" class="badge bg-secondary bg-opacity-10 text-secondary border"></span>
+                                        </div>
+                                        <div class="p-2 bg-body rounded border border-secondary border-opacity-25 text-center mt-2">
+                                            <span class="small text-muted fw-bold d-block mb-1 text-uppercase">Número de Cuenta</span>
+                                            <span id="info-numero" class="font-monospace fw-bold text-primary fs-5 user-select-all tracking-wide"></span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="mb-4">
                                 <label class="form-label fw-bold small text-muted">3. Monto Depositado</label>
                                 <div class="input-group input-group-lg shadow-sm">
-                                    <span class="input-group-text bg-white text-success fw-bold">$</span>
+                                    <span class="input-group-text bg-body-tertiary text-success fw-bold">$</span>
                                     <input type="number" class="form-control fw-bold" name="monto_pagado" step="0.01" min="1" placeholder="0.00" required>
                                 </div>
                             </div>
@@ -83,7 +95,7 @@
                             <div class="mb-4">
                                 <label class="form-label fw-bold small text-muted">4. Número de Referencia / Transacción</label>
                                 <div class="input-group shadow-sm">
-                                    <span class="input-group-text bg-white text-secondary"><i class="fas fa-hashtag"></i></span>
+                                    <span class="input-group-text bg-body-tertiary text-secondary"><i class="fas fa-hashtag"></i></span>
                                     <input type="text" class="form-control fw-bold" name="numeroreferencia" placeholder="Ej: 0012345678" required>
                                 </div>
                                 <div class="form-text">
@@ -130,7 +142,7 @@
                 <div class="card-body p-0">
                     <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                         <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light sticky-top">
+                            <thead class="bg-body-tertiary sticky-top">
                                 <tr>
                                     <th class="ps-4">Fecha</th>
                                     <th>Crédito Destino</th>
@@ -192,15 +204,15 @@
                 const selectedOption = this.options[this.selectedIndex];
                 
                 if (selectedOption.value) {
-                    // Extraer los datos de los atributos data-* de la opción seleccionada
-                    infoBanco.textContent = selectedOption.getAttribute('data-banco');
-                    infoTipo.textContent = selectedOption.getAttribute('data-tipo');
-                    infoNumero.textContent = selectedOption.getAttribute('data-numero');
+                    // Llenar los datos en el recuadro
+                    infoBanco.textContent = selectedOption.getAttribute('data-banco') || 'No especificado';
+                    infoTipo.textContent = selectedOption.getAttribute('data-tipo') || 'Estándar';
+                    infoNumero.textContent = selectedOption.getAttribute('data-numero') || 'Sin número';
                     
-                    // Quitar la clase 'd-none' para mostrar el recuadro
+                    // Mostrar el recuadro con la animación
                     detalleCuenta.classList.remove('d-none');
                 } else {
-                    // Si vuelve a la opción por defecto, ocultar el recuadro
+                    // Ocultar si vuelve a la opción por defecto
                     detalleCuenta.classList.add('d-none');
                 }
             });

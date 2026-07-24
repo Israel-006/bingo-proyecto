@@ -66,7 +66,6 @@ def inicio(request):
             if not jugador.idsocio and not request.session.get('promo_socio_visto', False):
                 mostrar_promo_socio = True
                 request.session['promo_socio_visto'] = True
-
         if socio:
             es_socio = True
             # Validamos en sesión si el socio se encuentra en estado 'Activo'
@@ -106,7 +105,6 @@ def inicio(request):
         ingreso_en_dolares = float(vendidos * b.preciocarton) * tasa_venta
         fondo_pozo_dolares = ingreso_en_dolares * 0.45 # El 45% de la recaudación alimenta el pozo
         premio_base_dolares = float(b.premiomayor) * tasa_premio
-        
         # Comparamos si el fondo dinámico supera al premio base inicial
         if fondo_pozo_dolares > premio_base_dolares:
             b.pozo_dinamico_actual = fondo_pozo_dolares / tasa_premio
@@ -120,7 +118,6 @@ def inicio(request):
     valoraciones = ValoracionSistema.objects.all().order_by('-fecha')
     promedio = valoraciones.aggregate(promedio=Avg('puntuacion'))['promedio'] or 0
     total_valoraciones = valoraciones.count()
-
     mi_valoracion = None
     if request.user.is_authenticated:
         mi_valoracion = valoraciones.filter(usuario=request.user).first()
@@ -301,7 +298,6 @@ def registro_socio(request):
         if not cedula.isdigit() or len(cedula) != 10:
             messages.error(request, "Error de seguridad: La cédula debe tener exactamente 10 dígitos numéricos.")
             return redirect('registro_socio')
-            
         if not telefono_personal.isdigit() or len(telefono_personal) != 10:
             messages.error(request, "Error de seguridad: El teléfono debe tener exactamente 10 dígitos numéricos.")
             return redirect('registro_socio')
@@ -323,8 +319,7 @@ def registro_socio(request):
         # ==========================================================================================
         if User.objects.filter(username=cedula).exists():
             messages.error(request, "Esta cédula ya está registrada.")
-            return redirect('registro_socio')
-            
+            return redirect('registro_socio')           
         if User.objects.filter(email=email).exists():
             messages.error(request, "Este correo electrónico ya está registrado.")
             return redirect('registro_socio')
@@ -580,18 +575,15 @@ def perfil(request):
                 nuevo_correo = request.POST.get('correo')
                 if nuevo_correo:
                     user.email = nuevo_correo
-                    user.save()
-                
+                    user.save()               
                 if socio:
                     socio.telefonopersonalsocio = request.POST.get('telefono', socio.telefonopersonalsocio)
-                    socio.save()
-                    
+                    socio.save()                   
                 if jugador:
                     jugador.aliasjugador = request.POST.get('alias', jugador.aliasjugador)
                     jugador.correojugador = nuevo_correo
                     jugador.save()
-                    request.session['user_nombre'] = jugador.aliasjugador
-                    
+                    request.session['user_nombre'] = jugador.aliasjugador                  
                 messages.success(request, "Tus datos de contacto han sido actualizados.")
             # B) Actualización de foto de perfil (Avatar)
             elif action == 'actualizar_avatar':
@@ -603,8 +595,7 @@ def perfil(request):
             # C) Cambio de contraseña de seguridad
             elif action == 'actualizar_password':
                 actual = request.POST.get('password_actual')
-                nueva = request.POST.get('password_nueva')
-                
+                nueva = request.POST.get('password_nueva')                
                 if user.check_password(actual):
                     user.set_password(nueva)
                     user.save()
@@ -626,8 +617,7 @@ def perfil(request):
                 sexo = request.POST.get('sexo')
                 correo_elegido = request.POST.get('correo') 
                 telefonofijo = request.POST.get('telefonofijo')
-                direcciontrabajo = request.POST.get('direcciontrabajo')
-                
+                direcciontrabajo = request.POST.get('direcciontrabajo')                
                 try:
                     fecha_nac = datetime.strptime(fecha_nacimiento_str, '%Y-%m-%d').date()
                     tipo_base = TipoSocio.objects.first()
@@ -657,12 +647,10 @@ def perfil(request):
                     # Vinculamos el perfil de jugador existente con el nuevo socio creado
                     jugador.idsocio = nuevo_socio
                     jugador.correojugador = correo_elegido
-                    jugador.save()
-                    
+                    jugador.save()                   
                     messages.success(request, "¡Solicitud enviada exitosamente! Tu perfil de Socio está en estado 'Pendiente' hasta que el Administrador lo valide. Mientras tanto, puedes seguir jugando con normalidad.")
                 except Exception as e:
                     messages.error(request, f"Error al procesar la solicitud de socio: {str(e)}")
-
         except Exception as e:
             messages.error(request, f"Error al actualizar el perfil: {str(e)}")
 
@@ -707,12 +695,10 @@ def activar_perfil_juego_socio(request):
     # ==========================================================================================
     # 1. LOCALIZACIÓN Y VALIDACIÓN DEL SOCIO
     # ==========================================================================================
-    socio = Socio.objects.filter(cisocio=request.user.username).first()
-    
+    socio = Socio.objects.filter(cisocio=request.user.username).first()  
     if not socio:
         messages.error(request, "No se encontró un perfil de Socio vinculado a esta cuenta.")
-        return redirect('inicio')
-        
+        return redirect('inicio')        
     if socio.estadosocio != 'Activo':
         messages.warning(request, "Tu cuenta de Socio debe estar aprobada y activa para habilitar el perfil de juego.")
         return redirect('perfil')
@@ -734,7 +720,6 @@ def activar_perfil_juego_socio(request):
         # Generación automática de un alias único (evita colisiones si el nombre ya está tomado)
         alias_propuesto = socio.primernombresocio
         if Jugador.objects.filter(aliasjugador=alias_propuesto).exists():
-
             alias_propuesto = f"{socio.primernombresocio}{socio.cisocio[-4:]}"
         # Creación del registro heredando la información directamente del Socio validado
         nuevo_jugador = Jugador.objects.create(
@@ -755,8 +740,7 @@ def activar_perfil_juego_socio(request):
         # ==========================================================================================
         request.session['user_nombre'] = nuevo_jugador.aliasjugador
         if socio.fotosocio:
-            request.session['avatar_url'] = socio.fotosocio.url
-            
+            request.session['avatar_url'] = socio.fotosocio.url           
         messages.success(request, f"¡Billetera y perfil de juego activados al instante! Tu alias inicial es '{alias_propuesto}' (puedes cambiarlo cuando desees).")
         return redirect('perfil')
         # ==========================================================================================
@@ -779,8 +763,7 @@ def mis_cartones(request):
     # 1. IDENTIFICACIÓN Y VALIDACIÓN DEL JUGADOR
     # ==========================================================================================
     # Buscamos al jugador utilizando la cédula almacenada en el username del usuario autenticado
-    jugador = Jugador.objects.filter(cedulaidentidadjugador=request.user.username).first()
-    
+    jugador = Jugador.objects.filter(cedulaidentidadjugador=request.user.username).first()   
     if not jugador:
         messages.warning(request, "Debes activar tu perfil de juego para ver tus cartones.")
         return redirect('inicio')
@@ -858,31 +841,44 @@ def descargar_cartones_pdf(request, id_bingo):
         if not jugador:
             messages.error(request, "Perfil no encontrado.")
             return redirect('mis_cartones')
+        # ==========================================================================================
 
+        # ==========================================================================================
+        # 2. VALIDACIÓN DE SELECCIÓN DE CARTONES
+        # ==========================================================================================
         cartones_ids = request.POST.getlist('cartones_seleccionados')
         if not cartones_ids:
             messages.warning(request, "No seleccionaste ningún cartón para imprimir.")
             return redirect('mis_cartones')
+        # ==========================================================================================
 
+        # ==========================================================================================
+        # 3. CONSULTA DE CARTONES ASIGNADOS
+        # ==========================================================================================
         bingo = get_object_or_404(Bingo, idbingo=id_bingo)
         cartones_asignados = CartonPartidaBingo.objects.filter(
             idjugador=jugador, 
             idpartida__idbingo=bingo,
             idcarton__in=cartones_ids
         ).select_related('idcarton')
+        # ==========================================================================================
 
-
+        # ==========================================================================================
+        # 4. DEDUPLICACIÓN Y PARSEO DE MATRICES
+        # ==========================================================================================
         cartones_unicos = {}
         for asig in cartones_asignados:
+            # Evitamos duplicar cartones si están asignados a múltiples rondas del mismo bingo
             if asig.idcarton.idcarton not in cartones_unicos:
                 matriz = asig.idcarton.matriznumeros
+                # Parseo seguro de la matriz en formato string o JSON
                 if isinstance(matriz, str):
                     try: matriz = json.loads(matriz.replace("'", '"'))
-                    except: continue
-                
+                    except: continue                
                 if isinstance(matriz, dict):
                     try:
                         filas = []
+                        # Construimos la estructura de filas (5x5) para la vista del PDF
                         for i in range(5):
                             filas.append([matriz['B'][i], matriz['I'][i], matriz['N'][i], matriz['G'][i], matriz['O'][i]])
                         
@@ -891,68 +887,81 @@ def descargar_cartones_pdf(request, id_bingo):
                             'filas': filas
                         }
                     except Exception as e: print(e)
-
         cartones_procesados = list(cartones_unicos.values())
+        # ==========================================================================================
 
+        # ==========================================================================================
+        # 5. RENDERIZADO Y GENERACIÓN DEL PDF
+        # ==========================================================================================
         template = get_template('cuentas/cartones_pdf.html')
         context = {'bingo': bingo, 'jugador': jugador, 'cartones': cartones_procesados}
         html = template.render(context)
-
         response = HttpResponse(content_type='application/pdf')
-
+        # Configuramos como 'inline' para que el navegador previsualice el PDF en lugar de descargarlo directamente
         response['Content-Disposition'] = f'inline; filename="Mis_Cartones_{bingo.idbingo}_{jugador.aliasjugador}.pdf"'
-        
         pisa_status = pisa.CreatePDF(html, dest=response)
-        
         if pisa_status.err:
             return HttpResponse('Tuvimos errores generando tu documento PDF', status=500)
         return response
+        # ==========================================================================================
     
     return redirect('mis_cartones')
+    # ==========================================================================================
 
 @login_required
 def cambiar_carton_boveda(request):
-    """Procesa el reemplazo del cartón validando reglas de negocio"""
+    """
+    Procesa el reemplazo de un cartón de bingo del jugador validando estrictamente
+    las reglas de negocio (que el evento esté activo, que no existan rondas en juego 
+    en ese instante y que se posean rondas futuras pendientes por jugar).
+    Soporta dos modalidades de reemplazo: generación aleatoria (RNG) o selección por catálogo.
+    """
     if request.method == 'POST':
+        # ==========================================================================================
+        # 1. CAPTURA DE PARÁMETROS DE LA PETICIÓN
+        # ==========================================================================================
         jugador = Jugador.objects.filter(cedulaidentidadjugador=request.user.username).first()
         id_bingo = request.POST.get('id_bingo')
         id_carton_viejo = request.POST.get('id_carton_viejo')
         modalidad = request.POST.get('modalidad') 
         id_carton_nuevo = request.POST.get('id_carton_nuevo') 
-
         bingo = get_object_or_404(Bingo, idbingo=id_bingo)
+        # ==========================================================================================
 
-        # Regla 1: El evento no debe estar finalizado
+        # ==========================================================================================
+        # 2. VALIDACIONES DE REGLAS DE NEGOCIO
+        # ==========================================================================================
+        # Regla A: El evento no debe haber concluido o sido cancelado
         if bingo.estadobingo in ['Finalizado', 'Cancelado']:
             messages.error(request, "El evento ya concluyó, no puedes realizar cambios.")
             return redirect('mis_cartones')
-
-        # Regla 2: Ninguna ronda debe estar en juego activo
+        # Regla B: Ninguna ronda debe encontrarse en juego activo o verificación en este instante
         rondas_activas = PartidaBingo.objects.filter(
             idbingo=bingo, 
             estadopartida__in=['En Juego', 'Verificando', 'Desempate']
         ).exists()
-
         if rondas_activas:
             messages.error(request, "¡Acción bloqueada! Hay una ronda en juego en este instante.")
             return redirect('mis_cartones')
-
-        # Regla 3: Filtrar SOLO las asignaciones de rondas futuras (Programada)
+        # Regla C: El jugador debe poseer asignaciones futuras (Programadas) con este cartón
         asignaciones_pendientes = CartonPartidaBingo.objects.filter(
             idjugador=jugador, 
             idpartida__idbingo=bingo, 
             idcarton_id=id_carton_viejo,
             idpartida__estadopartida='Programada'
         )
-
         if not asignaciones_pendientes.exists():
             messages.error(request, "No tienes rondas futuras con este cartón para poder cambiarlo.")
             return redirect('mis_cartones')
+        # ==========================================================================================
 
+        # ==========================================================================================
+        # 3. PROCESAMIENTO ATÓMICO DEL REEMPLAZO
+        # ==========================================================================================
         try:
             with transaction.atomic():
                 nuevo_carton_obj = None
-
+                # Modalidad A: Generación aleatoria mediante algoritmo (RNG)
                 if modalidad == 'rng':
                     lote = generar_lote_cartones(1) 
                     c_data = lote[0]
@@ -961,27 +970,26 @@ def cambiar_carton_boveda(request):
                         matriznumeros=c_data['matriz'], 
                         esmaestro=False
                     )
-                
+                # Modalidad B: Selección manual desde el catálogo de cartones maestros
                 elif modalidad == 'catalogo':
                     nuevo_carton_obj = Carton.objects.get(idcarton=id_carton_nuevo, esmaestro=True)
+                    # Verificamos que el cartón elegido del catálogo no esté siendo usado por otro jugador en este bingo
                     en_uso = CartonPartidaBingo.objects.filter(
                         idpartida__idbingo=bingo, 
                         idcarton=nuevo_carton_obj
                     ).exists()
-                    
                     if en_uso:
                         messages.error(request, "¡Alguien más tomó ese cartón del catálogo! Intenta con otro.")
                         return redirect('mis_cartones')
-
-                # FIX: Solo actualizamos las asignaciones de las rondas que aún no se juegan
+                # Actualizamos de forma masiva únicamente las asignaciones futuras pendientes con el nuevo cartón
                 asignaciones_pendientes.update(idcarton=nuevo_carton_obj)
-                
-                messages.success(request, f"¡Cartón cambiado exitosamente! Tu nuevo código para las rondas restantes es {nuevo_carton_obj.codigocarton}.")
-
+                messages.success(request, f"¡Cartón cambiado exitosamente! Tu nuevo código para las rondas restantes es {nuevo_carton_obj.codigocarton}.")                
         except Exception as e:
             messages.error(request, f"Error al realizar el cambio: {str(e)}")
+        # ==========================================================================================
 
     return redirect('mis_cartones')
+    # ==========================================================================================
 # ===============================================================================================================================================
 
 # ===============================================================================================================================================
@@ -990,85 +998,80 @@ def cambiar_carton_boveda(request):
 @login_required
 def creditos(request):
     """
-    Vista para que el Socio vea sus préstamos activos y solicite nuevos créditos.
+    Vista protegida para la gestión del módulo de créditos de la cooperativa.
+    Valida que el usuario sea un Socio activo, procesa las solicitudes de nuevos 
+    préstamos (incluyendo cálculo de intereses con precisión Decimal, asignación de 
+    garantes y cuenta bancaria de destino) y carga los historiales correspondientes.
     """
+    # ==========================================================================================
+    # 1. VALIDACIÓN DE PERFIL DE SOCIO ACTIVO
+    # ==========================================================================================
     socio = Socio.objects.filter(cisocio=request.user.username).first()
-    
-    # Validación de seguridad: Solo socios activos
     if not socio or socio.estadosocio not in ['Activo', 'Active']:
         messages.error(request, "Acceso denegado: Solo los socios activos pueden solicitar créditos.")
         return redirect('inicio')
-
-    # Obtenemos los préstamos del socio ordenados por el más reciente
+    # Consultas iniciales para la visualización del panel
     mis_prestamos = Prestamo.objects.filter(idsocio=socio).order_by('-fechasolicitud')
-    
-    # Obtenemos garantes disponibles (excluyendo al solicitante)
+    # Listado de otros socios activos elegibles como garantes (excluyendo al usuario actual)
     lista_socios = Socio.objects.filter(estadosocio='Activo').exclude(idsocio=socio.idsocio)
+    mis_cuentas = CuentaBancaria.objects.filter(idsocio=socio, estadocuenta='Activo')
+    # ==========================================================================================
 
+    # ==========================================================================================
+    # 2. PROCESAMIENTO DE SOLICITUD DE CRÉDITO (VÍA POST)
+    # ==========================================================================================
     if request.method == 'POST':
-        action = request.POST.get('action')
-        
+        action = request.POST.get('action')       
         if action == 'solicitar_prestamo':
-            # Nombres de los inputs del formulario HTML
+            # Captura de datos del formulario de préstamo
             monto_solicitado = request.POST.get('montoprestamosolicitado')
             numerocuotas = request.POST.get('numerocuotas')
             fechavencimiento = request.POST.get('fechavencimiento')
             idgarante1 = request.POST.get('idgarante1')
-            idgarante2 = request.POST.get('idgarante2')
-            
+            idgarante2 = request.POST.get('idgarante2')            
             try:
                 monto = float(monto_solicitado)
                 cuotas = int(numerocuotas)
-                
-                # =========================================================
-                # LÓGICA FINANCIERA: TASA FIJA DEL 10% (Regla de Vanessa)
-                # =========================================================
-                # Ignoramos cualquier input de tasa del usuario y forzamos el 10%
-                tasa = Decimal('10.00') 
-                
+                tasa = Decimal('10.00')     # Tasa de interés oficial fija del 10%
                 if monto > 0 and cuotas > 0:
-                    # Cálculo de intereses con precisión Decimal
+                    # Cálculo de intereses y monto total a pagar utilizando precisión Decimal
                     interes_calculado = (Decimal(str(monto)) * tasa) / Decimal('100')
-                    monto_total = Decimal(str(monto)) + interes_calculado
-                    
+                    monto_total = Decimal(str(monto)) + interes_calculado        
+                    # Búsqueda y asignación de los objetos de los garantes seleccionados           
                     garante1_obj = Socio.objects.filter(idsocio=idgarante1).first() if idgarante1 else None
                     garante2_obj = Socio.objects.filter(idsocio=idgarante2).first() if idgarante2 else None
-
-                    # === MAGIA NUEVA: Leer método de desembolso ===
+                    # Resolución de la cuenta bancaria de destino (o efectivo si aplica)
                     id_cuenta_destino = request.POST.get('idcuentadestino')
                     cuenta_obj = None
                     if id_cuenta_destino and id_cuenta_destino != 'EFECTIVO':
                         cuenta_obj = CuentaBancaria.objects.filter(idcuentabancaria=id_cuenta_destino).first()
-                    # ==============================================
-                    
-                    # ⚠️ IMPORTANTE: Ajusta estos nombres si tu modelo usa 'montoprestamo' o 'saldovivoprestamo'
+                    # Creación del registro del préstamo con estado inicial 'Solicitado'
                     Prestamo.objects.create(
                         idsocio=socio,
                         idcuentadestino=cuenta_obj,
                         idgarante1=garante1_obj,
                         idgarante2=garante2_obj,
-                        montoprestamosolicitado=monto, # Revisa si es montoprestamo
+                        montoprestamosolicitado=monto, 
                         tasainteres=tasa,
                         numerocuotas=cuotas,
-                        montototalpagar=monto_total,   # Revisa si es montototalapagar
-                        saldopendiente=monto_total,    # Revisa si es saldovivoprestamo
+                        montototalpagar=monto_total,   
+                        saldopendiente=monto_total,    
                         fechasolicitud=timezone.now(),
                         fechavencimiento=fechavencimiento, 
                         estadoprestamo='Solicitado'
-                    )
-                    
+                    )                   
                     messages.success(request, f"¡Tu solicitud por ${monto:.2f} ha sido enviada! Se aplicó la tasa oficial del 10%. Total a pagar: ${monto_total:.2f}.")
                 else:
-                    messages.error(request, "El monto y las cuotas deben ser valores mayores a 0.")
-                    
+                    messages.error(request, "El monto y las cuotas deben ser valores mayores a 0.")                   
             except Exception as e:
                 messages.error(request, f"Ocurrió un error al procesar tu solicitud: {str(e)}")
-                
-            # Es mejor redirigir a la misma página de créditos para ver el cambio reflejado inmediatamente
             return redirect('creditos')
+            # ==========================================================================================
 
+    # ==========================================
+    # 3. EMPAQUETADO DE CONTEXTO Y RENDERIZADO
+    # ==========================================
     mis_cuentas = CuentaBancaria.objects.filter(idsocio=socio, estadocuenta='Activo')
-
     contexto = {
         'socio': socio,
         'mis_prestamos': mis_prestamos,
@@ -1076,75 +1079,74 @@ def creditos(request):
         'mis_cuentas': mis_cuentas
     }
     return render(request, 'negocio/creditos.html', contexto)
+    # ==========================================================================================
 
 @login_required
 def ahorro(request):
     """
-    Vista para que el Socio vea su libreta de ahorros, reporte depósitos y solicite retiros.
+    Vista protegida para la gestión del módulo de ahorros y libreta del socio.
+    Valida que el usuario sea un Socio activo, calcula el saldo total acreditado y 
+    procesa peticiones POST para dos acciones principales:
+    1. registrar_ahorro: Reporte de un depósito voluntario con comprobante de pago (estado 'Pendiente').
+    2. solicitar_retiro: Solicitud de retiro de fondos validando que no supere el saldo disponible.
     """
+    # ==========================================================================================
+    # 1. VALIDACIÓN DE PERFIL DE SOCIO ACTIVO
+    # ==========================================================================================
     socio = Socio.objects.filter(cisocio=request.user.username).first()
-    
-    # 1. Validación Estricta: Solo socios aprobados y activos
     if not socio or socio.estadosocio not in ['Activo', 'Active']:
         messages.warning(request, "Acceso denegado: Debes ser un Socio activo para acceder a la libreta de ahorros.")
         return redirect('inicio')
-
+    # Consultas iniciales para el historial y cálculo de saldo acumulado
     historial_ahorros = Ahorro.objects.filter(idsocio=socio).order_by('-fechaahorro')
     total_ahorrado = historial_ahorros.filter(estadoahorro='Acreditado').aggregate(total=Sum('montoahorro'))['total'] or Decimal('0.00')
+    # ==========================================================================================
 
+    # ==========================================================================================
+    # 2. PROCESAMIENTO DE ACCIONES VÍA POST
+    # ==========================================================================================
     if request.method == 'POST':
         action = request.POST.get('action')
-        
-        # ==============================================================
-        # ACCIÓN 1: REPORTAR UN NUEVO DEPÓSITO
-        # ==============================================================
+        # A) Registro de nuevo depósito o ahorro voluntario
         if action == 'registrar_ahorro':
             monto_ahorro = request.POST.get('monto_ahorro')
             id_metodo_pago = request.POST.get('idmetodopago')
-            imagen_comprobante = request.FILES.get('comprobanteahorro')
-            
+            imagen_comprobante = request.FILES.get('comprobanteahorro')   
             try:
                 monto = float(monto_ahorro)
                 bingo_vinculado = Bingo.objects.exclude(estadobingo__in=['Finalizado', 'Cancelado']).first()
-                
-                # Ya no creamos cuentas fantasma, buscamos el método oficial de la cooperativa
-                metodo_obj = MetodoPago.objects.filter(idmetodopago=id_metodo_pago).first()
-                
+                metodo_obj = MetodoPago.objects.filter(idmetodopago=id_metodo_pago).first()             
                 if metodo_obj and monto > 0 and imagen_comprobante:
                     Ahorro.objects.create(
                         idsocio=socio,
                         idbingo=bingo_vinculado, 
-                        idmetodopago=metodo_obj, # <-- Vinculamos la llave foránea
+                        idmetodopago=metodo_obj, 
                         tipoahorro='Voluntario',
                         montoahorro=monto,
                         comprobanteahorro=imagen_comprobante,
                         fechaahorro=timezone.now(),
-                        estadoahorro='Pendiente',
+                        estadoahorro='Pendiente',       # Queda en revisión por el tesorero/administrador
                         origenahorro='Directo'
                     )
                     messages.success(request, "¡Tu depósito ha sido reportado exitosamente! Espera la confirmación del administrador.")
                 else:
                     messages.error(request, "Faltan datos en el formulario. Asegúrate de adjuntar el comprobante y seleccionar la cuenta destino.")
             except ValueError:
-                messages.error(request, "El formato del monto ingresado es incorrecto.")
-                
+                messages.error(request, "El formato del monto ingresado es incorrecto.")                
             return redirect('ahorro')
-
-        # ==============================================================
-        # ACCIÓN 2: SOLICITAR UN RETIRO DE FONDOS
-        # ==============================================================
+        # B) Solicitud de retiro de fondos de ahorros
         elif action == 'solicitar_retiro':
             monto_retiro = request.POST.get('monto_retiro')
             try:
-                monto = abs(float(monto_retiro))
-                
+                # Validamos que el monto a retirar no exceda el total ahorrado y acreditado actual
+                monto = abs(float(monto_retiro))                
                 if 0 < monto <= float(total_ahorrado):
                     Ahorro.objects.create(
                         idsocio=socio,
                         idbingo=None,
                         tipoahorro='Voluntario',
-                        montoahorro=-monto,
-                        estadoahorro='Retirar', # <--- CAMBIO: Nuevo estado exclusivo para retiros
+                        montoahorro=-monto,     # Se registra en negativo para restar en la libreta
+                        estadoahorro='Retirar', 
                         fechaahorro=timezone.now(),
                         origenahorro='Retiro Solicitado'
                     )
@@ -1152,9 +1154,13 @@ def ahorro(request):
                 else:
                     messages.error(request, "El monto solicitado supera tu saldo disponible y acreditado.")
             except ValueError:
-                messages.error(request, "Monto de retiro inválido.")
-                
+                messages.error(request, "Monto de retiro inválido.")               
             return redirect('ahorro')
+    # ==========================================================================================
+
+    # ==========================================================================================
+    # 3. EMPAQUETADO DE CONTEXTO Y RENDERIZADO
+    # ==========================================================================================
     contexto = {
         'socio': socio,
         'historial_ahorros': historial_ahorros,
@@ -1162,50 +1168,60 @@ def ahorro(request):
         'metodos_pago': MetodoPago.objects.filter(estadometodopago='Activo')
     }
     return render(request, 'cuentas/ahorro.html', contexto)
+    # ==========================================================================================
 
 @login_required
 def aporte_y_regalos(request):
-    # 1. Validación del Socio e Identificación de su Antigüedad
+    """
+    Vista protegida para que un Socio activo gestione sus aportes semanales y el registro de regalos.
+    Permite dos acciones principales vía POST:
+    1. registrar_aporte: Envía o actualiza un comprobante de pago para un aporte semanal específico (estado 'En Revision').
+    2. registrar_regalo: Da de alta un nuevo regalo en la bodega virtual asociado al socio.
+    Además, recopila historiales y bingos elegibles según la fecha de registro del socio.
+    """
+    # ==========================================================================================
+    # 1. VALIDACIÓN DE PERFIL DE SOCIO ACTIVO
+    # ==========================================================================================
     socio_obj = Socio.objects.filter(cisocio=request.user.username).first()
-    fecha_registro_socio = request.user.date_joined # Obtenemos la fecha exacta en la que se creó su cuenta
-    
+    fecha_registro_socio = request.user.date_joined   
     if not socio_obj or socio_obj.estadosocio not in ['Activo', 'Active']:
         messages.error(request, "Solo los socios activos pueden gestionar aportes y regalos.")
         return redirect('perfil')
+    # ==========================================================================================
 
+    # ==========================================================================================
+    # 2. PROCESAMIENTO DE ACCIONES VÍA POST
+    # ==========================================================================================
     if request.method == 'POST':
         action = request.POST.get('action')
-
-        # --- LÓGICA DE APORTES ---
+        # A) Registro o actualización de aporte semanal
         if action == 'registrar_aporte':
             id_bingo = request.POST.get('id_bingo')
             numero_semana = request.POST.get('numero_semana')
             monto_pagado = request.POST.get('monto_pagado')
             id_metodo_pago = request.POST.get('idmetodopago')
             comprobante = request.FILES.get('comprobanteaporte')
-
             if id_bingo and numero_semana and monto_pagado and id_metodo_pago and comprobante:
                 bingo_obj = get_object_or_404(Bingo, pk=id_bingo)
-                metodo_obj = get_object_or_404(MetodoPago, pk=id_metodo_pago) # <-- Validamos el objeto
-                
+                metodo_obj = get_object_or_404(MetodoPago, pk=id_metodo_pago)     
+                # Buscamos si ya existe un registro para esta semana o lo creamos       
                 aporte_obj, creado = AporteSemanal.objects.get_or_create(
                     idsocio=socio_obj,
                     idbingo=bingo_obj,
                     numerosemana=numero_semana,
                     defaults={
                         'montoaporte': Decimal(str(monto_pagado)),
-                        'idmetodopago': metodo_obj, # <-- Inyectamos la relación real
+                        'idmetodopago': metodo_obj, 
                         'comprobanteaporte': comprobante,
                         'estadoaporte': 'En Revision',
                         'fechaplanificadadada': timezone.now()
                     }
-                )
-                
+                )               
+                # Si el registro ya existía, validamos su estado antes de sobrescribir
                 if not creado:
                     if aporte_obj.estadoaporte in ['Al Dia', 'En Revision']:
                         messages.warning(request, f"Ya tienes un pago reportado en estado '{aporte_obj.estadoaporte}' para la semana {numero_semana}.")
                     else:
-                        # Si estaba Atrasado, se actualiza
                         aporte_obj.montoaporte = Decimal(str(monto_pagado))
                         aporte_obj.idmetodopago = metodo_obj
                         aporte_obj.comprobanteaporte = comprobante
@@ -1216,17 +1232,14 @@ def aporte_y_regalos(request):
                 else:
                     messages.success(request, "Tu pago fue enviado a revisión exitosamente.")
             else:
-                messages.error(request, "Faltan datos para procesar el aporte.")
-            
+                messages.error(request, "Faltan datos para procesar el aporte.")          
             return redirect('aporte_y_regalos')
-
-        # --- LÓGICA DE REGALOS (Se mantiene igual) ---
+        # B) Registro de un nuevo regalo en la bodega virtual
         elif action == 'registrar_regalo':
             nombre = request.POST.get('nombreregalo')
             descripcion = request.POST.get('descripcionregalo', '')
             valor = request.POST.get('valorregalo')
             imagen = request.FILES.get('urlimagen')
-            
             try:
                 Regalo.objects.create(
                     idsocio=socio_obj,
@@ -1240,74 +1253,81 @@ def aporte_y_regalos(request):
             except Exception as e:
                 messages.error(request, f"Error al registrar el regalo: {e}")
             return redirect('aporte_y_regalos')
+    # ==========================================================================================
 
-    # 3. Preparación del contexto (GET)
+    # ==========================================================================================
+    # 3. CARGA DE DATOS E HISTORIALES (GET)
+    # ==========================================================================================
     historial_aportes = AporteSemanal.objects.filter(idsocio=socio_obj).order_by('-fechaplanificadadada')
     mis_regalos = Regalo.objects.filter(idsocio=socio_obj).order_by('-fechaultimaactualizacion')
-    
-    # MAGIA DE FECHAS: 
-    # Le damos un margen de 7 días hacia atrás por si se registró justo unos días después de iniciar el evento.
-    # Excluimos "Cancelado", pero SÍ mostramos "Finalizado" por si tiene pagos pendientes de un bingo anterior.
+    # Filtramos los bingos activos considerando un margen de 7 días previos al registro del socio
     margen_fecha = fecha_registro_socio - timedelta(days=7)
     bingos_activos = Bingo.objects.exclude(estadobingo='Cancelado').filter(fechaprogramadabingo__gte=margen_fecha).order_by('-fechaprogramadabingo')
+    # ==========================================================================================
 
-    context = {
+    # ==========================================================================================
+    # 4. EMPAQUETADO DE CONTEXTO Y RENDERIZADO
+    # ==========================================================================================
+    contexto = {
         'socio': socio_obj,
         'historial_aportes': historial_aportes,
         'mis_regalos': mis_regalos,
         'bingos_activos': bingos_activos,
         'metodos_pago': MetodoPago.objects.filter(estadometodopago='Activo')
     }
-    return render(request, 'cuentas/aporte_y_regalos.html', context)
+    return render(request, 'cuentas/aporte_y_regalos.html', contexto)
+    # ==========================================================================================
 
 @login_required
 def cuenta_bancaria(request):
     """
-    Vista para que el Socio registre y elimine sus cuentas bancarias.
-    Solo accesible para Socios Activos, con límite de 2 cuentas.
+    Vista protegida para la gestión de cuentas bancarias asociadas al perfil del socio.
+    Verifica que el usuario sea un Socio activo y maneja solicitudes POST para:
+    1. agregar_cuenta: Registra una nueva cuenta bancaria, asignándola automáticamente como principal 
+       si es la primera cuenta registrada, y ejecuta validaciones completas del modelo.
+    2. eliminar_cuenta: Elimina una cuenta bancaria existente del socio.
     """
+    # ==========================================================================================
+    # 1. VERIFICACIÓN DE PERFIL Y CUENTAS EXISTENTES
+    # ==========================================================================================
     socio = Socio.objects.filter(cisocio=request.user.username).first()
-    # Verificamos si realmente es un socio activo
     es_socio = True if socio and socio.estadosocio in ['Activo', 'Active'] else False
-
-    # Si es socio, cargamos sus cuentas; si no, lista vacía
     cuentas = CuentaBancaria.objects.filter(idsocio=socio) if socio else []
+    # ==========================================================================================
 
+    # ==========================================================================================
+    # 2. PROCESAMIENTO DE ACCIONES VÍA POST
+    # ==========================================================================================
     if request.method == 'POST':
-        action = request.POST.get('action')
-        
+        action = request.POST.get('action')        
+        # A) Registro de una nueva cuenta bancaria
         if action == 'agregar_cuenta':
             if not es_socio:
                 messages.error(request, "Solo los socios activos pueden registrar cuentas bancarias.")
                 return redirect('cuenta_bancaria')
-
             try:
-                # Usamos los nombres EXACTOS de tu nuevo modelo
                 nueva_cuenta = CuentaBancaria(
                     idsocio=socio,
                     nombrebanco=request.POST.get('nombrebanco'),
                     tipocuenta=request.POST.get('tipocuenta'),
                     numerocuenta=request.POST.get('numerocuenta'),
-                    esprincipal=True if cuentas.count() == 0 else False, # La primera será la principal
+                    # Si es la primera cuenta del socio, se marca automáticamente como principal
+                    esprincipal=True if cuentas.count() == 0 else False, 
                     estadocuenta='Activo'
                 )
-                
-                # full_clean() fuerza la ejecución de tu def clean(self) en el modelo
+                # Ejecuta las validaciones a nivel de modelo antes de guardar
                 nueva_cuenta.full_clean() 
                 nueva_cuenta.save()
                 messages.success(request, "Cuenta bancaria agregada exitosamente a tu perfil.")
-                
             except ValidationError as e:
-                # Si se activa el bloqueo de las 2 cuentas, mostramos el error elegante
                 if hasattr(e, 'message_dict'):
                     messages.error(request, "Error de validación en los datos.")
                 else:
                     messages.error(request, e.messages[0])
             except Exception as e:
-                messages.error(request, f"Error al registrar cuenta: {str(e)}")
-            
-            return redirect('cuenta_bancaria')
-            
+                messages.error(request, f"Error al registrar cuenta: {str(e)}")           
+            return redirect('cuenta_bancaria')    
+        # B) Eliminación de una cuenta bancaria existente       
         elif action == 'eliminar_cuenta':
             id_cuenta = request.POST.get('id_cuenta')
             cuenta = CuentaBancaria.objects.filter(idcuentabancaria=id_cuenta, idsocio=socio).first()
@@ -1315,60 +1335,67 @@ def cuenta_bancaria(request):
                 cuenta.delete()
                 messages.success(request, "La cuenta bancaria ha sido eliminada.")
             return redirect('cuenta_bancaria')
+    # ==========================================================================================
 
+    # ==========================================================================================
+    # 3. EMPAQUETADO DE CONTEXTO Y RENDERIZADO
+    # ==========================================================================================
     contexto = {
         'socio': socio,
         'es_socio': es_socio,
         'cuentas': cuentas
     }
     return render(request, 'cuentas/cuenta_bancaria.html', contexto)
+    # ==========================================================================================
 
 @login_required
 def pago(request):
     """
-    Vista para que el Socio reporte o registre un pago realizado a sus préstamos.
+    Vista protegida para que un Socio activo pueda registrar el pago de sus préstamos vigentes.
+    Verifica que el usuario sea un socio con estado activo, recopila los préstamos en curso,
+    métodos de pago disponibles e historial de pagos previos. 
+    Procesa solicitudes POST para dar de alta nuevos pagos con estado 'Pendiente' 
+    requiriendo obligatoriamente la subida de un comprobante de pago.
     """
+    # ==========================================================================================
+    # 1. VALIDACIÓN DE PERFIL DE SOCIO ACTIVO
+    # ==========================================================================================
     socio = Socio.objects.filter(cisocio=request.user.username).first()
-    
-    # 1. Validación de seguridad (Adaptado a tu lógica): Solo socios activos
     if not socio or socio.estadosocio not in ['Activo', 'Active']:
         messages.warning(request, "Debes ser un Socio activo para registrar pagos de préstamos.")
         return redirect('inicio')
-
-    # Préstamos que aún tienen saldo pendiente
-    prestamos_activos = Prestamo.objects.filter(idsocio=socio).exclude(estadoprestamo='Liquidado')
+    # Consultas iniciales para la interfaz de pagos y del historial
+    prestamos_activos = Prestamo.objects.filter(idsocio=socio, estadoprestamo='En Curso')
     metodos_activos = MetodoPago.objects.filter(estadometodopago='Activo')
     historial_pagos = Pago.objects.filter(idprestamo__idsocio=socio).order_by('-fechapago')
+    # ==========================================================================================
 
+    # ==========================================================================================
+    # 2. PROCESAMIENTO DE REGISTRO DE PAGO (VÍA POST)
+    # ==========================================================================================
     if request.method == 'POST':
-        action = request.POST.get('action')
-        
+        action = request.POST.get('action')       
         if action == 'registrar_pago':
-            # Nombres exactos de los campos del formulario HTML
             id_prestamo = request.POST.get('id_prestamo')
             id_metodo = request.POST.get('id_metodo_pago') 
             monto_pagado = request.POST.get('monto_pagado')
             referencia_pago = request.POST.get('numeroreferencia')
-            # Capturamos la imagen del comprobante
             imagen_comprobante = request.FILES.get('imagencomprobante')
-
             try:
                 monto = float(monto_pagado)
-                # Validar que el préstamo pertenece al socio y existe
                 prestamo = prestamos_activos.filter(idprestamo=id_prestamo).first()
                 metodo = metodos_activos.filter(idmetodopago=id_metodo).first()
-
-                # Validamos que exista la imagen y que los montos sean mayores a 0
+                # Validamos que existan el préstamo, el método de pago, un monto válido y el comprobante
                 if prestamo and metodo and monto > 0:
                     if imagen_comprobante:
                         Pago.objects.create(
                             idprestamo=prestamo,
                             idmetodopago=metodo,
-                            montopagado=monto, 
+                            montopagado=monto, # Nota: asegurado según modelo de pago
                             numeroreferencia=referencia_pago,
                             comprobantepago=imagen_comprobante, 
                             fechapago=timezone.now(),
-                            estadopago='Pendiente' # Queda pendiente de verificación
+                            estadopago='Pendiente' # Queda sujeto a verificación administrativa
                         )
                         messages.success(request, "Tu comprobante de pago ha sido registrado. Un administrador verificará la transacción pronto.")
                     else:
@@ -1377,9 +1404,12 @@ def pago(request):
                     messages.error(request, "Datos inválidos. Por favor, verifica el préstamo y el método de pago seleccionado.")
             except (ValueError, TypeError):
                 messages.error(request, "El monto ingresado no es válido.")
-        
         return redirect('pago')
+    # ==========================================================================================
 
+    # ==========================================================================================
+    # 3. EMPAQUETADO DE CONTEXTO Y RENDERIZADO
+    # ==========================================================================================
     contexto = {
         'socio': socio,
         'prestamos_activos': prestamos_activos,
@@ -1387,6 +1417,7 @@ def pago(request):
         'historial_pagos': historial_pagos
     }
     return render(request, 'negocio/pago.html', contexto)
+    # ==========================================================================================
 # ===============================================================================================================================================
 
 # ===============================================================================================================================================
@@ -1576,16 +1607,40 @@ def dashboard(request):
                 prestamo = get_object_or_404(Prestamo, pk=request.POST.get('id_prestamo'))
                 decision = request.POST.get('decision')
                 
+                tasa_modificada = request.POST.get('tasa_interes')
+                
                 if decision == 'Aprobar':
-                    # Al aprobar y desembolsar, el préstamo entra en etapa de pago por cuotas
-                    prestamo.estadoprestamo = 'En Curso'
+                    if tasa_modificada:
+                        try:
+                            nueva_tasa = Decimal(tasa_modificada)
+                            prestamo.tasainteres = nueva_tasa
+                            interes_calculado = (prestamo.montoprestamosolicitado * nueva_tasa) / Decimal('100')
+                            prestamo.montototalpagar = prestamo.montoprestamosolicitado + interes_calculado
+                            prestamo.saldopendiente = prestamo.montototalpagar
+                        except Exception as e:
+                            pass 
+                            
+                    # CAMBIO: Ahora pasa a Aprobado esperando la transferencia
+                    prestamo.estadoprestamo = 'Aprobado'
                     prestamo.save()
-                    messages.success(request, f"¡Crédito #{prestamo.idprestamo} aprobado y puesto 'En Curso' para {prestamo.idsocio.primernombresocio}!")
+                    messages.success(request, f"¡Crédito #{prestamo.idprestamo} aprobado para {prestamo.idsocio.primernombresocio}! Ahora está listo para desembolso.")
                 
                 elif decision == 'Rechazar':
                     prestamo.estadoprestamo = 'Rechazado'
                     prestamo.save()
                     messages.warning(request, f"El crédito #{prestamo.idprestamo} ha sido rechazado.")
+
+            elif action == 'desembolsar_credito':
+                prestamo = get_object_or_404(Prestamo, pk=request.POST.get('id_prestamo'))
+                comprobante = request.FILES.get('comprobante_desembolso')
+                
+                if comprobante:
+                    prestamo.comprobantedesembolso = comprobante
+                    prestamo.estadoprestamo = 'En Curso'
+                    prestamo.save()
+                    messages.success(request, f"¡Desembolso registrado exitosamente! El crédito #{prestamo.idprestamo} de {prestamo.idsocio.primernombresocio} está ahora 'En Curso'.")
+                else:
+                    messages.error(request, "Error: Es obligatorio adjuntar el comprobante de la transferencia.")
 
             # =======================================================
             # 2. GESTIÓN DE AMORTIZACIONES Y PAGOS POR CUOTAS
@@ -2019,6 +2074,43 @@ def dashboard(request):
                 messages.success(request, "Divisa eliminada del sistema.")
 
             # =======================================================
+            # NUEVO: GESTIÓN Y EDICIÓN DE MÉTODOS DE PAGO
+            # =======================================================
+            elif action == 'crear_metodo':
+                nombre = request.POST.get('nombremetodopago')
+                descripcion = request.POST.get('descripcionmetodopago')
+                numero_cuenta = request.POST.get('urlmetodopago')
+                
+                if nombre and numero_cuenta:
+                    MetodoPago.objects.create(
+                        nombremetodopago=nombre,
+                        descripcionmetodopago=descripcion,
+                        urlmetodopago=numero_cuenta,
+                        estadometodopago='Activo'
+                    )
+                    messages.success(request, "¡Nuevo método de pago agregado exitosamente!")
+                else:
+                    messages.error(request, "Faltan datos obligatorios para registrar el método.")
+
+            elif action == 'editar_metodo':
+                id_metodo = request.POST.get('id_metodo')
+                metodo = get_object_or_404(MetodoPago, pk=id_metodo)
+                
+                metodo.nombremetodopago = request.POST.get('nombremetodopago')
+                metodo.descripcionmetodopago = request.POST.get('descripcionmetodopago')
+                metodo.urlmetodopago = request.POST.get('urlmetodopago')
+                metodo.estadometodopago = request.POST.get('estadometodopago', 'Activo')
+                metodo.save()
+                
+                messages.success(request, "Método de pago actualizado correctamente.")
+
+            elif action == 'eliminar_metodo':
+                id_metodo = request.POST.get('id_metodo')
+                metodo = get_object_or_404(MetodoPago, pk=id_metodo)
+                metodo.delete()
+                messages.success(request, "El método de pago fue eliminado de forma segura.")
+
+            # =======================================================
             # NUEVO: GESTIÓN DE TIENDA Y TRANSACCIONES
             # =======================================================
             elif action == 'crear_tarjeta_recarga':
@@ -2225,6 +2317,7 @@ def dashboard(request):
         'partidas': partidas_lista,
         'tarjetas_recarga': TarjetaRecarga.objects.all().order_by('-estado', 'tiposaldo', 'preciodetarjetarecarga'),
         'transacciones_recarga': TransaccionRecarga.objects.all().select_related('idjugador', 'idtarjeta').order_by('-fechatransaccion')[:50],
+        'metodos_pago': MetodoPago.objects.all(),
     }
     # Agrega esto al final de tus variables de contexto
     contexto['bingos_con_pozo'] = list(PartidaBingo.objects.filter(premiomaterial='[POZO_MAYOR]').values_list('idbingo_id', flat=True))
@@ -2726,7 +2819,18 @@ def metodos_pago(request):
                 messages.success(request, "¡Nuevo método de pago agregado exitosamente a la cooperativa!")
             else:
                 messages.error(request, "Faltan datos obligatorios para registrar el método.")
-        
+
+        elif action == 'editar_metodo':
+            id_metodo = request.POST.get('id_metodo')
+            metodo = get_object_or_404(MetodoPago, pk=id_metodo)
+            metodo.nombremetodopago = request.POST.get('nombremetodopago')
+            metodo.descripcionmetodopago = request.POST.get('descripcionmetodopago')
+            metodo.urlmetodopago = request.POST.get('urlmetodopago')
+            metodo.estadometodopago = request.POST.get('estadometodopago', 'Activo')
+            metodo.save()
+            
+            messages.success(request, "Método de pago actualizado correctamente.")
+
         elif action == 'eliminar_metodo':
             id_metodo = request.POST.get('id_metodo')
             metodo = MetodoPago.objects.filter(idmetodopago=id_metodo).first()

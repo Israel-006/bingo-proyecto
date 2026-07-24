@@ -307,6 +307,12 @@ class Prestamo(models.Model):
         default='Solicitado', # Por lógica, todo préstamo inicia como solicitado
         verbose_name="Estado del Préstamo"
     )
+    comprobantedesembolso = models.FileField(
+        upload_to='media/prestamo/comprobantes_desembolso/', 
+        null=True, 
+        blank=True, 
+        verbose_name="Comprobante de Desembolso"
+    )
 
     def __str__(self):
         return f"Préstamo #{self.idprestamo} - Socio ID: {self.idsocio_id} - {self.estadoprestamo}"
@@ -415,7 +421,7 @@ class Bingo(models.Model):
         ('Finalizado', 'Finalizado'),
         ('Cancelado', 'Cancelado'),
     ]
-    idbingo = models.AutoField(primary_key=True)
+    idbingo = models.AutoField(primary_key=True)    
     idunidad_venta = models.ForeignKey(UnidadMonetaria, on_delete=models.PROTECT, related_name='bingos_venta')
     idunidad_premio = models.ForeignKey(UnidadMonetaria, on_delete=models.PROTECT, related_name='bingos_premio')
     titulobingo = models.CharField(
@@ -482,6 +488,10 @@ class Bingo(models.Model):
         null=True, 
         blank=True, 
         verbose_name="Descripción de otros premios"
+    )
+    recordatorio_enviado = models.BooleanField(
+        default=False, 
+        verbose_name="Recordatorio 30m Enviado"
     )
 
     def __str__(self):

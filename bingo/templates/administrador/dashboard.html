@@ -26,7 +26,7 @@
         overflow-x: hidden;
     }
     .opciones-scroll::-webkit-scrollbar { width: 6px; }
-    .opciones-scroll::-webkit-scrollbar-track { background: #f8f9fa; border-radius: 4px; }
+    .opciones-scroll::-webkit-scrollbar-track { background: var(--bs-tertiary-bg); border-radius: 4px; }
     .opciones-scroll::-webkit-scrollbar-thumb { background: #adb5bd; border-radius: 4px; }
     .opciones-scroll::-webkit-scrollbar-thumb:hover { background: #6c757d; }
 </style>
@@ -382,30 +382,25 @@
                                                             {% endif %}
                                                         </td>
                                                         <td class="text-end text-nowrap">
-                                                            <!-- NUEVO BOTÓN: Ver Información del Socio (Reutiliza el modal relacional) -->
+                                                            <!-- Ver Información del Socio -->
                                                             <button type="button" class="btn btn-sm btn-outline-info border-0 p-1 px-2 me-1" data-bs-toggle="modal" data-bs-target="#modalVerificarSocio{{ p.idsocio.idsocio }}" title="Inspeccionar Perfil del Socio">
                                                                 <i class="fas fa-user-check fs-6"></i>
                                                             </button>
-                                                            <!-- BOTÓN PARA VER HISTORIAL DE PAGOS DE ESTE PRÉSTAMO -->
+                                                            <!-- Historial de Pagos -->
                                                             <button type="button" class="btn btn-sm btn-outline-warning border-0 p-1 px-2 me-1" data-bs-toggle="modal" data-bs-target="#modalHistorialPagosPrestamo{{ p.idprestamo }}" title="Ver Historial de Abonos / Cuotas">
                                                                 <i class="fas fa-receipt fs-6"></i>
                                                             </button>
+                                                            
                                                             {% if p.estadoprestamo == 'Solicitado' or p.estadoprestamo == 'Pendiente' %}
-                                                                <!-- Botón Aprobar (Podría abrir un modal para elegir si es en Efectivo o Banco) -->
-                                                                <button class="btn btn-sm btn-success border-0 p-1 px-2 me-1" data-bs-toggle="modal" data-bs-target="#modalAprobarCredito{{ p.idprestamo }}" title="Aprobar y Desembolsar">
-                                                                    <i class="fas fa-check"></i>
+                                                                <!-- Botón Revisar Solicitud (Lupa) -->
+                                                                <button type="button" class="btn btn-sm btn-info border-0 p-1 px-2 me-1 text-white shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAprobarCredito{{ p.idprestamo }}" title="Revisar Solicitud">
+                                                                    <i class="fas fa-search"></i>
                                                                 </button>
-                                                                
-                                                                <!-- Botón Rechazar -->
-                                                                <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Seguro que deseas rechazar este crédito?');">
-                                                                    {% csrf_token %}
-                                                                    <input type="hidden" name="action" value="gestionar_credito">
-                                                                    <input type="hidden" name="decision" value="Rechazar">
-                                                                    <input type="hidden" name="id_prestamo" value="{{ p.idprestamo }}">
-                                                                    <button type="submit" class="btn btn-sm btn-danger border-0 p-1 px-2" title="Rechazar Crédito">
-                                                                        <i class="fas fa-times"></i>
-                                                                    </button>
-                                                                </form>
+                                                            {% elif p.estadoprestamo == 'Aprobado' %}
+                                                                <!-- NUEVO: Botón Desembolsar (Aparece sólo cuando está Aprobado) -->
+                                                                <button class="btn btn-sm btn-primary border-0 p-1 px-2 me-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDesembolsarCredito{{ p.idprestamo }}" title="Transferir y Subir Comprobante">
+                                                                    <i class="fas fa-money-bill-transfer fs-6"></i>
+                                                                </button>
                                                             {% else %}
                                                                 <button class="btn btn-sm btn-outline-secondary border-0 p-1 px-2 opacity-50" disabled><i class="fas fa-lock"></i></button>
                                                             {% endif %}
@@ -478,24 +473,10 @@
                                                             {% endif %}
                                                         </td>
                                                         <td class="text-end text-nowrap">
-                                                            {% if pago.comprobantepago %}
-                                                            <a href="{{ pago.comprobantepago.url }}" target="_blank" class="btn btn-sm btn-outline-info border-0 p-1 px-2 me-1" title="Ver Comprobante"><i class="fas fa-image"></i></a>
-                                                            {% endif %}
-                                                            
-                                                            <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Aprobar esta amortización? Se descontará del saldo del préstamo.');">
-                                                                {% csrf_token %}
-                                                                <input type="hidden" name="action" value="gestionar_transaccion">
-                                                                <input type="hidden" name="decision" value="Aprobar">
-                                                                <input type="hidden" name="id_pago" value="{{ pago.idpago }}">
-                                                                <button type="submit" class="btn btn-sm btn-success border-0 p-1 px-2 me-1" title="Aprobar"><i class="fas fa-check"></i></button>
-                                                            </form>
-                                                            <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Rechazar esta amortización?');">
-                                                                {% csrf_token %}
-                                                                <input type="hidden" name="action" value="gestionar_transaccion">
-                                                                <input type="hidden" name="decision" value="Rechazar">
-                                                                <input type="hidden" name="id_pago" value="{{ pago.idpago }}">
-                                                                <button type="submit" class="btn btn-sm btn-danger border-0 p-1 px-2" title="Rechazar"><i class="fas fa-times"></i></button>
-                                                            </form>
+                                                            <!-- Botón Revisar Abono (Lupa) -->
+                                                            <button type="button" class="btn btn-sm btn-info border-0 p-1 px-2 me-1 text-white shadow-sm" data-bs-toggle="modal" data-bs-target="#modalValidarPago{{ pago.idpago }}" title="Revisar y Aprobar Abono">
+                                                                <i class="fas fa-search"></i>
+                                                            </button>
                                                         </td>
                                                         <td><input type="checkbox" class="pago-checkbox" value="{{ pago.idpago }}" onclick="actualizarBotonMasivoGeneric('pago-checkbox')"></td>
                                                     </tr>
@@ -601,35 +582,17 @@
                                                         </button>
                                                     {% endif %}
 
-                                                    <!-- Lógica blindada: Muestra botones SOLO si está pendiente de retirar -->
                                                     {% if a.estadoahorro == 'Retirar' or a.estadoahorro == 'Pendiente' and a.montoahorro < 0 %}
-                                                        <button class="btn btn-sm btn-success border-0 p-1 px-2 me-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRetiro{{ a.idahorro }}" title="Procesar Retiro">
-                                                            <i class="fas fa-check"></i>
+                                                        <!-- Botón Revisar Retiro (Lupa) -->
+                                                        <button type="button" class="btn btn-sm btn-info border-0 p-1 px-2 me-1 text-white shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRetiro{{ a.idahorro }}" title="Revisar Solicitud de Retiro">
+                                                            <i class="fas fa-search"></i>
                                                         </button>
-                                                        <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Rechazar esta solicitud de retiro?');">
-                                                            {% csrf_token %}
-                                                            <input type="hidden" name="action" value="procesar_retiro">
-                                                            <input type="hidden" name="id_ahorro" value="{{ a.idahorro }}">
-                                                            <input type="hidden" name="decision" value="Rechazar">
-                                                            <button type="submit" class="btn btn-sm btn-danger border-0 p-1 px-2 shadow-sm" title="Rechazar"><i class="fas fa-times"></i></button>
-                                                        </form>
                                                     
-                                                    <!-- Si es un depósito a favor pendiente normal -->
                                                     {% elif a.estadoahorro == 'Pendiente' and a.montoahorro > 0 %}
-                                                        <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Aprobar esta transacción en la libreta?');">
-                                                            {% csrf_token %}
-                                                            <input type="hidden" name="action" value="gestionar_ahorro">
-                                                            <input type="hidden" name="id_ahorro" value="{{ a.idahorro }}">
-                                                            <input type="hidden" name="decision" value="Aprobar">
-                                                            <button type="submit" class="btn btn-sm btn-success border-0 p-1 px-2 me-1" title="Aprobar"><i class="fas fa-check"></i></button>
-                                                        </form>
-                                                        <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Rechazar esta transacción?');">
-                                                            {% csrf_token %}
-                                                            <input type="hidden" name="action" value="gestionar_ahorro">
-                                                            <input type="hidden" name="id_ahorro" value="{{ a.idahorro }}">
-                                                            <input type="hidden" name="decision" value="Rechazar">
-                                                            <button type="submit" class="btn btn-sm btn-danger border-0 p-1 px-2" title="Rechazar"><i class="fas fa-times"></i></button>
-                                                        </form>
+                                                        <!-- Botón Revisar Depósito (Lupa) -->
+                                                        <button type="button" class="btn btn-sm btn-info border-0 p-1 px-2 me-1 text-white shadow-sm" data-bs-toggle="modal" data-bs-target="#modalValidarAhorro{{ a.idahorro }}" title="Revisar Depósito">
+                                                            <i class="fas fa-search"></i>
+                                                        </button>
                                                     {% endif %}
                                                 </td>
                                                 <td>
@@ -651,7 +614,7 @@
 
                     <div class="card-minimalista p-4 mb-4 border-start border-warning border-4">
                         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 border-bottom pb-3">
-                            <h5 class="fw-bold mb-0 text-warning"><i class="fas fa-vault me-2 text-dark"></i>Auditoría de Aportes (Control de Caja)</h5>
+                            <h5 class="fw-bold mb-0 text-warning"><i class="fas fa-vault me-2 text-warning"></i>Auditoría de Aportes (Control de Caja)</h5>
                             <div>
                                 <button class="btn btn-sm btn-outline-primary shadow-sm fw-bold me-2" data-bs-toggle="modal" data-bs-target="#modalAperturarAporte">
                                     <i class="fas fa-folder-open me-1"></i> Aperturar
@@ -769,20 +732,10 @@
                                                 </button>
                                             {% endif %}
                                             {% if ap.estadoaporte == 'En Revision' %}
-                                                <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Aprobar este pago? El socio quedará AL DÍA automáticamente.');">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="action" value="gestionar_aporte">
-                                                    <input type="hidden" name="decision" value="Aprobar">
-                                                    <input type="hidden" name="id_aporte" value="{{ ap.pk }}">
-                                                    <button type="submit" class="btn btn-sm btn-success border-0 p-1 px-2 me-1" title="Aprobar Pago"><i class="fas fa-check"></i></button>
-                                                </form>
-                                                <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Rechazar este pago? Se marcará como ATRASADO.');">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="action" value="gestionar_aporte">
-                                                    <input type="hidden" name="decision" value="Rechazar">
-                                                    <input type="hidden" name="id_aporte" value="{{ ap.pk }}">
-                                                    <button type="submit" class="btn btn-sm btn-danger border-0 p-1 px-2" title="Rechazar Pago"><i class="fas fa-times"></i></button>
-                                                </form>
+                                                <!-- Botón Revisar Aporte (Lupa) -->
+                                                <button type="button" class="btn btn-sm btn-info border-0 p-1 px-2 me-1 text-white shadow-sm" data-bs-toggle="modal" data-bs-target="#modalValidarAporte{{ ap.pk }}" title="Revisar Aporte">
+                                                    <i class="fas fa-search"></i>
+                                                </button>
                                             {% endif %}
                                         </td>
                                         <td>
@@ -968,20 +921,10 @@
                                                 </td>
                                                 <td class="text-end text-nowrap">
                                                     {% if txn.estado == 'Pendiente' %}
-                                                        <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Aprobar comprobante e inyectar el saldo al jugador?');">
-                                                            {% csrf_token %}
-                                                            <input type="hidden" name="action" value="gestionar_transaccion">
-                                                            <input type="hidden" name="decision" value="Aprobar">
-                                                            <input type="hidden" name="id_transaccion" value="{{ txn.idtransaccion }}">
-                                                            <button type="submit" class="btn btn-sm btn-success border-0 p-1 px-2 me-1" title="Aprobar y Pagar"><i class="fas fa-check"></i></button>
-                                                        </form>
-                                                        <form method="post" action="{% url 'dashboard' %}" class="d-inline" onsubmit="return confirm('¿Rechazar esta transacción por falta de fondos?');">
-                                                            {% csrf_token %}
-                                                            <input type="hidden" name="action" value="gestionar_transaccion">
-                                                            <input type="hidden" name="decision" value="Rechazar">
-                                                            <input type="hidden" name="id_transaccion" value="{{ txn.idtransaccion }}">
-                                                            <button type="submit" class="btn btn-sm btn-danger border-0 p-1 px-2" title="Rechazar"><i class="fas fa-times"></i></button>
-                                                        </form>
+                                                        <!-- Botón Revisar Recarga (Lupa) -->
+                                                        <button type="button" class="btn btn-sm btn-info border-0 p-1 px-2 me-1 text-white shadow-sm" data-bs-toggle="modal" data-bs-target="#modalValidarRecarga{{ txn.idtransaccion }}" title="Revisar Solicitud de Recarga">
+                                                            <i class="fas fa-search"></i>
+                                                        </button>
                                                     {% else %}
                                                         <button class="btn btn-sm btn-outline-secondary border-0 p-1 px-2 opacity-50" disabled><i class="fas fa-lock"></i></button>
                                                     {% endif %}
@@ -1826,7 +1769,7 @@
 
 <div class="modal fade" id="modalNuevaPartida" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Crear Nueva Ronda</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -1944,7 +1887,7 @@
 
 <div class="modal fade" id="modalNuevoTipoSocio" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Nuevo Tipo de Socio</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -1977,7 +1920,7 @@
 
 <div class="modal fade" id="modalCreditoMasivo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Modificación Masiva de Saldos</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -2014,7 +1957,7 @@
 
 <div class="modal fade" id="modalNuevaPlataforma" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Integrar Plataforma Web</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -2072,7 +2015,7 @@
 {% for b in bingos %}
 <div class="modal fade text-start" id="modalEditarBingo{{ b.idbingo }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg"> 
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Editar Jornada de Bingo</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -2165,7 +2108,7 @@
 {% for s in socios %}
 <div class="modal fade text-start" id="modalEditarSocio{{ s.idsocio }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Editar Perfil de Socio</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -2286,7 +2229,7 @@
 <!-- MODAL DE VERIFICACIÓN (SOLO LECTURA PARA PENDIENTES) -->
 <div class="modal fade text-start" id="modalVerificarSocio{{ s.idsocio }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold text-info"><i class="fas fa-search me-2"></i>Ficha de Verificación del Socio</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -2395,7 +2338,7 @@
 {% for j in jugadores %}
 <div class="modal fade text-start" id="modalEditarJugador{{ j.idjugador }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Editar Perfil de Jugador</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -2496,7 +2439,7 @@
 
 <div class="modal fade" id="modalNuevaMoneda" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Crear Nueva Divisa</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -2546,7 +2489,7 @@
 {% for m in todas_monedas %}
 <div class="modal fade" id="modalEditarMoneda{{ m.idunidadmonetaria }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Editar Divisa: {{ m.nombremoneda }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -2667,7 +2610,7 @@
 
 <div class="modal fade" id="modalNuevaTarjetaRecarga" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Crear Paquete de Recarga</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -2821,6 +2764,68 @@
     {% endif %}
 {% endfor %}
 
+{% for ap in aportes_semanales %}
+{% if ap.estadoaporte == 'En Revision' %}
+<div class="modal fade text-start" id="modalValidarAporte{{ ap.pk }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0 bg-dark text-white rounded-top" style="padding: 1rem 1.5rem;">
+                <h5 class="modal-title fw-bold"><i class="fas fa-calendar-check me-2"></i> Validar Aporte Semanal</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <form method="post" action="{% url 'dashboard' %}" id="formValidarAporte{{ ap.pk }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="gestionar_aporte">
+                <input type="hidden" name="decision" id="decisionAporte{{ ap.pk }}" value="Aprobar">
+                <input type="hidden" name="id_aporte" value="{{ ap.pk }}">
+                
+                <div class="modal-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6 border-end">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user me-2"></i> Datos del Socio</h6>
+                            <p class="mb-2 small"><strong>Socio:</strong> {{ ap.idsocio.primernombresocio }} {{ ap.idsocio.primerapellidosocio }}</p>
+                            <p class="mb-2 small"><strong>Cédula:</strong> {{ ap.idsocio.cisocio }}</p>
+                            <p class="mb-4 small"><strong>Teléfono:</strong> {{ ap.idsocio.telefonopersonalsocio|default:"No registrado" }}</p>
+                            
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-file-invoice me-2"></i> Detalle del Aporte</h6>
+                            <p class="mb-2 small"><strong>Bingo:</strong> {{ ap.idbingo.titulobingo }}</p>
+                            <p class="mb-2 small"><strong>Semana a Pagar:</strong> Nº {{ ap.numerosemana }}</p>
+                            <p class="mb-2 small"><strong>Monto Abonado:</strong> <span class="text-success fw-bold">${{ ap.montoaporte }}</span></p>
+                            <p class="mb-2 small"><strong>Canal:</strong> {{ ap.idmetodopago.nombremetodopago|default:"Manual/Efectivo" }}</p>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-secondary mb-3 text-center"><i class="fas fa-image me-1"></i> Comprobante del Socio</h6>
+                            <div class="text-center">
+                                {% if ap.comprobanteaporte %}
+                                    <a href="{{ ap.comprobanteaporte.url }}" target="_blank" title="Clic para ampliar imagen">
+                                        <img src="{{ ap.comprobanteaporte.url }}" class="img-fluid rounded border shadow-sm" style="max-height: 280px; object-fit: contain;">
+                                    </a>
+                                    <p class="small text-muted mt-2"><i class="fas fa-hand-pointer me-1"></i> Clic para ampliar</p>
+                                {% else %}
+                                    <div class="p-4 border rounded bg-light text-muted">No se adjuntó comprobante</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer bg-body-tertiary border-top d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-outline-danger px-4 fw-bold bg-body" onclick="document.getElementById('decisionAporte{{ ap.pk }}').value='Rechazar'; document.getElementById('formValidarAporte{{ ap.pk }}').submit();">
+                        <i class="fas fa-times me-2"></i> Rechazar
+                    </button>
+                    <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" onclick="document.getElementById('decisionAporte{{ ap.pk }}').value='Aprobar';">
+                        <i class="fas fa-check me-2"></i> Validar Aporte
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
 <!-- MODAL DE INFORMACIÓN DEL TIPO DE SOCIO -->
 {% for t in tipos_socio %}
 <div class="modal fade" id="modalInfoTipoSocio{{ t.idtiposocio }}" tabindex="-1" aria-hidden="true">
@@ -2872,7 +2877,7 @@
 <!-- Modal: Crear Nuevo Método -->
 <div class="modal fade" id="modalNuevoMetodoPago" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold text-success"><i class="fas fa-plus-circle me-2"></i>Nueva Cuenta Receptora</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -2915,7 +2920,7 @@
 <!-- Modal: Editar Método -->
 <div class="modal fade text-start" id="modalEditarMetodoPago{{ m.idmetodopago }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold text-primary"><i class="fas fa-edit me-2"></i>Editar Cuenta Receptora</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -2984,7 +2989,7 @@
 {% for pt in partidas %}
 <div class="modal fade" id="modalEditarPartida{{ pt.idpartidabingo }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold text-primary"><i class="fas fa-edit me-2"></i> Editar Ronda</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -3093,32 +3098,96 @@
 {% for p in prestamos %}
     {% if p.estadoprestamo == 'Solicitado' or p.estadoprestamo == 'Pendiente' %}
     <div class="modal fade text-start" id="modalAprobarCredito{{ p.idprestamo }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content card-minimalista border-0 shadow">
-                <div class="modal-header border-bottom-0 pb-0">
-                    <h5 class="modal-title fw-bold text-success"><i class="fas fa-money-check-alt me-2"></i>Aprobar y Desembolsar Crédito</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
+                
+                <div class="modal-header border-bottom-0 pb-0 bg-dark text-white rounded-top" style="padding: 1rem 1.5rem;">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-search me-2"></i> Revisión de Crédito #{{ p.idprestamo }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="post" action="{% url 'dashboard' %}">
+                
+                <form method="post" action="{% url 'dashboard' %}" id="formAprobarCredito{{ p.idprestamo }}">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="gestionar_credito">
-                    <input type="hidden" name="decision" value="Aprobar">
+                    <input type="hidden" name="decision" id="decisionCredito{{ p.idprestamo }}" value="Aprobar">
                     <input type="hidden" name="id_prestamo" value="{{ p.idprestamo }}">
                     
-                    <div class="bg-body-tertiary p-3 rounded border mb-3">
-                        <h6 class="fw-bold text-indigo mb-2"><i class="fas fa-exchange-alt me-2"></i> Método de Desembolso Solicitado</h6>
-                        {% if p.idcuentadestino %}
-                            <p class="mb-0 text-body"><i class="fas fa-university text-primary me-2"></i> Banco: <strong>{{ p.idcuentadestino.nombrebanco }}</strong></p>
-                            <p class="mb-0 text-body"><i class="fas fa-hashtag text-secondary me-2"></i> Cuenta: <strong>{{ p.idcuentadestino.numerocuenta }}</strong></p>
-                            <p class="mb-0 text-body"><i class="fas fa-id-card text-success me-2"></i> Titular: <strong>{{ p.idsocio.primernombresocio }} {{ p.idsocio.primerapellidosocio }}</strong></p>
-                        {% else %}
-                            <p class="mb-0 text-success fw-bold"><i class="fas fa-money-bill-wave me-2"></i> Entregar en Efectivo (Caja Física)</p>
-                        {% endif %}
+                    <div class="modal-body p-4">
+                        <div class="row g-4">
+                            <!-- Columna: Datos del Socio -->
+                            <div class="col-md-6 border-end">
+                                <h6 class="fw-bold text-danger mb-3"><i class="fas fa-user me-2"></i> Datos del Socio</h6>
+                                <p class="mb-2 small"><strong>Nombre:</strong> {{ p.idsocio.primernombresocio }} {{ p.idsocio.primerapellidosocio }}</p>
+                                <p class="mb-2 small"><strong>Cédula:</strong> {{ p.idsocio.cisocio }}</p>
+                                <p class="mb-2 small"><strong>Teléfono:</strong> {{ p.idsocio.telefonopersonalsocio|default:"No registrado" }}</p>
+                                <p class="mb-0 small"><strong>Estado:</strong> <span class="badge bg-success">{{ p.idsocio.estadosocio }}</span></p>
+                            </div>
+                            
+                            <!-- Columna: Detalles del Crédito -->
+                            <div class="col-md-6">
+                                <h6 class="fw-bold text-danger mb-3"><i class="fas fa-file-invoice-dollar me-2"></i> Detalles del Crédito</h6>
+                                <p class="mb-2 small"><strong>Monto solicitado:</strong> ${{ p.montoprestamosolicitado }}</p>
+                                <p class="mb-2 small"><strong>Cuotas a pagar:</strong> {{ p.numerocuotas }} meses</p>
+                                <p class="mb-2 small"><strong>Tasa normal aplicada:</strong> <span id="lbl-tasa-{{ p.idprestamo }}">{{ p.tasainteres }}</span>%</p>
+                                <p class="mb-2 small text-danger fw-bold"><strong>Total con interés:</strong> $<span id="lbl-total-{{ p.idprestamo }}">{{ p.montototalpagar }}</span></p>
+                                <p class="mb-0 small"><strong>Vencimiento:</strong> {{ p.fechavencimiento|date:"d M Y" }}</p>
+                            </div>
+                        </div>
+
+                        <hr class="my-4 text-muted opacity-25">
+
+                        <!-- Sección: Garantías Presentadas -->
+                        <h6 class="fw-bold text-danger mb-3"><i class="fas fa-users me-2"></i> Garantías Presentadas</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="border p-3 rounded bg-body shadow-sm">
+                                    <strong class="d-block small mb-1">Garante 1:</strong>
+                                    {% if p.idgarante1 %}
+                                        <span class="small text-muted">{{ p.idgarante1.primernombresocio }} {{ p.idgarante1.primerapellidosocio }} ({{ p.idgarante1.cisocio }})</span>
+                                    {% else %}
+                                        <span class="small text-muted fst-italic">Sin garante principal</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="border p-3 rounded bg-body shadow-sm">
+                                    <strong class="d-block small mb-1">Garante 2:</strong>
+                                    {% if p.idgarante2 %}
+                                        <span class="small text-muted">{{ p.idgarante2.primernombresocio }} {{ p.idgarante2.primerapellidosocio }} ({{ p.idgarante2.cisocio }})</span>
+                                    {% else %}
+                                        <span class="small text-muted fst-italic">Sin garante secundario</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Nota de Modificación -->
+                        <div class="px-3 py-2 mb-4 rounded bg-primary bg-opacity-10 text-primary-emphasis shadow-sm small border border-primary border-opacity-25">
+                            <i class="fas fa-info-circle"></i> <strong>Modifica el % de interés abajo si es necesario.</strong> Al aprobar el crédito, su estado cambiará a <strong>Aprobado</strong> y el sistema recalculará la deuda automáticamente.
+                        </div>
                     </div>
                     
-                    <div class="modal-footer border-top-0 pt-0">
-                        <button type="button" class="btn bg-body-tertiary text-body border fw-bold" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-success fw-bold shadow-sm"><i class="fas fa-check-circle me-1"></i> Confirmar Desembolso</button>
+                    <!-- Footer con los controles interactivos -->
+                    <div class="modal-footer bg-body-tertiary border-top d-flex justify-content-between align-items-center">
+                        <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal" style="background-color: #6c757d;">Cerrar</button>
+                        
+                        <div class="d-flex align-items-stretch gap-2">
+                            <!-- Botón Rechazar dinámico -->
+                            <button type="button" class="btn btn-outline-danger px-3 bg-body d-flex align-items-center fw-bold" onclick="document.getElementById('decisionCredito{{ p.idprestamo }}').value='Rechazar'; document.getElementById('formAprobarCredito{{ p.idprestamo }}').submit();">
+                                <i class="fas fa-times me-2"></i> Rechazar
+                            </button>
+                            
+                            <!-- Input para modificar la tasa de interés -->
+                            <div class="input-group w-auto shadow-sm">
+                                <span class="input-group-text bg-success text-white border-success"><i class="fas fa-percent"></i></span>
+                                <input type="number" step="0.01" min="0" name="tasa_interes" id="input-tasa-{{ p.idprestamo }}" class="form-control border-success text-center fw-bold text-primary" style="width: 85px;" value="{{ p.tasainteres|stringformat:'f' }}" oninput="recalcularInteres('{{ p.idprestamo }}', {{ p.montoprestamosolicitado|stringformat:'f' }})">
+                            </div>
+                            
+                            <!-- Botón Aprobar -->
+                            <button type="submit" class="btn btn-success fw-bold px-3 shadow-sm d-flex align-items-center" onclick="document.getElementById('decisionCredito{{ p.idprestamo }}').value='Aprobar';">
+                                <i class="fas fa-check me-2"></i> Aprobar Crédito
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -3130,7 +3199,7 @@
 {% for p in prestamos %}
 <div class="modal fade text-start" id="modalHistorialPagosPrestamo{{ p.idprestamo }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold text-warning">
                     <i class="fas fa-file-invoice-dollar me-2"></i> Historial de Abonos - Crédito #{{ p.idprestamo }}
@@ -3251,7 +3320,7 @@
                                     <p class="mb-3 small fw-bold text-body">Monto a Transferir: <span class="text-danger fs-5">${{ a.montoahorro }}</span></p>
                                 {% endif %}
                                 
-                                <div class="bg-white p-3 rounded border border-warning border-opacity-50 shadow-sm mt-3">
+                                <div class="bg-body p-3 rounded border border-warning border-opacity-50 shadow-sm mt-3">
                                     <h6 class="small fw-bold text-muted mb-2"><i class="fas fa-university me-1"></i> Cuentas Destino del Socio</h6>
                                     {% with a.idsocio.cuentabancaria_set.all as cuentas_socio %}
                                         {% for c in cuentas_socio %}
@@ -3273,13 +3342,13 @@
                                 <h6 class="fw-bold text-warning mb-3 text-center"><i class="fas fa-upload me-1"></i> Evidencia de Transferencia</h6>
                                 <p class="small text-muted text-center mb-4 px-3">Una vez que le transfieras el dinero al socio, sube aquí la foto del comprobante para que él pueda verla en su libreta.</p>
                                 
-                                <div class="border rounded p-4 text-center bg-white shadow-sm border-warning border-opacity-50">
+                                <div class="border rounded p-4 text-center bg-body-tertiary shadow-sm border-warning border-opacity-50">
                                     <input type="file" name="comprobante_retiro" class="form-control" accept="image/*,application/pdf" required>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer bg-white border-top py-3 d-flex justify-content-between">
+                    <div class="modal-footer bg-body-tertiary border-top py-3 d-flex justify-content-between">
                         <!-- El botón Rechazar usa formnovalidate para ignorar el 'required' de la imagen -->
                         <button type="submit" name="decision" value="Rechazar" class="btn btn-outline-danger fw-bold px-4" formnovalidate>
                             <i class="fas fa-times me-1"></i> Rechazar
@@ -3295,11 +3364,72 @@
     {% endif %}
 {% endfor %}
 
+<!-- Modal: Revisar Depósito de Ahorro -->
+{% for a in ahorros %}
+{% if a.estadoahorro == 'Pendiente' and a.montoahorro > 0 %}
+<div class="modal fade text-start" id="modalValidarAhorro{{ a.idahorro }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0 bg-dark text-white rounded-top" style="padding: 1rem 1.5rem;">
+                <h5 class="modal-title fw-bold"><i class="fas fa-piggy-bank me-2"></i> Validar Depósito de Ahorro</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <form method="post" action="{% url 'dashboard' %}" id="formValidarAhorro{{ a.idahorro }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="gestionar_ahorro">
+                <input type="hidden" name="decision" id="decisionAhorro{{ a.idahorro }}" value="Aprobar">
+                <input type="hidden" name="id_ahorro" value="{{ a.idahorro }}">
+                
+                <div class="modal-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6 border-end">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user me-2"></i> Datos del Socio</h6>
+                            <p class="mb-2 small"><strong>Socio:</strong> {{ a.idsocio.primernombresocio }} {{ a.idsocio.primerapellidosocio }}</p>
+                            <p class="mb-2 small"><strong>Cédula:</strong> {{ a.idsocio.cisocio }}</p>
+                            <p class="mb-4 small"><strong>Teléfono:</strong> {{ a.idsocio.telefonopersonalsocio|default:"No registrado" }}</p>
+                            
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-exchange-alt me-2"></i> Detalle de Transacción</h6>
+                            <p class="mb-2 small"><strong>Monto Depositado:</strong> <span class="text-success fw-bold">+${{ a.montoahorro }}</span></p>
+                            <p class="mb-2 small"><strong>Destino:</strong> {{ a.idmetodopago.nombremetodopago|default:"Efectivo" }}</p>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-secondary mb-3 text-center"><i class="fas fa-image me-1"></i> Comprobante del Socio</h6>
+                            <div class="text-center">
+                                {% if a.comprobanteahorro %}
+                                    <a href="{{ a.comprobanteahorro.url }}" target="_blank" title="Clic para ampliar imagen">
+                                        <img src="{{ a.comprobanteahorro.url }}" class="img-fluid rounded border shadow-sm" style="max-height: 280px; object-fit: contain;">
+                                    </a>
+                                    <p class="small text-muted mt-2"><i class="fas fa-hand-pointer me-1"></i> Clic para ampliar</p>
+                                {% else %}
+                                    <div class="p-4 border rounded bg-light text-muted">No se adjuntó comprobante</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer bg-body-tertiary border-top d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-outline-danger px-4 fw-bold bg-body" onclick="document.getElementById('decisionAhorro{{ a.idahorro }}').value='Rechazar'; document.getElementById('formValidarAhorro{{ a.idahorro }}').submit();">
+                        <i class="fas fa-times me-2"></i> Rechazar
+                    </button>
+                    <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" onclick="document.getElementById('decisionAhorro{{ a.idahorro }}').value='Aprobar';">
+                        <i class="fas fa-check me-2"></i> Validar Transacción
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
 <!-- Modales: Editar Tarjeta Recarga -->
 {% for t in tarjetas_recarga %}
 <div class="modal fade" id="modalEditarTarjetaRecarga{{ t.idtarjetarecarga }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-minimalista border-0 shadow">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold text-primary"><i class="fas fa-edit me-2"></i>Editar Paquete de Recarga</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -3417,6 +3547,131 @@
         </div>
     </div>
 </div>
+
+{% for p in prestamos %}
+    {% if p.estadoprestamo == 'Aprobado' %}
+    <div class="modal fade text-start" id="modalDesembolsarCredito{{ p.idprestamo }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
+                
+                <div class="modal-header border-bottom-0 pb-0 bg-primary text-white rounded-top" style="padding: 1rem 1.5rem;">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-money-bill-transfer me-2"></i> Desembolso de Crédito #{{ p.idprestamo }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <form method="post" action="{% url 'dashboard' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="desembolsar_credito">
+                    <input type="hidden" name="id_prestamo" value="{{ p.idprestamo }}">
+                    
+                    <div class="modal-body p-4">
+                        <div class="row g-4">
+                            <!-- Columna Izquierda: Información de Cuenta Bancaria -->
+                            <div class="col-md-6 border-end">
+                                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-university me-2"></i> Cuenta Destino del Socio</h6>
+                                <p class="mb-1 small"><strong class="text-body">Titular:</strong> {{ p.idsocio.primernombresocio }} {{ p.idsocio.primerapellidosocio }}</p>
+                                <p class="mb-1 small"><strong class="text-body">Cédula:</strong> {{ p.idsocio.cisocio }}</p>
+                                <p class="mb-3 small"><strong class="text-body">Monto a Transferir:</strong> <span class="text-success fs-5 fw-bold">${{ p.montoprestamosolicitado }}</span></p>
+                                
+                                <div class="bg-body-tertiary p-3 rounded border shadow-sm">
+                                    {% if p.idcuentadestino %}
+                                        <p class="mb-1 small"><i class="fas fa-building text-primary me-1"></i> <strong>Banco:</strong> {{ p.idcuentadestino.nombrebanco }}</p>
+                                        <p class="mb-1 small"><i class="fas fa-tag text-warning me-1"></i> <strong>Tipo de Cuenta:</strong> {{ p.idcuentadestino.tipocuenta }}</p>
+                                        <p class="mb-0 small font-monospace text-indigo fw-bold fs-6"><i class="fas fa-hashtag text-secondary me-1"></i> {{ p.idcuentadestino.numerocuenta }}</p>
+                                    {% else %}
+                                        <p class="mb-0 text-success fw-bold"><i class="fas fa-money-bill-wave me-2"></i> Entregar en Efectivo (Caja Física)</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Columna Derecha: Subida de Comprobante -->
+                            <div class="col-md-6">
+                                <h6 class="fw-bold text-warning mb-3 text-center"><i class="fas fa-upload me-1"></i> Comprobante de Transferencia</h6>
+                                <p class="small text-muted text-center mb-4">Sube la captura, foto o PDF de la transferencia realizada para notificar al socio en su perfil.</p>
+                                
+                                <div class="border rounded p-4 text-center bg-body-tertiary shadow-sm border-warning border-opacity-50">
+                                    <input type="file" name="comprobante_desembolso" class="form-control" accept="image/*,application/pdf" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer bg-body-tertiary border-top">
+                        <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary fw-bold px-4"><i class="fas fa-check me-2"></i> Confirmar Transferencia</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
+<!-- Modal: Revisar Amortización / Pagos -->
+{% for pago in pagos_pendientes %}
+<div class="modal fade text-start" id="modalValidarPago{{ pago.idpago }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content card-minimalista bg-body text-body border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0 bg-dark text-white rounded-top" style="padding: 1rem 1.5rem;">
+                <h5 class="modal-title fw-bold"><i class="fas fa-search me-2"></i> Revisión de Abono #{{ pago.idpago }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <form method="post" action="{% url 'dashboard' %}" id="formValidarPago{{ pago.idpago }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="gestionar_transaccion">
+                <input type="hidden" name="decision" id="decisionPago{{ pago.idpago }}" value="Aprobar">
+                <input type="hidden" name="id_pago" value="{{ pago.idpago }}">
+                
+                <div class="modal-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6 border-end">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user me-2"></i> Datos del Socio</h6>
+                            <p class="mb-2 small"><strong>Socio:</strong> {{ pago.idprestamo.idsocio.primernombresocio }} {{ pago.idprestamo.idsocio.primerapellidosocio }}</p>
+                            <p class="mb-2 small"><strong>Cédula:</strong> {{ pago.idprestamo.idsocio.cisocio }}</p>
+                            <p class="mb-3 small"><strong>Teléfono:</strong> {{ pago.idprestamo.idsocio.telefonopersonalsocio|default:"No registrado" }}</p>
+                            
+                            <h6 class="fw-bold text-primary mb-3 mt-4"><i class="fas fa-file-invoice-dollar me-2"></i> Detalle del Pago</h6>
+                            <p class="mb-2 small"><strong>Préstamo ID:</strong> #{{ pago.idprestamo.idprestamo }}</p>
+                            <p class="mb-2 small text-danger fw-bold"><strong>Saldo Antes de Abonar:</strong> ${{ pago.idprestamo.saldopendiente }}</p>
+                            <p class="mb-2 small text-success fw-bold"><strong>Monto a Abonar:</strong> ${{ pago.montopagado }}</p>
+                            <p class="mb-2 small"><strong>Canal:</strong> {{ pago.idmetodopago.nombremetodopago|default:"Efectivo" }}</p>
+                            <p class="mb-0 small"><strong>Fecha:</strong> {{ pago.fechapago|date:"d/m/Y, H:i" }}</p>
+                            
+                            <div class="px-3 py-2 mb-4 rounded bg-primary bg-opacity-10 text-primary-emphasis shadow-sm small border border-primary border-opacity-25">
+                                <i class="fas fa-exclamation-triangle"></i> <strong>Aviso:</strong> Si validas este pago, el saldo del préstamo se reducirá automáticamente. Esta acción no se puede deshacer.
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-secondary mb-3 text-center"><i class="fas fa-image me-1"></i> Comprobante Adjunto</h6>
+                            <div class="text-center">
+                                {% if pago.comprobantepago %}
+                                    <a href="{{ pago.comprobantepago.url }}" target="_blank" title="Clic para ampliar imagen">
+                                        <img src="{{ pago.comprobantepago.url }}" class="img-fluid rounded border shadow-sm" style="max-height: 280px; object-fit: contain;">
+                                    </a>
+                                    <p class="small text-muted mt-2"><i class="fas fa-hand-pointer me-1"></i> Clic en la imagen para ampliar</p>
+                                {% else %}
+                                    <div class="p-4 border rounded bg-light text-muted">No se adjuntó comprobante</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer bg-body-tertiary border-top d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-outline-danger px-4 fw-bold bg-body" onclick="document.getElementById('decisionPago{{ pago.idpago }}').value='Rechazar'; document.getElementById('formValidarPago{{ pago.idpago }}').submit();">
+                        <i class="fas fa-times me-2"></i> Rechazar Pago
+                    </button>
+                    <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" onclick="document.getElementById('decisionPago{{ pago.idpago }}').value='Aprobar';">
+                        <i class="fas fa-check me-2"></i> Validar y Descontar Saldo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
 
 <script>
     function filtrarAportesDashboard() {
@@ -4157,6 +4412,23 @@ function filtrarAhorrosCedula() {
         }
     }
 
-
+function recalcularInteres(idPrestamo, montoBaseCrudo) {
+        let montoBase = parseFloat(montoBaseCrudo);
+        let inputTasa = document.getElementById('input-tasa-' + idPrestamo);
+        let lblTasa = document.getElementById('lbl-tasa-' + idPrestamo);
+        let lblTotal = document.getElementById('lbl-total-' + idPrestamo);
+        
+        let nuevaTasa = parseFloat(inputTasa.value) || 0;
+        
+        // Actualizamos la etiqueta de la tasa de interés en vivo
+        lblTasa.innerText = nuevaTasa.toFixed(2);
+        
+        // Recalculamos la deuda total
+        let interes = (montoBase * nuevaTasa) / 100;
+        let nuevoTotal = montoBase + interes;
+        
+        // Actualizamos la etiqueta del total
+        lblTotal.innerText = nuevoTotal.toFixed(2);
+    }
 </script>
 {% endblock %}
